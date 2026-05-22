@@ -7,6 +7,8 @@ export default defineConfig({
       enabled: true,
       autoStaticPathsDiscovery: true,
       crawlLinks: true,
+      // GitHub Pages serves /tools from tools.html, not tools/index.html
+      autoSubfolderIndex: false,
     },
   },
 });

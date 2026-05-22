@@ -35,6 +35,16 @@ jobs:
       # GitHub Pages serves static files only; prerendered HTML lives under dist/client
       - name: Prepare GitHub Pages artifact
         run: |
+          touch dist/client/.nojekyll
+          # Flat *.html routes (/tools) + folder index for /tools/ trailing-slash URLs
+          for html in dist/client/*.html; do
+            name="$(basename "$html" .html)"
+            if [ "$name" = "index" ] || [ "$name" = "404" ]; then
+              continue
+            fi
+            mkdir -p "dist/client/${name}"
+            cp "$html" "dist/client/${name}/index.html"
+          done
           cp dist/client/index.html dist/client/404.html
 
       - name: Upload artifact
