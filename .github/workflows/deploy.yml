@@ -31,12 +31,16 @@ jobs:
 
       - name: Build
         run: bun run build
-        
+
+      # GitHub Pages serves static files only; prerendered HTML lives under dist/client
+      - name: Prepare GitHub Pages artifact
+        run: |
+          cp dist/client/index.html dist/client/404.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Changed from .output/public to match your project's output folder
-          path: dist
+          path: dist/client
 
   deploy:
     environment:
