@@ -11,7 +11,11 @@ export type Post = {
   content: string;
 };
 
-export const posts: Post[] = [];
+const postModules = import.meta.glob('./posts/*.ts', { eager: true });
+
+export const posts: Post[] = Object.values(postModules)
+  .map((mod: any) => mod.post)
+  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export function getPost(slug: string): Post | undefined {
   return posts.find((p) => p.slug === slug);

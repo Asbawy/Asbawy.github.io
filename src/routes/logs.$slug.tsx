@@ -1,5 +1,3 @@
-
-
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
@@ -8,13 +6,11 @@ import { getPost, posts, type Post } from "@/data/posts";
 import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/logs/$slug")({
-
   loader: ({ params }) => {
     const post = getPost(params.slug);
     if (!post) throw notFound();
     return { post: post as Post };
   },
-
 
   head: ({ loaderData }) => {
     const p = loaderData?.post;
@@ -30,7 +26,6 @@ export const Route = createFileRoute("/logs/$slug")({
     };
   },
 
-
   notFoundComponent: () => (
     <CyberLayout>
       <div className="p-10 font-mono text-sm text-muted-foreground">
@@ -38,7 +33,6 @@ export const Route = createFileRoute("/logs/$slug")({
       </div>
     </CyberLayout>
   ),
-
 
   errorComponent: ({ error }) => (
     <CyberLayout>
@@ -48,6 +42,30 @@ export const Route = createFileRoute("/logs/$slug")({
   component: PostPage,
 });
 
+function parseTableCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((c) => c.trim());
+}
+
+function isTableLine(line: string): boolean {
+  return line.trim().startsWith("|");
+}
+
+function isTableSeparator(line: string): boolean {
+  return /^\|[\s\-:|]+\|$/.test(line.trim());
+}
+
+function isListLine(line: string): boolean {
+  return /^- (?:\[ \] )?.+/.test(line);
+}
+
+function isHrLine(line: string): boolean {
+  return line.trim() === "---";
+}
 
 function renderContent(md: string, sectionIds: string[]) {
   const lines = md.trim().split("\n");
@@ -55,24 +73,154 @@ function renderContent(md: string, sectionIds: string[]) {
   let i = 0;
   let headingIdx = -1;
 
-
   const renderInline = (s: string) =>
-    s.split(/(`[^`]+`)/g).map((chunk, idx) =>
-      chunk.startsWith("`") && chunk.endsWith("`") ? (
-        <code
-          key={idx}
-          className="rounded bg-panel/80 border border-panel-border px-1.5 py-0.5 text-[12px] text-neon-green font-mono"
-        >
-          {chunk.slice(1, -1)}
-        </code>
-      ) : (
-        <span key={idx}>{chunk}</span>
-      ),
-    );
+    s.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).map((chunk, idx) => {
+      if (chunk.startsWith("`") && chunk.endsWith("`")) {
+        return (
+          <code
+            key={idx}
+            className="rounded bg-panel/80 border border-panel-border px-1.5 py-0.5 text-[12px] text-neon-green font-mono"
+          >
+            {chunk.slice(1, -1)}
+          </code>
+        );
+      }
+      if (chunk.startsWith("**") && chunk.endsWith("**")) {
+        return (
+          <strong key={idx} className="font-semibold text-foreground">
+            {chunk.slice(2, -2)}
+          </strong>
+        );
+      }
+      return <span key={idx}>{chunk}</span>;
+    });
 
   while (i < lines.length) {
     const line = lines[i];
 
+    /* ── Image (![alt](url)) ───────────────────────────────────── */
+    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+    if (imgMatch) {
+      const [, alt, src] = imgMatch;
+      out.push(
+        <figure key={`img-${i}`} className="my-8">
+          <img
+            src={src}
+            alt={alt || ""}
+            className="w-full rounded border border-panel-border"
+            loading="lazy"
+          />
+          {alt ? (
+            <figcaption className="mt-2 text-center font-mono text-[11px] text-muted-foreground">
+              {alt}
+            </figcaption>
+          ) : null}
+        </figure>,
+      );
+      i++;
+      continue;
+    }
+
+    if (line.startsWith("### ")) {
+      out.push(
+        <h3 key={`h3-${i}`} className="mt-8 mb-3 font-mono text-base text-foreground/90">
+          {line.replace("### ", "")}
+        </h3>,
+      );
+      i++;
+      continue;
+    }
+
+    if (line.startsWith("#### ")) {
+      out.push(
+        <h4 key={`h4-${i}`} className="mt-6 mb-2 font-mono text-sm text-neon-blue">
+          {line.replace("#### ", "")}
+        </h4>,
+      );
+      i++;
+      continue;
+    }
+
+    if (isTableLine(line)) {
+      const tableLines: string[] = [];
+      while (i < lines.length && isTableLine(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const rows = tableLines
+        .filter((tl) => !isTableSeparator(tl))
+        .map(parseTableCells)
+        .filter((r) => r.length > 0);
+      if (rows.length > 0) {
+        const [header, ...body] = rows;
+        out.push(
+          <div key={`tbl-${i}`} className="my-6 overflow-x-auto rounded border border-panel-border">
+            <table className="w-full min-w-[320px] border-collapse font-mono text-[13px]">
+              <thead>
+                <tr className="border-b border-panel-border bg-panel/50">
+                  {header.map((cell, ci) => (
+                    <th
+                      key={ci}
+                      className="px-3 py-2 text-left font-semibold text-neon-green"
+                    >
+                      {renderInline(cell)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {body.map((row, ri) => (
+                  <tr key={ri} className="border-b border-panel-border/50 last:border-0">
+                    {row.map((cell, ci) => (
+                      <td key={ci} className="px-3 py-2 align-top text-foreground/85">
+                        {renderInline(cell)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>,
+        );
+      }
+      continue;
+    }
+
+    if (isListLine(line)) {
+      const items: { text: string; checkbox: boolean }[] = [];
+      while (i < lines.length && isListLine(lines[i])) {
+        const chk = lines[i].match(/^- \[ \] (.+)$/);
+        const bullet = lines[i].match(/^- (.+)$/);
+        if (chk) items.push({ text: chk[1], checkbox: true });
+        else if (bullet) items.push({ text: bullet[1], checkbox: false });
+        i++;
+      }
+      const hasCheckbox = items.some((it) => it.checkbox);
+      out.push(
+        <ul
+          key={`ul-${i}`}
+          className={`my-4 space-y-2 text-[15px] leading-7 text-foreground/85 ${
+            hasCheckbox ? "list-none ml-0" : "list-disc ml-5"
+          }`}
+        >
+          {items.map((it, li) => (
+            <li key={li} className={it.checkbox ? "flex items-start gap-2" : undefined}>
+              {it.checkbox ? (
+                <span className="shrink-0 font-mono text-[12px] text-neon-green">[ ]</span>
+              ) : null}
+              <span>{renderInline(it.text)}</span>
+            </li>
+          ))}
+        </ul>,
+      );
+      continue;
+    }
+
+    if (isHrLine(line)) {
+      out.push(<hr key={`hr-${i}`} className="my-8 border-panel-border" />);
+      i++;
+      continue;
+    }
 
     if (line.startsWith("## ")) {
       headingIdx++;
@@ -89,7 +237,6 @@ function renderContent(md: string, sectionIds: string[]) {
       );
       i++;
 
-
     } else if (line.startsWith("```")) {
       const lang = line.slice(3).trim() || "bash";
       i++;
@@ -105,15 +252,24 @@ function renderContent(md: string, sectionIds: string[]) {
         </TerminalCode>,
       );
 
-
     } else if (line.trim() === "") {
       i++;
-
 
     } else {
       const buf: string[] = [line];
       i++;
-      while (i < lines.length && lines[i].trim() !== "" && !lines[i].startsWith("##") && !lines[i].startsWith("```")) {
+      while (
+        i < lines.length &&
+        lines[i].trim() !== "" &&
+        !lines[i].startsWith("##") &&
+        !lines[i].startsWith("###") &&
+        !lines[i].startsWith("####") &&
+        !lines[i].startsWith("```") &&
+        !isTableLine(lines[i]) &&
+        !isListLine(lines[i]) &&
+        !isHrLine(lines[i]) &&
+        !/^!\[[^\]]*\]\([^)]+\)\s*$/.test(lines[i])
+      ) {
         buf.push(lines[i]);
         i++;
       }
@@ -127,13 +283,11 @@ function renderContent(md: string, sectionIds: string[]) {
   return out;
 }
 
-
 function PostPage() {
   const { post } = Route.useLoaderData() as { post: Post };
   const sectionIds = useMemo(() => post.sections.map((s) => s.id), [post]);
   const [active, setActive] = useState(sectionIds[0]);
   const [progress, setProgress] = useState(0);
-
 
   useEffect(() => {
     const onScroll = () => {
@@ -142,7 +296,6 @@ function PostPage() {
       const max = h.scrollHeight - h.clientHeight;
       setProgress(Math.min(100, Math.max(0, (scrolled / Math.max(1, max)) * 100)));
 
-      // Determine which section heading is currently in view
       let current = sectionIds[0];
       for (const id of sectionIds) {
         const el = document.getElementById(id);
@@ -158,7 +311,6 @@ function PostPage() {
   return (
     <CyberLayout>
       <article className="px-6 md:px-10 py-10 max-w-6xl">
-
         <Link
           to="/logs"
           className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-neon-green"
@@ -167,9 +319,7 @@ function PostPage() {
         </Link>
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10">
-
           <div className="min-w-0">
-
             <div className="font-mono text-[11px] text-muted-foreground flex flex-wrap items-center gap-3">
               <span>{post.date}</span>
               <span>·</span>
@@ -189,40 +339,33 @@ function PostPage() {
               </span>
             </div>
 
-
             <h1 className="mt-3 text-2xl md:text-4xl font-semibold leading-tight text-foreground">
               {post.title}
             </h1>
-
 
             <div className="mt-3 flex flex-wrap gap-1.5">
               {post.tags.map((t) => (
                 <Tag key={t} variant={tagVariantFor(t)}>{t}</Tag>
               ))}
             </div>
-
-
             <div className="mt-2">{renderContent(post.content, sectionIds)}</div>
-
 
             <div className="mt-16 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
               // end of post — <Link to="/logs" className="text-neon-green">return /logs</Link>
             </div>
           </div>
-
-
           <aside className="hidden lg:block">
             <div className="sticky top-6">
-
+              {/* Reading progress bar + section links */}
               <Panel title="table of contents">
-
+                {/* Progress bar */}
                 <div className="mb-3 h-1 w-full overflow-hidden rounded-sm bg-secondary/60">
                   <div
                     className="h-full bg-neon-green"
                     style={{ width: `${progress}%`, boxShadow: "0 0 10px currentColor" }}
                   />
                 </div>
-
+                {/* Section links (auto-generated from post.sections) */}
                 <ol className="space-y-1 font-mono text-xs">
                   {post.sections.map((s) => {
                     const isActive = active === s.id;
@@ -244,8 +387,6 @@ function PostPage() {
                   })}
                 </ol>
               </Panel>
-
-
               {posts.filter((p) => p.slug !== post.slug).length > 0 && (
                 <Panel title="related" className="mt-4">
                   <ul className="space-y-2 text-xs">

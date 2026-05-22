@@ -12,8 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as LogsRouteImport } from './routes/logs'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LogsIndexRouteImport } from './routes/logs.index'
 import { Route as LogsSlugRouteImport } from './routes/logs.$slug'
 
 const ToolsRoute = ToolsRouteImport.update({
@@ -31,74 +31,75 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LogsRoute = LogsRouteImport.update({
-  id: '/logs',
-  path: '/logs',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LogsIndexRoute = LogsIndexRouteImport.update({
+  id: '/logs/',
+  path: '/logs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LogsSlugRoute = LogsSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => LogsRoute,
+  id: '/logs/$slug',
+  path: '/logs/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/logs': typeof LogsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/logs/': typeof LogsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/logs': typeof LogsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/logs': typeof LogsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/logs': typeof LogsRouteWithChildren
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/logs/': typeof LogsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/logs'
     | '/sitemap.xml'
     | '/stats'
     | '/tools'
     | '/logs/$slug'
+    | '/logs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/logs' | '/sitemap.xml' | '/stats' | '/tools' | '/logs/$slug'
+  to: '/' | '/sitemap.xml' | '/stats' | '/tools' | '/logs/$slug' | '/logs'
   id:
     | '__root__'
     | '/'
-    | '/logs'
     | '/sitemap.xml'
     | '/stats'
     | '/tools'
     | '/logs/$slug'
+    | '/logs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  LogsRoute: typeof LogsRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatsRoute: typeof StatsRoute
   ToolsRoute: typeof ToolsRoute
+  LogsSlugRoute: typeof LogsSlugRoute
+  LogsIndexRoute: typeof LogsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -124,13 +125,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/logs': {
-      id: '/logs'
-      path: '/logs'
-      fullPath: '/logs'
-      preLoaderRoute: typeof LogsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -138,32 +132,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/logs/': {
+      id: '/logs/'
+      path: '/logs'
+      fullPath: '/logs/'
+      preLoaderRoute: typeof LogsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/logs/$slug': {
       id: '/logs/$slug'
-      path: '/$slug'
+      path: '/logs/$slug'
       fullPath: '/logs/$slug'
       preLoaderRoute: typeof LogsSlugRouteImport
-      parentRoute: typeof LogsRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
 
-interface LogsRouteChildren {
-  LogsSlugRoute: typeof LogsSlugRoute
-}
-
-const LogsRouteChildren: LogsRouteChildren = {
-  LogsSlugRoute: LogsSlugRoute,
-}
-
-const LogsRouteWithChildren = LogsRoute._addFileChildren(LogsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  LogsRoute: LogsRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatsRoute: StatsRoute,
   ToolsRoute: ToolsRoute,
+  LogsSlugRoute: LogsSlugRoute,
+  LogsIndexRoute: LogsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

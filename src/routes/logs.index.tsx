@@ -1,13 +1,10 @@
-
-
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
 import { posts } from "@/data/posts";
 import { Search } from "lucide-react";
 
-export const Route = createFileRoute("/logs")({
-
+export const Route = createFileRoute("/logs/")({
   head: () => ({
     meta: [
       { title: "/logs — Asbawy Blog" },
@@ -23,11 +20,8 @@ export const Route = createFileRoute("/logs")({
 const categories = ["All", "Web", "AI Security", "Automation", "Scripting"] as const;
 
 function LogsPage() {
-
   const [cat, setCat] = useState<(typeof categories)[number]>("All");
   const [q, setQ] = useState("");
-
-
   const filtered = useMemo(() => {
     return posts.filter((p) => {
       const okCat = cat === "All" || p.category === cat;
@@ -42,14 +36,12 @@ function LogsPage() {
   return (
     <CyberLayout>
       <section className="px-6 md:px-10 py-10 max-w-6xl">
-
         <div className="font-mono text-[11px] text-muted-foreground">
           <span className="text-neon-green">asbawy</span>:<span className="text-neon-blue">~/logs</span>$ ls -la --sort=date
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /logs <span className="text-muted-foreground">— blog posts</span>
         </h1>
-
 
         <div className="mt-6 flex flex-col md:flex-row md:items-center gap-3">
           <div className="flex flex-wrap gap-2">
@@ -77,7 +69,6 @@ function LogsPage() {
             />
           </div>
         </div>
-
 
         <Panel title={`results // ${filtered.length} entries`} className="mt-6">
           <ul className="divide-y divide-panel-border/60">
