@@ -35,8 +35,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # TanStack Start with github-pages preset outputs to .output/public by default
-          path: .output/public
+          # Changed from .output/public to match your project's output folder
+          path: dist
 
   deploy:
     environment:
