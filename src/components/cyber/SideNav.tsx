@@ -1,0 +1,84 @@
+import { Link, useRouterState } from "@tanstack/react-router";
+import { Home, FileTerminal, Wrench, Activity, Shield } from "lucide-react";
+
+const items = [
+  { to: "/", label: "/home", icon: Home },
+  { to: "/logs", label: "/logs", icon: FileTerminal },
+  { to: "/tools", label: "/tools", icon: Wrench },
+  { to: "/stats", label: "/stats", icon: Activity },
+];
+
+export function SideNav() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isActive = (to: string) =>
+    to === "/" ? pathname === "/" : pathname.startsWith(to);
+
+  return (
+    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-panel-border bg-sidebar/80 backdrop-blur-md sticky top-0 h-screen font-mono">
+      <div className="px-5 py-5 border-b border-panel-border flex items-center gap-3">
+        <div className="relative">
+          <Shield className="h-5 w-5 text-neon-green" />
+          <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-neon-green pulse-dot" />
+        </div>
+        <div className="flex flex-col leading-tight">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            node://
+          </span>
+          <span className="text-sm text-foreground text-glow-green">Asbawy</span>
+        </div>
+      </div>
+
+      <nav className="flex-1 px-3 py-4 space-y-1 text-sm">
+        <p className="px-3 pb-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          ── navigation
+        </p>
+        {items.map(({ to, label, icon: Icon }) => {
+          const active = isActive(to);
+          return (
+            <Link
+              key={to}
+              to={to}
+              className={`group flex items-center gap-3 rounded-md px-3 py-2 border transition-all ${
+                active
+                  ? "border-neon-green/40 bg-neon-green/5 text-neon-green text-glow-green"
+                  : "border-transparent text-muted-foreground hover:border-panel-border hover:bg-panel hover:text-foreground"
+              }`}
+            >
+              <span className={`text-xs ${active ? "text-neon-green" : "text-muted-foreground"}`}>
+                {active ? "▸" : "·"}
+              </span>
+              <Icon className="h-4 w-4" />
+              <span>{label}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="m-3 rounded-md border border-panel-border bg-panel/60 p-3 text-[11px] font-mono">
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span>session</span>
+          <span className="text-neon-green">● live</span>
+        </div>
+        <div className="mt-1 text-foreground/80 truncate">tty/asbawy</div>
+        <div className="mt-2 text-muted-foreground">v0.42.1 // edge</div>
+      </div>
+    </aside>
+  );
+}
+
+export function TopBar() {
+  return (
+    <div className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-panel-border bg-background/90 backdrop-blur px-4 py-3 font-mono">
+      <div className="flex items-center gap-2">
+        <Shield className="h-4 w-4 text-neon-green" />
+        <span className="text-sm text-glow-green">Asbawy</span>
+      </div>
+      <nav className="flex items-center gap-3 text-xs text-muted-foreground">
+        <Link to="/" className="hover:text-neon-green">/home</Link>
+        <Link to="/logs" className="hover:text-neon-green">/logs</Link>
+        <Link to="/tools" className="hover:text-neon-green">/tools</Link>
+        <Link to="/stats" className="hover:text-neon-green">/stats</Link>
+      </nav>
+    </div>
+  );
+}
