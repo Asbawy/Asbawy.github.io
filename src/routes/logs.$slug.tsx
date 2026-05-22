@@ -2,18 +2,18 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
 import { TerminalCode } from "@/components/cyber/TerminalCode";
-import { getPost, posts, type Post } from "@/data/posts";
+import { getPost, posts } from "@/data/posts";
 import { ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/logs/$slug")({
   loader: ({ params }) => {
-    const post = getPost(params.slug);
-    if (!post) throw notFound();
-    return { post: post as Post };
+    if (!getPost(params.slug)) throw notFound();
+    // Slug only — avoid serializing full post content into hydration JSON
+    return { slug: params.slug };
   },
 
-  head: ({ loaderData }) => {
-    const p = loaderData?.post;
+  head: ({ params }) => {
+    const p = getPost(params.slug);
     return {
       meta: p
         ? [
@@ -284,7 +284,9 @@ function renderContent(md: string, sectionIds: string[]) {
 }
 
 function PostPage() {
-  const { post } = Route.useLoaderData() as { post: Post };
+  const { slug } = Route.useLoaderData();
+  const post = getPost(slug);
+  if (!post) throw notFound();
   const sectionIds = useMemo(() => post.sections.map((s) => s.id), [post]);
   const [active, setActive] = useState(sectionIds[0]);
   const [progress, setProgress] = useState(0);

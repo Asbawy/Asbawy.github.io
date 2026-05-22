@@ -36,15 +36,30 @@ jobs:
       - name: Prepare GitHub Pages artifact
         run: |
           touch dist/client/.nojekyll
-          # Flat *.html routes (/tools) + folder index for /tools/ trailing-slash URLs
-          for html in dist/client/*.html; do
-            name="$(basename "$html" .html)"
-            if [ "$name" = "index" ] || [ "$name" = "404" ]; then
+
+          # For every *.html, also provide a directory/index.html variant for trailing-slash URLs.
+          # Never overwrite prerendered index.html files (e.g. logs/index.html, nested posts).
+          find dist/client -type f -name '*.html' ! -name '404.html' | while read -r html; do
+            rel="${html#dist/client/}"
+            dir=$(dirname "$rel")
+            base=$(basename "$rel" .html)
+
+            if [ "$base" = "index" ]; then
               continue
             fi
-            mkdir -p "dist/client/${name}"
-            cp "$html" "dist/client/${name}/index.html"
+
+            if [ "$dir" = "." ]; then
+              target_dir="dist/client/${base}"
+            else
+              target_dir="dist/client/${dir}/${base}"
+            fi
+
+            mkdir -p "$target_dir"
+            if [ ! -f "$target_dir/index.html" ]; then
+              cp "$html" "$target_dir/index.html"
+            fi
           done
+
           cp dist/client/index.html dist/client/404.html
 
       - name: Upload artifact

@@ -17,7 +17,7 @@ export const Route = createFileRoute("/logs/")({
 });
 
 
-const categories = ["All", "Web", "AI Security", "Automation", "Scripting"] as const;
+const categories = ["All", "Web", "AI Security", "Automation", "Scripting", "Network"] as const;
 
 function LogsPage() {
   const [cat, setCat] = useState<(typeof categories)[number]>("All");

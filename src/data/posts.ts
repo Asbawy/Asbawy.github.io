@@ -2,7 +2,7 @@ export type Post = {
   slug: string;
   title: string;
   date: string;
-  category: "Web" | "AI Security" | "Automation" | "Scripting";
+  category: "Web" | "AI Security" | "Automation" | "Scripting" | "Network";
   tags: string[];
   severity: "Low" | "Medium" | "High" | "Critical";
   excerpt: string;
