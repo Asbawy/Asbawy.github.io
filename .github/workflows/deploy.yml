@@ -32,6 +32,21 @@ jobs:
       - name: Build
         run: bun run build
 
+      # Fail early if we would deploy the dev index.html instead of the prerendered app
+      - name: Verify build output
+        run: |
+          test -f dist/client/index.html
+          if grep -q '/src/start.ts' dist/client/index.html; then
+            echo "ERROR: dist/client/index.html is still the dev template."
+            echo "GitHub Pages cannot run /src/start.ts — the production build did not prerender."
+            exit 1
+          fi
+          if ! grep -q 'min-h-screen' dist/client/index.html; then
+            echo "ERROR: dist/client/index.html does not contain prerendered app markup."
+            exit 1
+          fi
+          echo "Build output verified ($(wc -c < dist/client/index.html) bytes)"
+
       # GitHub Pages serves static files only; prerendered HTML lives under dist/client
       - name: Prepare GitHub Pages artifact
         run: |
