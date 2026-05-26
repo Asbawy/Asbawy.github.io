@@ -73,27 +73,62 @@ function renderContent(md: string, sectionIds: string[]) {
   let i = 0;
   let headingIdx = -1;
 
-  const renderInline = (s: string) =>
-    s.split(/(`[^`]+`|\*\*[^*]+\*\*)/g).map((chunk, idx) => {
+  const linkClassName =
+    "text-neon-blue hover:text-glow-blue underline underline-offset-2 transition-colors";
+
+  const renderInline = (s: string) => {
+    const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\[([^\]]+)\]\(([^)]+)\)|https?:\/\/[^\s<>)]+)/g;
+    const nodes: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let key = 0;
+
+    while ((match = pattern.exec(s)) !== null) {
+      if (match.index > lastIndex) {
+        nodes.push(<span key={key++}>{s.slice(lastIndex, match.index)}</span>);
+      }
+
+      const chunk = match[0];
       if (chunk.startsWith("`") && chunk.endsWith("`")) {
-        return (
+        nodes.push(
           <code
-            key={idx}
+            key={key++}
             className="rounded bg-panel/80 border border-panel-border px-1.5 py-0.5 text-[12px] text-neon-green font-mono"
           >
             {chunk.slice(1, -1)}
-          </code>
+          </code>,
         );
-      }
-      if (chunk.startsWith("**") && chunk.endsWith("**")) {
-        return (
-          <strong key={idx} className="font-semibold text-foreground">
+      } else if (chunk.startsWith("**") && chunk.endsWith("**")) {
+        nodes.push(
+          <strong key={key++} className="font-semibold text-foreground">
             {chunk.slice(2, -2)}
-          </strong>
+          </strong>,
         );
+      } else if (match[2] && match[3]) {
+        nodes.push(
+          <a key={key++} href={match[3]} target="_blank" rel="noopener noreferrer" className={linkClassName}>
+            {match[2]}
+          </a>,
+        );
+      } else if (chunk.startsWith("http://") || chunk.startsWith("https://")) {
+        nodes.push(
+          <a key={key++} href={chunk} target="_blank" rel="noopener noreferrer" className={linkClassName}>
+            {chunk}
+          </a>,
+        );
+      } else {
+        nodes.push(<span key={key++}>{chunk}</span>);
       }
-      return <span key={idx}>{chunk}</span>;
-    });
+
+      lastIndex = match.index + chunk.length;
+    }
+
+    if (lastIndex < s.length) {
+      nodes.push(<span key={key++}>{s.slice(lastIndex)}</span>);
+    }
+
+    return nodes.length > 0 ? nodes : [<span key={0}>{s}</span>];
+  };
 
   while (i < lines.length) {
     const line = lines[i];
