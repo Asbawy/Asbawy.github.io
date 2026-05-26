@@ -1,6 +1,6 @@
-import type { Post } from "../posts";
+import type { Post, PostMeta } from "../posts";
 
-export const post: Post = {
+export const meta: PostMeta = {
   slug: "data-exfiltration-guide",
   title: "Data Exfiltration Guide",
   date: "2026-05-13",
@@ -35,6 +35,10 @@ export const post: Post = {
     { id: "neo-regeorg-tunneling", title: "09 · Advanced Tunneling — Neo-reGeorg (HTTP Tunneling)" },
     { id: "conclusion",            title: "10 · Conclusion & Stealth Best Practices" },
   ],
+};
+
+export const post: Post = {
+  ...meta,
   content: `
 ![Data exfiltration attack paths across TCP, SSH, HTTP, ICMP, and DNS](https://i.imgur.com/lpX6GkI.png)
 
@@ -1024,5 +1028,5 @@ Understanding attacker methodology at this level of technical depth is a prerequ
 
 
 
-  `,
+  `
 };

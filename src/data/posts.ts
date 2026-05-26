@@ -1,4 +1,4 @@
-export type Post = {
+export type PostMeta = {
   slug: string;
   title: string;
   date: string;
@@ -8,15 +8,33 @@ export type Post = {
   excerpt: string;
   readTime: string;
   sections: { id: string; title: string }[];
+};
+
+export type Post = PostMeta & {
   content: string;
 };
 
-const postModules = import.meta.glob<{ post: Post }>("./posts/*.ts", { eager: true });
+// Eager: metadata only (tiny JS footprint thanks to custom Vite plugin)
+const metaModules = import.meta.glob<{ meta: PostMeta }>(
+  "./posts/*.ts",
+  { eager: true, query: '?meta' }
+);
 
-export const posts: Post[] = Object.values(postModules)
-  .map((mod) => mod.post)
+export const postsMeta: PostMeta[] = Object.values(metaModules)
+  .map((mod) => mod.meta)
   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-export function getPost(slug: string): Post | undefined {
-  return posts.find((p) => p.slug === slug);
+export function getPostMeta(slug: string): PostMeta | undefined {
+  return postsMeta.find((p) => p.slug === slug);
+}
+
+// Lazy: full post content (loaded per-route)
+const contentModules = import.meta.glob<{ post: Post }>("./posts/*.ts");
+
+export async function getPostContent(slug: string): Promise<Post | undefined> {
+  const key = Object.keys(contentModules).find((k) => k.includes(`/${slug}.ts`));
+  if (!key) return undefined;
+  
+  const mod = await contentModules[key]();
+  return mod.post;
 }

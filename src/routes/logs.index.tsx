@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
-import { posts } from "@/data/posts";
+import { postsMeta } from "@/data/posts";
 import { Search } from "lucide-react";
 
 export const Route = createFileRoute("/logs/")({
@@ -23,7 +23,7 @@ function LogsPage() {
   const [cat, setCat] = useState<(typeof categories)[number]>("All");
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
-    return posts.filter((p) => {
+    return postsMeta.filter((p) => {
       const okCat = cat === "All" || p.category === cat;
       const okQ =
         !q ||

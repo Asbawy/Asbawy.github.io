@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
 import { Typewriter } from "@/components/cyber/Typewriter";
 import { SystemStatus } from "@/components/cyber/SystemStatus";
-import { posts } from "@/data/posts";
+import { postsMeta } from "@/data/posts";
 import { ArrowUpRight, Terminal } from "lucide-react";
 
 export const Route = createFileRoute("/")(
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/")(
 
 function Index() {
 
-  const recent = posts.slice(0, 4);
+  const recent = postsMeta.slice(0, 4);
 
   return (
     <CyberLayout>
@@ -89,7 +89,7 @@ function Index() {
           <Panel title="ops summary">
             <ul className="space-y-3 font-mono text-xs">
               {[
-                ["total_posts", String(posts.length)],
+                ["total_posts", String(postsMeta.length)],
                 ["categories", "4"],
                 ["status", "active"],
                 ["version", "v1.0"],

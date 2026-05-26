@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, FileTerminal, Wrench, Activity, Shield } from "lucide-react";
+import { Home, FileTerminal, Wrench, Activity, Skull } from "lucide-react";
 
 const items = [
   { to: "/", label: "/home", icon: Home },
@@ -17,7 +17,7 @@ export function SideNav() {
     <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-panel-border bg-sidebar/80 backdrop-blur-md sticky top-0 h-screen font-mono">
       <div className="px-5 py-5 border-b border-panel-border flex items-center gap-3">
         <div className="relative">
-          <Shield className="h-5 w-5 text-neon-green" />
+          <Skull className="h-5 w-5 text-neon-green" />
           <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-neon-green pulse-dot" />
         </div>
         <div className="flex flex-col leading-tight">
@@ -70,7 +70,7 @@ export function TopBar() {
   return (
     <div className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-panel-border bg-background/90 backdrop-blur px-4 py-3 font-mono">
       <div className="flex items-center gap-2">
-        <Shield className="h-4 w-4 text-neon-green" />
+        <Skull className="h-4 w-4 text-neon-green" />
         <span className="text-sm text-glow-green">Asbawy</span>
       </div>
       <nav className="flex items-center gap-3 text-xs text-muted-foreground">

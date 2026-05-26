@@ -2,7 +2,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { CyberLayout, Panel, Tag } from "@/components/cyber/Layout";
-import { posts } from "@/data/posts";
+import { postsMeta } from "@/data/posts";
 
 export const Route = createFileRoute("/stats")({
 
@@ -19,16 +19,16 @@ export const Route = createFileRoute("/stats")({
 
 function StatsPage() {
 
-  const total = posts.length;
+  const total = postsMeta.length;
 
 
-  const sevCount = posts.reduce<Record<string, number>>((acc, p) => {
+  const sevCount = postsMeta.reduce<Record<string, number>>((acc, p) => {
     acc[p.severity] = (acc[p.severity] ?? 0) + 1;
     return acc;
   }, {});
 
 
-  const catCount = posts.reduce<Record<string, number>>((acc, p) => {
+  const catCount = postsMeta.reduce<Record<string, number>>((acc, p) => {
     acc[p.category] = (acc[p.category] ?? 0) + 1;
     return acc;
   }, {});
@@ -57,7 +57,7 @@ function StatsPage() {
           {[
             ["entries", String(total)],
             ["categories", String(Object.keys(catCount).length)],
-            ["tags", String(new Set(posts.flatMap((p) => p.tags)).size)],
+            ["tags", String(new Set(postsMeta.flatMap((p) => p.tags)).size)],
             ["status", "active"],
           ].map(([k, v]) => (
             <div key={k} className="rounded-md border border-panel-border bg-panel/60 p-4">
@@ -117,12 +117,12 @@ function StatsPage() {
 
         <Panel title="tag_cloud" className="mt-5">
           <div className="flex flex-wrap gap-2">
-            {posts.length === 0 ? (
+            {postsMeta.length === 0 ? (
               <span className="font-mono text-xs text-muted-foreground">
                 // tags will appear here once you add posts
               </span>
             ) : (
-              Array.from(new Set(posts.flatMap((p) => p.tags))).map((t) => (
+              Array.from(new Set(postsMeta.flatMap((p) => p.tags))).map((t) => (
                 <Tag key={t}>{t}</Tag>
               ))
             )}

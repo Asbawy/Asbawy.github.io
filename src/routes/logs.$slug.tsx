@@ -2,18 +2,23 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
 import { TerminalCode } from "@/components/cyber/TerminalCode";
-import { getPost, posts } from "@/data/posts";
+import { getPostMeta, getPostContent, postsMeta } from "@/data/posts";
 import { ArrowLeft } from "lucide-react";
+import { ImageLightbox } from "@/components/cyber/ImageLightbox";
+import { getRelatedPosts } from "@/lib/related-posts";
 
 export const Route = createFileRoute("/logs/$slug")({
-  loader: ({ params }) => {
-    if (!getPost(params.slug)) throw notFound();
-    // Slug only — avoid serializing full post content into hydration JSON
-    return { slug: params.slug };
+  loader: async ({ params }) => {
+    const meta = getPostMeta(params.slug);
+    if (!meta) throw notFound();
+    const post = await getPostContent(params.slug);
+    if (!post) throw notFound();
+    return { slug: params.slug, post };
   },
 
   head: ({ params }) => {
-    const p = getPost(params.slug);
+    const p = getPostMeta(params.slug);
+    const url = `https://asbawy.github.io/logs/${params.slug}`;
     return {
       meta: p
         ? [
@@ -21,8 +26,36 @@ export const Route = createFileRoute("/logs/$slug")({
             { name: "description", content: p.excerpt },
             { property: "og:title", content: p.title },
             { property: "og:description", content: p.excerpt },
+            { property: "og:type", content: "article" },
+            { property: "og:url", content: url },
+            { name: "twitter:card", content: "summary_large_image" },
           ]
         : [{ title: "Asbawy Blog" }],
+      links: [
+        { rel: "canonical", href: url },
+      ],
+      scripts: p ? [{
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          headline: p.title,
+          description: p.excerpt,
+          datePublished: p.date,
+          author: {
+            "@type": "Person",
+            name: "Asbawy",
+            url: "https://asbawy.github.io",
+          },
+          publisher: {
+            "@type": "Person",
+            name: "Asbawy",
+          },
+          url,
+          mainEntityOfPage: { "@type": "WebPage", "@id": url },
+          keywords: p.tags.join(", "),
+        }),
+      }] : [],
     };
   },
 
@@ -67,7 +100,7 @@ function isHrLine(line: string): boolean {
   return line.trim() === "---";
 }
 
-function renderContent(md: string, sectionIds: string[]) {
+function renderContent(md: string, sectionIds: string[], setLightboxSrc: (src: string) => void) {
   const lines = md.trim().split("\n");
   const out: React.ReactNode[] = [];
   let i = 0;
@@ -142,8 +175,9 @@ function renderContent(md: string, sectionIds: string[]) {
           <img
             src={src}
             alt={alt || ""}
-            className="w-full rounded border border-panel-border"
+            className="w-full rounded border border-panel-border cursor-zoom-in"
             loading="lazy"
+            onClick={() => setLightboxSrc(src)}
           />
           {alt ? (
             <figcaption className="mt-2 text-center font-mono text-[11px] text-muted-foreground">
@@ -319,12 +353,11 @@ function renderContent(md: string, sectionIds: string[]) {
 }
 
 function PostPage() {
-  const { slug } = Route.useLoaderData();
-  const post = getPost(slug);
-  if (!post) throw notFound();
+  const { slug, post } = Route.useLoaderData();
   const sectionIds = useMemo(() => post.sections.map((s) => s.id), [post]);
   const [active, setActive] = useState(sectionIds[0]);
   const [progress, setProgress] = useState(0);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   useEffect(() => {
     const onScroll = () => {
@@ -385,7 +418,7 @@ function PostPage() {
                 <Tag key={t} variant={tagVariantFor(t)}>{t}</Tag>
               ))}
             </div>
-            <div className="mt-2">{renderContent(post.content, sectionIds)}</div>
+            <div className="mt-2">{renderContent(post.content, sectionIds, setLightboxSrc)}</div>
 
             <div className="mt-16 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
               // end of post — <Link to="/logs" className="text-neon-green">return /logs</Link>
@@ -424,10 +457,10 @@ function PostPage() {
                   })}
                 </ol>
               </Panel>
-              {posts.filter((p) => p.slug !== post.slug).length > 0 && (
+              {getRelatedPosts(post, postsMeta).length > 0 && (
                 <Panel title="related" className="mt-4">
                   <ul className="space-y-2 text-xs">
-                    {posts.filter((p) => p.slug !== post.slug).slice(0, 3).map((p) => (
+                    {getRelatedPosts(post, postsMeta).map((p) => (
                       <li key={p.slug}>
                         <Link
                           to="/logs/$slug"
@@ -445,6 +478,7 @@ function PostPage() {
           </aside>
         </div>
       </article>
+      <ImageLightbox src={lightboxSrc} alt="Expanded image" onClose={() => setLightboxSrc(null)} />
     </CyberLayout>
   );
 }
