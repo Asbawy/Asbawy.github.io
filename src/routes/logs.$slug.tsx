@@ -96,12 +96,16 @@ function isListLine(line: string): boolean {
   return /^- (?:\[ \] )?.+/.test(line);
 }
 
+function isOrderedListLine(line: string): boolean {
+  return /^\s*\d+\.\s+.+/.test(line);
+}
+
 function isHrLine(line: string): boolean {
   return line.trim() === "---";
 }
 
 function renderContent(md: string, sectionIds: string[], setLightboxSrc: (src: string) => void) {
-  const lines = md.trim().split("\n");
+  const lines = md.replace(/\r/g, "").trim().split("\n");
   const out: React.ReactNode[] = [];
   let i = 0;
   let headingIdx = -1;
@@ -165,6 +169,29 @@ function renderContent(md: string, sectionIds: string[], setLightboxSrc: (src: s
 
   while (i < lines.length) {
     const line = lines[i];
+
+    /* ── HTML (raw HTML block) ───────────────────────────────────── */
+    if (line.trim().startsWith("<div") || line.trim().startsWith("<iframe")) {
+        const buf: string[] = [line];
+        i++;
+        
+        // If the block is multi-line, collect lines until we hit the closing tag
+        if (!line.trim().endsWith("</div>") && !line.trim().endsWith("</iframe>")) {
+            while (i < lines.length && !lines[i].trim().endsWith("</div>") && !lines[i].trim().endsWith("</iframe>")) {
+                buf.push(lines[i]);
+                i++;
+            }
+            if (i < lines.length && (lines[i].trim().endsWith("</div>") || lines[i].trim().endsWith("</iframe>"))) {
+               buf.push(lines[i]);
+               i++;
+            }
+        }
+        
+        out.push(
+            <div key={`html-${i}`} className="my-8" dangerouslySetInnerHTML={{ __html: buf.join("\n") }} />
+        );
+        continue;
+    }
 
     /* ── Image (![alt](url)) ───────────────────────────────────── */
     const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
@@ -285,6 +312,28 @@ function renderContent(md: string, sectionIds: string[], setLightboxSrc: (src: s
       continue;
     }
 
+    if (isOrderedListLine(line)) {
+      const items: string[] = [];
+      while (i < lines.length && isOrderedListLine(lines[i])) {
+        const match = lines[i].match(/^\s*\d+\.\s+(.+)$/);
+        if (match) items.push(match[1]);
+        i++;
+      }
+      out.push(
+        <ol
+          key={`ol-${i}`}
+          className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-decimal ml-5"
+        >
+          {items.map((text, li) => (
+            <li key={li}>
+              <span>{renderInline(text)}</span>
+            </li>
+          ))}
+        </ol>
+      );
+      continue;
+    }
+
     if (isHrLine(line)) {
       out.push(<hr key={`hr-${i}`} className="my-8 border-panel-border" />);
       i++;
@@ -336,8 +385,11 @@ function renderContent(md: string, sectionIds: string[], setLightboxSrc: (src: s
         !lines[i].startsWith("```") &&
         !isTableLine(lines[i]) &&
         !isListLine(lines[i]) &&
+        !isOrderedListLine(lines[i]) &&
         !isHrLine(lines[i]) &&
-        !/^!\[[^\]]*\]\([^)]+\)\s*$/.test(lines[i])
+        !/^!\[[^\]]*\]\([^)]+\)\s*$/.test(lines[i]) &&
+        !lines[i].trim().startsWith("<div") &&
+        !lines[i].trim().startsWith("<iframe")
       ) {
         buf.push(lines[i]);
         i++;

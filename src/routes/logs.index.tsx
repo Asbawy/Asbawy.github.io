@@ -80,7 +80,7 @@ function LogsPage() {
                   className="group block py-4 px-1 transition-colors hover:bg-neon-green/5"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1 pr-4">
                       <div className="flex items-center gap-3 font-mono text-[10px] text-muted-foreground">
                         <span>{p.date}</span>
                         <span>·</span>
@@ -93,7 +93,7 @@ function LogsPage() {
                       </h2>
                       <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{p.excerpt}</p>
                     </div>
-                    <div className="flex flex-wrap gap-1.5 md:justify-end md:max-w-xs">
+                    <div className="flex flex-wrap gap-1.5 md:justify-end md:w-[320px] shrink-0 mt-3 md:mt-0">
                       {p.tags.map((t) => (
                         <Tag key={t} variant={tagVariantFor(t)}>{t}</Tag>
                       ))}
