@@ -2,7 +2,9 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
 import { TerminalCode } from "@/components/cyber/TerminalCode";
-import { getPostMeta, getPostContent, postsMeta } from "@/data/posts";
+import { Mermaid } from "@/components/cyber/Mermaid";
+import { getPostMeta, getPostContent, postsMeta, MdxComponents } from "@/data/posts";
+import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { ImageLightbox } from "@/components/cyber/ImageLightbox";
 import { getRelatedPosts } from "@/lib/related-posts";
@@ -75,360 +77,128 @@ export const Route = createFileRoute("/logs/$slug")({
   component: PostPage,
 });
 
-function parseTableCells(line: string): string[] {
-  return line
-    .trim()
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((c) => c.trim());
-}
-
-function isTableLine(line: string): boolean {
-  return line.trim().startsWith("|");
-}
-
-function isTableSeparator(line: string): boolean {
-  return /^\|[\s\-:|]+\|$/.test(line.trim());
-}
-
-function isListLine(line: string): boolean {
-  return /^- (?:\[ \] )?.+/.test(line);
-}
-
-function isOrderedListLine(line: string): boolean {
-  return /^\s*\d+\.\s+.+/.test(line);
-}
-
-function isHrLine(line: string): boolean {
-  return line.trim() === "---";
-}
-
-function renderContent(md: string, sectionIds: string[], setLightboxSrc: (src: string) => void) {
-  const lines = md.replace(/\r/g, "").trim().split("\n");
-  const out: React.ReactNode[] = [];
-  let i = 0;
-  let headingIdx = -1;
-
-  const linkClassName =
-    "text-neon-blue hover:text-glow-blue underline underline-offset-2 transition-colors";
-
-  const renderInline = (s: string) => {
-    const pattern = /(`[^`]+`|\*\*[^*]+\*\*|\[([^\]]+)\]\(([^)]+)\)|https?:\/\/[^\s<>)]+)/g;
-    const nodes: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    let key = 0;
-
-    while ((match = pattern.exec(s)) !== null) {
-      if (match.index > lastIndex) {
-        nodes.push(<span key={key++}>{s.slice(lastIndex, match.index)}</span>);
-      }
-
-      const chunk = match[0];
-      if (chunk.startsWith("`") && chunk.endsWith("`")) {
-        nodes.push(
-          <code
-            key={key++}
-            className="rounded bg-panel/80 border border-panel-border px-1.5 py-0.5 text-[12px] text-neon-green font-mono"
-          >
-            {chunk.slice(1, -1)}
-          </code>,
-        );
-      } else if (chunk.startsWith("**") && chunk.endsWith("**")) {
-        nodes.push(
-          <strong key={key++} className="font-semibold text-foreground">
-            {chunk.slice(2, -2)}
-          </strong>,
-        );
-      } else if (match[2] && match[3]) {
-        nodes.push(
-          <a key={key++} href={match[3]} target="_blank" rel="noopener noreferrer" className={linkClassName}>
-            {match[2]}
-          </a>,
-        );
-      } else if (chunk.startsWith("http://") || chunk.startsWith("https://")) {
-        nodes.push(
-          <a key={key++} href={chunk} target="_blank" rel="noopener noreferrer" className={linkClassName}>
-            {chunk}
-          </a>,
-        );
-      } else {
-        nodes.push(<span key={key++}>{chunk}</span>);
-      }
-
-      lastIndex = match.index + chunk.length;
-    }
-
-    if (lastIndex < s.length) {
-      nodes.push(<span key={key++}>{s.slice(lastIndex)}</span>);
-    }
-
-    return nodes.length > 0 ? nodes : [<span key={0}>{s}</span>];
-  };
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    /* ── HTML (raw HTML block) ───────────────────────────────────── */
-    if (line.trim().startsWith("<div") || line.trim().startsWith("<iframe")) {
-        const buf: string[] = [line];
-        i++;
-        
-        // If the block is multi-line, collect lines until we hit the closing tag
-        if (!line.trim().endsWith("</div>") && !line.trim().endsWith("</iframe>")) {
-            while (i < lines.length && !lines[i].trim().endsWith("</div>") && !lines[i].trim().endsWith("</iframe>")) {
-                buf.push(lines[i]);
-                i++;
-            }
-            if (i < lines.length && (lines[i].trim().endsWith("</div>") || lines[i].trim().endsWith("</iframe>"))) {
-               buf.push(lines[i]);
-               i++;
-            }
-        }
-        
-        out.push(
-            <div key={`html-${i}`} className="my-8" dangerouslySetInnerHTML={{ __html: buf.join("\n") }} />
-        );
-        continue;
-    }
-
-    /* ── Image (![alt](url)) ───────────────────────────────────── */
-    const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
-    if (imgMatch) {
-      const [, alt, src] = imgMatch;
-      out.push(
-        <figure key={`img-${i}`} className="my-8">
-          <img
-            src={src}
-            alt={alt || ""}
-            className="w-full rounded border border-panel-border cursor-zoom-in"
-            loading="lazy"
-            onClick={() => setLightboxSrc(src)}
-          />
-          {alt ? (
-            <figcaption className="mt-2 text-center font-mono text-[11px] text-muted-foreground">
-              {alt}
-            </figcaption>
-          ) : null}
-        </figure>,
-      );
-      i++;
-      continue;
-    }
-
-    if (line.startsWith("### ")) {
-      out.push(
-        <h3 key={`h3-${i}`} className="mt-8 mb-3 font-mono text-base text-foreground/90">
-          {line.replace("### ", "")}
-        </h3>,
-      );
-      i++;
-      continue;
-    }
-
-    if (line.startsWith("#### ")) {
-      out.push(
-        <h4 key={`h4-${i}`} className="mt-6 mb-2 font-mono text-sm text-neon-blue">
-          {line.replace("#### ", "")}
-        </h4>,
-      );
-      i++;
-      continue;
-    }
-
-    if (isTableLine(line)) {
-      const tableLines: string[] = [];
-      while (i < lines.length && isTableLine(lines[i])) {
-        tableLines.push(lines[i]);
-        i++;
-      }
-      const rows = tableLines
-        .filter((tl) => !isTableSeparator(tl))
-        .map(parseTableCells)
-        .filter((r) => r.length > 0);
-      if (rows.length > 0) {
-        const [header, ...body] = rows;
-        out.push(
-          <div key={`tbl-${i}`} className="my-6 overflow-x-auto rounded border border-panel-border">
-            <table className="w-full min-w-[320px] border-collapse font-mono text-[13px]">
-              <thead>
-                <tr className="border-b border-panel-border bg-panel/50">
-                  {header.map((cell, ci) => (
-                    <th
-                      key={ci}
-                      className="px-3 py-2 text-left font-semibold text-neon-green"
-                    >
-                      {renderInline(cell)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {body.map((row, ri) => (
-                  <tr key={ri} className="border-b border-panel-border/50 last:border-0">
-                    {row.map((cell, ci) => (
-                      <td key={ci} className="px-3 py-2 align-top text-foreground/85">
-                        {renderInline(cell)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>,
-        );
-      }
-      continue;
-    }
-
-    if (isListLine(line)) {
-      const items: { text: string; checkbox: boolean }[] = [];
-      while (i < lines.length && isListLine(lines[i])) {
-        const chk = lines[i].match(/^- \[ \] (.+)$/);
-        const bullet = lines[i].match(/^- (.+)$/);
-        if (chk) items.push({ text: chk[1], checkbox: true });
-        else if (bullet) items.push({ text: bullet[1], checkbox: false });
-        i++;
-      }
-      const hasCheckbox = items.some((it) => it.checkbox);
-      out.push(
-        <ul
-          key={`ul-${i}`}
-          className={`my-4 space-y-2 text-[15px] leading-7 text-foreground/85 ${
-            hasCheckbox ? "list-none ml-0" : "list-disc ml-5"
-          }`}
-        >
-          {items.map((it, li) => (
-            <li key={li} className={it.checkbox ? "flex items-start gap-2" : undefined}>
-              {it.checkbox ? (
-                <span className="shrink-0 font-mono text-[12px] text-neon-green">[ ]</span>
-              ) : null}
-              <span>{renderInline(it.text)}</span>
-            </li>
-          ))}
-        </ul>,
-      );
-      continue;
-    }
-
-    if (isOrderedListLine(line)) {
-      const items: string[] = [];
-      while (i < lines.length && isOrderedListLine(lines[i])) {
-        const match = lines[i].match(/^\s*\d+\.\s+(.+)$/);
-        if (match) items.push(match[1]);
-        i++;
-      }
-      out.push(
-        <ol
-          key={`ol-${i}`}
-          className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-decimal ml-5"
-        >
-          {items.map((text, li) => (
-            <li key={li}>
-              <span>{renderInline(text)}</span>
-            </li>
-          ))}
-        </ol>
-      );
-      continue;
-    }
-
-    if (isHrLine(line)) {
-      out.push(<hr key={`hr-${i}`} className="my-8 border-panel-border" />);
-      i++;
-      continue;
-    }
-
-    if (line.startsWith("## ")) {
-      headingIdx++;
-      const id = sectionIds[headingIdx] ?? `h-${headingIdx}`;
-      out.push(
-        <h2
-          key={`h-${i}`}
-          id={id}
-          className="scroll-mt-24 mt-10 mb-4 font-mono text-lg text-foreground border-l-2 border-neon-green pl-3"
-        >
-          <span className="text-neon-green mr-2">▸</span>
-          {line.replace("## ", "")}
-        </h2>,
-      );
-      i++;
-
-    } else if (line.startsWith("```")) {
-      const lang = line.slice(3).trim() || "bash";
-      i++;
-      const buf: string[] = [];
-      while (i < lines.length && !lines[i].startsWith("```")) {
-        buf.push(lines[i]);
-        i++;
-      }
-      i++; // skip closing ```
-      out.push(
-        <TerminalCode key={`c-${i}`} title={lang}>
-          {buf.join("\n")}
-        </TerminalCode>,
-      );
-
-    } else if (line.trim() === "") {
-      i++;
-
-    } else {
-      const buf: string[] = [line];
-      i++;
-      while (
-        i < lines.length &&
-        lines[i].trim() !== "" &&
-        !lines[i].startsWith("##") &&
-        !lines[i].startsWith("###") &&
-        !lines[i].startsWith("####") &&
-        !lines[i].startsWith("```") &&
-        !isTableLine(lines[i]) &&
-        !isListLine(lines[i]) &&
-        !isOrderedListLine(lines[i]) &&
-        !isHrLine(lines[i]) &&
-        !/^!\[[^\]]*\]\([^)]+\)\s*$/.test(lines[i]) &&
-        !lines[i].trim().startsWith("<div") &&
-        !lines[i].trim().startsWith("<iframe")
-      ) {
-        buf.push(lines[i]);
-        i++;
-      }
-      out.push(
-        <p key={`p-${i}`} className="my-4 text-[15px] leading-7 text-foreground/85">
-          {renderInline(buf.join(" "))}
-        </p>,
-      );
-    }
-  }
-  return out;
-}
-
 function PostPage() {
-  const { slug, post } = Route.useLoaderData();
-  const sectionIds = useMemo(() => post.sections.map((s) => s.id), [post]);
-  const [active, setActive] = useState(sectionIds[0]);
+  const { post } = Route.useLoaderData();
   const [progress, setProgress] = useState(0);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [headings, setHeadings] = useState<{ id: string; title: string }[]>([]);
+  const [activeHeading, setActiveHeading] = useState<string>("");
 
   useEffect(() => {
+    const extractHeadings = () => {
+      const h2s = Array.from(document.querySelectorAll("article h2"));
+      const extracted = h2s.map(h => ({
+        id: h.id,
+        title: h.textContent?.replace('▸', '').trim() || ""
+      })).filter(h => h.id);
+      
+      setHeadings(prev => {
+        if (prev.length !== extracted.length) return extracted;
+        // Simple comparison to prevent infinite re-renders
+        const isSame = prev.every((p, i) => p.id === extracted[i]?.id);
+        return isSame ? prev : extracted;
+      });
+    };
+
     const onScroll = () => {
       const h = document.documentElement;
       const scrolled = h.scrollTop;
       const max = h.scrollHeight - h.clientHeight;
       setProgress(Math.min(100, Math.max(0, (scrolled / Math.max(1, max)) * 100)));
 
-      let current = sectionIds[0];
-      for (const id of sectionIds) {
-        const el = document.getElementById(id);
-        if (el && el.getBoundingClientRect().top <= 120) current = id;
+      let current = "";
+      const h2s = Array.from(document.querySelectorAll("article h2"));
+      for (const h2 of h2s) {
+        if (h2.getBoundingClientRect().top <= 120) {
+          current = h2.id;
+        }
       }
-      setActive(current);
+      if (!current && h2s.length > 0) current = h2s[0].id;
+      setActiveHeading(current);
     };
+
+    const observer = new MutationObserver(() => {
+      extractHeadings();
+      onScroll();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    extractHeadings();
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [sectionIds]);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
+  }, []);
+
+  const components = useMemo(() => ({
+    h1: (props: any) => <h1 className="mt-8 mb-4 text-2xl md:text-3xl font-semibold text-foreground" {...props} />,
+    h2: (props: any) => (
+      <h2
+        className="scroll-mt-24 mt-10 mb-4 font-mono text-lg text-foreground border-l-2 border-neon-green pl-3"
+        {...props}
+      >
+        <span className="text-neon-green mr-2">▸</span>
+        {props.children}
+      </h2>
+    ),
+    h3: (props: any) => <h3 className="mt-8 mb-3 font-mono text-base text-foreground/90" {...props} />,
+    h4: (props: any) => <h4 className="mt-6 mb-2 font-mono text-sm text-neon-blue" {...props} />,
+    p: (props: any) => <p className="my-4 text-[15px] leading-7 text-foreground/85" {...props} />,
+    ul: (props: any) => <ul className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-disc ml-5" {...props} />,
+    ol: (props: any) => <ol className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-decimal ml-5" {...props} />,
+    li: (props: any) => <li className="marker:text-neon-green" {...props} />,
+    hr: (props: any) => <hr className="my-8 border-panel-border" {...props} />,
+    a: (props: any) => (
+      <a className="text-neon-blue hover:text-glow-blue underline underline-offset-2 transition-colors" target="_blank" rel="noopener noreferrer" {...props} />
+    ),
+    strong: (props: any) => <strong className="font-semibold text-foreground" {...props} />,
+    code: (props: any) => {
+      if (props.className) {
+        const language = props.className.replace(/language-/, '');
+        if (language === 'mermaid') {
+          return <Mermaid chart={props.children as string} />;
+        }
+        return <TerminalCode title={language}>{props.children as string}</TerminalCode>;
+      }
+      return (
+        <code className="rounded bg-panel/80 border border-panel-border px-1.5 py-0.5 text-[12px] text-neon-green font-mono">
+          {props.children}
+        </code>
+      );
+    },
+    pre: (props: any) => <>{props.children}</>, // The internal code element renders TerminalCode
+    img: (props: any) => (
+      <figure className="my-8">
+        <img
+          {...props}
+          className="w-full rounded border border-panel-border cursor-zoom-in"
+          loading="lazy"
+          onClick={() => setLightboxSrc(props.src)}
+        />
+        {props.alt && (
+          <figcaption className="mt-2 text-center font-mono text-[11px] text-muted-foreground">
+            {props.alt}
+          </figcaption>
+        )}
+      </figure>
+    ),
+    table: (props: any) => (
+      <div className="my-6 overflow-x-auto rounded border border-panel-border">
+        <table className="w-full min-w-[320px] border-collapse font-mono text-[13px]" {...props} />
+      </div>
+    ),
+    thead: (props: any) => <thead {...props} />,
+    tr: (props: any) => <tr className="border-b border-panel-border/50 last:border-0" {...props} />,
+    th: (props: any) => <th className="px-3 py-2 text-left font-semibold text-neon-green border-b border-panel-border bg-panel/50" {...props} />,
+    td: (props: any) => <td className="px-3 py-2 align-top text-foreground/85" {...props} />,
+    blockquote: (props: any) => (
+      <blockquote className="border-l-4 border-neon-blue pl-4 italic my-4 text-foreground/70 bg-panel/30 py-2 rounded-r" {...props} />
+    ),
+  }), [setLightboxSrc]);
+
+  const MDXContent = MdxComponents[post.slug] || (() => <div>Component not found</div>);
 
   return (
     <CyberLayout>
@@ -445,7 +215,7 @@ function PostPage() {
             <div className="font-mono text-[11px] text-muted-foreground flex flex-wrap items-center gap-3">
               <span>{post.date}</span>
               <span>·</span>
-              <span className="text-neon-blue">{post.category.toLowerCase()}</span>
+              <span className="text-neon-blue">{post.category?.toLowerCase()}</span>
               <span>·</span>
               <span>{post.readTime}</span>
               <span>·</span>
@@ -457,7 +227,7 @@ function PostPage() {
                   "text-neon-green"
                 }
               >
-                severity: {post.severity.toLowerCase()}
+                severity: {post.severity?.toLowerCase()}
               </span>
             </div>
 
@@ -466,49 +236,58 @@ function PostPage() {
             </h1>
 
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {post.tags.map((t) => (
+              {post.tags?.map((t) => (
                 <Tag key={t} variant={tagVariantFor(t)}>{t}</Tag>
               ))}
             </div>
-            <div className="mt-2">{renderContent(post.content, sectionIds, setLightboxSrc)}</div>
+            
+            {/* MDX Content */}
+            <div className="mt-6">
+              <Suspense fallback={<div className="animate-pulse text-neon-green font-mono">Loading core modules...</div>}>
+                <MDXContent components={components} />
+              </Suspense>
+            </div>
 
             <div className="mt-16 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
               // end of post — <Link to="/logs" className="text-neon-green">return /logs</Link>
             </div>
           </div>
+          
           <aside className="hidden lg:block">
             <div className="sticky top-6">
-              {/* Reading progress bar + section links */}
+              {/* Reading progress bar and TOC */}
               <Panel title="table of contents">
-                {/* Progress bar */}
-                <div className="mb-3 h-1 w-full overflow-hidden rounded-sm bg-secondary/60">
+                <div className="mb-4 h-1 w-full overflow-hidden rounded-sm bg-secondary/60">
                   <div
                     className="h-full bg-neon-green"
                     style={{ width: `${progress}%`, boxShadow: "0 0 10px currentColor" }}
                   />
                 </div>
-                {/* Section links (auto-generated from post.sections) */}
-                <ol className="space-y-1 font-mono text-xs">
-                  {post.sections.map((s) => {
-                    const isActive = active === s.id;
-                    return (
-                      <li key={s.id}>
-                        <a
-                          href={`#${s.id}`}
-                          className={`flex items-center gap-2 rounded px-2 py-1.5 transition-colors ${
-                            isActive
-                              ? "text-neon-green text-glow-green bg-neon-green/5"
-                              : "text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <span>{isActive ? "▸" : "·"}</span>
-                          <span className="truncate">{s.title}</span>
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ol>
+                
+                {headings.length > 0 && (
+                  <ol className="space-y-1 font-mono text-xs">
+                    {headings.map((s) => {
+                      const isActive = activeHeading === s.id;
+                      return (
+                        <li key={s.id}>
+                          <a
+                            href={`#${s.id}`}
+                            className={`flex items-center gap-2 rounded px-2 py-1.5 transition-colors ${
+                              isActive
+                                ? "text-neon-green text-glow-green bg-neon-green/5"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            <span>{isActive ? "▸" : "·"}</span>
+                            <span className="truncate">{s.title}</span>
+                          </a>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                )}
               </Panel>
+              
               {getRelatedPosts(post, postsMeta).length > 0 && (
                 <Panel title="related" className="mt-4">
                   <ul className="space-y-2 text-xs">

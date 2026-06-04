@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as StatsRouteImport } from './routes/stats'
+import { Route as CheatsheetRouteImport } from './routes/cheatsheet'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LogsIndexRouteImport } from './routes/logs.index'
 import { Route as LogsSlugRouteImport } from './routes/logs.$slug'
@@ -23,6 +25,16 @@ const ToolsRoute = ToolsRouteImport.update({
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
   path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheatsheetRoute = CheatsheetRouteImport.update({
+  id: '/cheatsheet',
+  path: '/cheatsheet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +55,8 @@ const LogsSlugRoute = LogsSlugRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/cheatsheet': typeof CheatsheetRoute
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
   '/logs/$slug': typeof LogsSlugRoute
@@ -50,6 +64,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/cheatsheet': typeof CheatsheetRoute
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
   '/logs/$slug': typeof LogsSlugRoute
@@ -58,6 +74,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/cheatsheet': typeof CheatsheetRoute
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
   '/logs/$slug': typeof LogsSlugRoute
@@ -65,14 +83,38 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/stats' | '/tools' | '/logs/$slug' | '/logs/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/cheatsheet'
+    | '/stats'
+    | '/tools'
+    | '/logs/$slug'
+    | '/logs/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/stats' | '/tools' | '/logs/$slug' | '/logs'
-  id: '__root__' | '/' | '/stats' | '/tools' | '/logs/$slug' | '/logs/'
+  to:
+    | '/'
+    | '/about'
+    | '/cheatsheet'
+    | '/stats'
+    | '/tools'
+    | '/logs/$slug'
+    | '/logs'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/cheatsheet'
+    | '/stats'
+    | '/tools'
+    | '/logs/$slug'
+    | '/logs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  CheatsheetRoute: typeof CheatsheetRoute
   StatsRoute: typeof StatsRoute
   ToolsRoute: typeof ToolsRoute
   LogsSlugRoute: typeof LogsSlugRoute
@@ -93,6 +135,20 @@ declare module '@tanstack/react-router' {
       path: '/stats'
       fullPath: '/stats'
       preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cheatsheet': {
+      id: '/cheatsheet'
+      path: '/cheatsheet'
+      fullPath: '/cheatsheet'
+      preLoaderRoute: typeof CheatsheetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -121,6 +177,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  CheatsheetRoute: CheatsheetRoute,
   StatsRoute: StatsRoute,
   ToolsRoute: ToolsRoute,
   LogsSlugRoute: LogsSlugRoute,

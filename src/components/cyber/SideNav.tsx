@@ -1,11 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, FileTerminal, Wrench, Activity, Skull } from "lucide-react";
+import { Home, FileTerminal, Wrench, Activity, Skull, BookOpen, User } from "lucide-react";
 
 const items = [
   { to: "/", label: "/home", icon: Home },
   { to: "/logs", label: "/logs", icon: FileTerminal },
   { to: "/tools", label: "/tools", icon: Wrench },
   { to: "/stats", label: "/stats", icon: Activity },
+  { to: "/cheatsheet", label: "/cheatsheet", icon: BookOpen },
+  { to: "/about", label: "/about", icon: User },
 ];
 
 export function SideNav() {
@@ -78,6 +80,8 @@ export function TopBar() {
         <Link to="/logs" className="hover:text-neon-green">/logs</Link>
         <Link to="/tools" className="hover:text-neon-green">/tools</Link>
         <Link to="/stats" className="hover:text-neon-green">/stats</Link>
+        <Link to="/cheatsheet" className="hover:text-neon-green">/cheat</Link>
+        <Link to="/about" className="hover:text-neon-green">/about</Link>
       </nav>
     </div>
   );
