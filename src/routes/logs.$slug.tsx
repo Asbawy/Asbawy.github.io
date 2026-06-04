@@ -7,6 +7,8 @@ import { getPostMeta, getPostContent, postsMeta, MdxComponents } from "@/data/po
 import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { ImageLightbox } from "@/components/cyber/ImageLightbox";
+import { ShareButtons } from "@/components/cyber/ShareButtons";
+import { AuthorBio } from "@/components/cyber/AuthorBio";
 import { getRelatedPosts } from "@/lib/related-posts";
 
 export const Route = createFileRoute("/logs/$slug")({
@@ -30,7 +32,9 @@ export const Route = createFileRoute("/logs/$slug")({
             { property: "og:description", content: p.excerpt },
             { property: "og:type", content: "article" },
             { property: "og:url", content: url },
+            { property: "og:image", content: "https://asbawy.github.io/asbawy.jpg" },
             { name: "twitter:card", content: "summary_large_image" },
+            { name: "twitter:image", content: "https://asbawy.github.io/asbawy.jpg" },
           ]
         : [{ title: "Asbawy Blog" }],
       links: [
@@ -240,6 +244,11 @@ function PostPage() {
                 <Tag key={t} variant={tagVariantFor(t)}>{t}</Tag>
               ))}
             </div>
+
+            {/* Share Buttons - Top */}
+            <div className="mt-5">
+              <ShareButtons title={post.title} slug={post.slug} />
+            </div>
             
             {/* MDX Content */}
             <div className="mt-6">
@@ -248,7 +257,15 @@ function PostPage() {
               </Suspense>
             </div>
 
-            <div className="mt-16 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
+            {/* Share Buttons - Bottom */}
+            <div className="mt-10">
+              <ShareButtons title={post.title} slug={post.slug} />
+            </div>
+
+            {/* Author Bio */}
+            <AuthorBio />
+
+            <div className="mt-10 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
               // end of post — <Link to="/logs" className="text-neon-green">return /logs</Link>
             </div>
           </div>

@@ -79,8 +79,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Asbawy Blog" },
       { property: "og:description", content: "Asbawy's personal blog — security research, dev logs, and tools." },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { property: "og:image", content: "https://asbawy.github.io/asbawy.jpg" },
+      { property: "og:url", content: "https://asbawy.github.io" },
+      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Asbawy" },
+      { name: "twitter:image", content: "https://asbawy.github.io/asbawy.jpg" },
+      { name: "google-site-verification", content: "-wRV8UzJbo8W6toGN1s2sXQCwhjDhT_qUoeUTUCgt0g" },
     ],
     links: [
       {
@@ -94,6 +98,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       { rel: "apple-touch-icon", href: "/favicon.svg" },
       { rel: "canonical", href: "https://asbawy.github.io" },
+      { rel: "alternate", type: "application/rss+xml", title: "Asbawy Blog RSS Feed", href: "https://asbawy.github.io/feed.xml" },
+    ],
+    scripts: [
+      {
+        src: "https://cloud.umami.is/script.js",
+        defer: true,
+        "data-website-id": "735888cd-b21c-4c63-9b06-6b99d656846d",
+      },
     ],
   }),
   shellComponent: RootShell,

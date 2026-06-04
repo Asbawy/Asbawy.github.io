@@ -5,17 +5,19 @@ const BASE_URL = "https://asbawy.github.io";
 const postsDir = join(process.cwd(), "src/data/posts");
 
 async function main() {
-  const files = readdirSync(postsDir).filter((f) => f.endsWith(".ts") && f !== "_template.ts");
+  const files = readdirSync(postsDir).filter((f) => f.endsWith(".mdx"));
 
   const staticPages = [
     { path: "/", changefreq: "weekly", priority: "1.0" },
     { path: "/logs", changefreq: "daily", priority: "0.9" },
+    { path: "/about", changefreq: "monthly", priority: "0.8" },
+    { path: "/cheatsheet", changefreq: "monthly", priority: "0.7" },
     { path: "/tools", changefreq: "monthly", priority: "0.7" },
     { path: "/stats", changefreq: "weekly", priority: "0.6" },
   ];
 
   const postPages = files.map((f) => ({
-    path: `/logs/${f.replace(/\.ts$/, "")}`,
+    path: `/logs/${f.replace(/\.mdx$/, "")}`,
     changefreq: "monthly",
     priority: "0.8",
   }));
@@ -39,7 +41,7 @@ async function main() {
     "</urlset>",
   ].join("\n");
 
-  const outDir = join(process.cwd(), "dist/client");
+  const outDir = join(process.cwd(), "public");
   if (!existsSync(outDir)) {
     mkdirSync(outDir, { recursive: true });
   }

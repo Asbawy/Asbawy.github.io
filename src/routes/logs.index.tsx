@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
 import { Search } from "lucide-react";
+import { RssSubscribe } from "@/components/cyber/RssSubscribe";
 
 export const Route = createFileRoute("/logs/")({
   head: () => ({
@@ -109,6 +110,9 @@ function LogsPage() {
             )}
           </ul>
         </Panel>
+
+        {/* RSS Subscribe Prompt */}
+        <RssSubscribe />
       </section>
     </CyberLayout>
   );

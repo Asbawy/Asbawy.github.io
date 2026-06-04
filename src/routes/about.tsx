@@ -138,7 +138,7 @@ function AboutPage() {
               <div className="rounded-md border border-neon-green/40 bg-panel/60 p-[3px] shadow-[0_0_12px_rgba(0,255,136,0.08)] group-hover:border-neon-green/70 group-hover:shadow-[0_0_20px_rgba(0,255,136,0.15)] transition-all duration-400">
                 <div className="rounded overflow-hidden">
                   <img
-                    src="/asbawy.jpg"
+                    src="/asbawy.webp"
                     alt="Asbawy"
                     className="h-24 w-24 md:h-28 md:w-28 object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-500"
                   />
