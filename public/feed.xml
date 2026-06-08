@@ -5,8 +5,26 @@
     <link>https://asbawy.github.io</link>
     <description>Security research, dev logs, automation, and scripting by Asbawy.</description>
     <language>en-us</language>
-    <lastBuildDate>Thu, 04 Jun 2026 23:31:31 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 08 Jun 2026 00:58:28 GMT</lastBuildDate>
     <atom:link href="https://asbawy.github.io/feed.xml" rel="self" type="application/rss+xml"/>
+    <item>
+      <title>Shellcode 101: From Assembly to AV Evasion</title>
+      <link>https://asbawy.github.io/logs/shellcode101</link>
+      <guid isPermaLink="true">https://asbawy.github.io/logs/shellcode101</guid>
+      <description>Go from zero to exploit-ready: learn how shellcode works, how buffer overflows weaponize it, how to survive null bytes, generate payloads with MSFvenom, and slip past modern AV/EDR. The complete guide for CTF players and Red Teamers.</description>
+      <pubDate>Mon, 08 Jun 2026 00:00:00 GMT</pubDate>
+      <category>Offensive Security</category>
+      <category>Exploit Development</category>
+      <category>Shellcode</category>
+      <category>Red Teaming</category>
+      <category>CTF</category>
+      <category>Buffer Overflow</category>
+      <category>x86-64 Assembly</category>
+      <category>Penetration Testing</category>
+      <category>MSFvenom</category>
+      <category>AV Evasion</category>
+      <category>EDR Bypass</category>
+    </item>
     <item>
       <title>CVE-2026-42945 — NGINX Rift: The 18-Year-Old RCE Hiding in Plain Sight</title>
       <link>https://asbawy.github.io/logs/cve-2026-42945-nginx-rift</link>
