@@ -31,6 +31,11 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://asbawy.github.io/logs/badsuccessor</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://asbawy.github.io/logs/cve-2021-43798-grafana-directory-traversal</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

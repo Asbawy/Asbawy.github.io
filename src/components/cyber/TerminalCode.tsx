@@ -46,7 +46,7 @@ export function TerminalCode({
         </button>
       </div>
       <pre className="overflow-x-auto px-4 py-3 text-[12.5px] leading-relaxed text-foreground/90 font-mono">
-        <code ref={codeRef} className={`language-${title}`}>
+        <code ref={codeRef} className={`language-${title} !bg-transparent !p-0`}>
           {children}
         </code>
       </pre>

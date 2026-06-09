@@ -106,7 +106,7 @@ export function SystemStatus() {
               <div
                 key={i}
                 className={`h-3 flex-1 rounded-[1px] ${
-                  intensity ? threat.bar : "bg-secondary/50"
+                  intensity ? `${threat.bar} ${threat.color}` : "bg-secondary/50"
                 }`}
                 style={intensity ? { boxShadow: `0 0 8px currentColor` } : undefined}
               />
