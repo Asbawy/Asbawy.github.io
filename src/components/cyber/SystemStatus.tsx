@@ -72,7 +72,7 @@ export function SystemStatus() {
           </div>
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="flex items-center gap-2"><Wifi className="h-3.5 w-3.5" />throughput</span>
-            <span className="text-neon-blue">{net.toFixed(0)} kB/s</span>
+            <span className="text-neon-green">{net.toFixed(0)} kB/s</span>
           </div>
         </div>
         <div className="space-y-3">
@@ -81,7 +81,7 @@ export function SystemStatus() {
               <span className="flex items-center gap-1"><Cpu className="h-3 w-3" />cpu</span>
               <span className="text-foreground">{cpu.toFixed(0)}%</span>
             </div>
-            <Bar value={cpu} color="bg-neon-blue" />
+            <Bar value={cpu} color="bg-neon-green" />
           </div>
           <div>
             <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
@@ -117,3 +117,4 @@ export function SystemStatus() {
     </Panel>
   );
 }
+

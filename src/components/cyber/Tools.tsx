@@ -51,7 +51,7 @@ export function JwtDecoder() {
         value={input}
         onChange={(e) => setInput(e.target.value.trim())}
         rows={4}
-        className="w-full resize-none rounded-md border border-panel-border bg-background/80 p-3 font-mono text-[12px] text-neon-blue focus:outline-none focus:border-neon-green/50 break-all"
+        className="w-full resize-none rounded-md border border-panel-border bg-background/80 p-3 font-mono text-[12px] text-neon-green focus:outline-none focus:border-neon-green/50 break-all"
       />
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
@@ -90,7 +90,7 @@ function Slot({
     tone === "green"
       ? "text-neon-green"
       : tone === "blue"
-      ? "text-neon-blue"
+      ? "text-neon-green"
       : "text-muted-foreground";
   return (
     <div className="rounded-md border border-panel-border bg-background/60">
@@ -161,7 +161,7 @@ export function PayloadEncoder() {
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={3}
-        className="w-full resize-none rounded-md border border-panel-border bg-background/80 p-3 font-mono text-[12px] text-foreground focus:outline-none focus:border-neon-blue/50"
+        className="w-full resize-none rounded-md border border-panel-border bg-background/80 p-3 font-mono text-[12px] text-foreground focus:outline-none focus:border-neon-green/50"
       />
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
@@ -172,8 +172,8 @@ export function PayloadEncoder() {
       </div>
 
       {decoded.length > 0 && (
-        <div className="mt-4 rounded-md border border-neon-blue/30 bg-neon-blue/5 p-3 font-mono text-[11px]">
-          <div className="text-neon-blue mb-1">// auto-detected decodings</div>
+        <div className="mt-4 rounded-md border border-neon-green/30 bg-neon-green/5 p-3 font-mono text-[11px]">
+          <div className="text-neon-green mb-1">// auto-detected decodings</div>
           {decoded.map((d) => (
             <div key={d.label} className="text-foreground/80 break-all">
               <span className="text-muted-foreground">{d.label}:</span> {d.out}
@@ -184,3 +184,4 @@ export function PayloadEncoder() {
     </Panel>
   );
 }
+

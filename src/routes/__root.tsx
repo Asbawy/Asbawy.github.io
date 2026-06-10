@@ -10,24 +10,37 @@ import {
 
 import hljsCss from "highlight.js/styles/github-dark.css?url";
 import appCss from "../styles.css?url";
+import { MatrixBackground } from "@/components/cyber/MatrixBackground";
+
+import { Terminal, Home, AlertCircle } from "lucide-react";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
+    <div className="flex flex-col min-h-[calc(100vh-4rem)] items-center justify-center p-6 relative z-10">
+      <div className="w-full max-w-lg border border-threat-high/30 bg-panel/80 backdrop-blur-md rounded-xl p-8 shadow-[0_0_50px_rgba(var(--threat-high),0.1)] font-mono text-center">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-threat-high/10 mb-6 border border-threat-high/30">
+          <AlertCircle className="h-10 w-10 text-threat-high animate-pulse" />
         </div>
+        
+        <h1 className="text-5xl md:text-6xl font-bold text-threat-high mb-2">404</h1>
+        <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-6">CONNECTION REFUSED</h2>
+        
+        <div className="bg-background/50 border border-panel-border rounded-md p-4 text-left text-[13px] text-muted-foreground space-y-2 mb-8 font-mono">
+          <div><span className="text-neon-green font-bold">$</span> <span className="opacity-80">curl -I /requested-path</span></div>
+          <div className="text-threat-mid">HTTP/2 404 Not Found</div>
+          <div className="text-threat-mid">X-Error: Resource permanently displaced or never existed</div>
+          <div className="pt-2"><span className="text-neon-green font-bold">$</span> <span className="opacity-80">traceroute target</span></div>
+          <div className="text-foreground/60">1  localhost (127.0.0.1)  0.032 ms</div>
+          <div className="text-threat-mid">2  * * * (Destination Host Unreachable)</div>
+        </div>
+
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 rounded-md bg-neon-green/10 border border-neon-green text-neon-green px-6 py-3 text-sm font-semibold hover:bg-neon-green hover:text-black transition-all hover:shadow-[0_0_20px_rgba(var(--neon-green),0.4)]"
+        >
+          <Home className="h-4 w-4" />
+          RETURN TO LOCALHOST
+        </Link>
       </div>
     </div>
   );
@@ -121,6 +134,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <MatrixBackground />
         {children}
         <Scripts />
       </body>

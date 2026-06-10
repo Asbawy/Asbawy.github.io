@@ -1,118 +1,66 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
   <channel>
     <title>Asbawy Blog</title>
+    <description>Security cheatsheets, quick references, and field notes by Asbawy.</description>
     <link>https://asbawy.github.io</link>
-    <description>Security research, dev logs, automation, and scripting by Asbawy.</description>
-    <language>en-us</language>
-    <lastBuildDate>Tue, 09 Jun 2026 08:06:38 GMT</lastBuildDate>
-    <atom:link href="https://asbawy.github.io/feed.xml" rel="self" type="application/rss+xml"/>
+    <lastBuildDate>Wed, 10 Jun 2026 14:29:28 GMT</lastBuildDate>
+    
     <item>
-      <title>BadSuccessor: dMSA Privilege Escalation in Windows Server 2025</title>
+      <title><![CDATA[Linux Privilege Escalation: Enumeration Cheatsheet]]></title>
+      <description><![CDATA[Copy-paste-ready enumeration commands covering every critical Linux privesc vector — OS, users, network, files, capabilities, and scheduled tasks. Built for Red Teamers, pentesters, and CTF players.]]></description>
+      <link>https://asbawy.github.io/cheatsheet/linux/privesc-enumeration</link>
+      <guid>https://asbawy.github.io/cheatsheet/linux/privesc-enumeration</guid>
+      <pubDate>Wed, 10 Jun 2026 14:29:28 GMT</pubDate>
+    </item>
+  
+    <item>
+      <title><![CDATA[BadSuccessor: dMSA Privilege Escalation in Windows Server 2025]]></title>
+      <description><![CDATA[A complete technical breakdown of the BadSuccessor vulnerability in Windows Server 2025, explaining how dMSA migration mechanics can be abused for full domain compromise.]]></description>
       <link>https://asbawy.github.io/logs/badsuccessor</link>
-      <guid isPermaLink="true">https://asbawy.github.io/logs/badsuccessor</guid>
-      <description>A complete technical breakdown of the BadSuccessor vulnerability in Windows Server 2025, explaining how dMSA migration mechanics can be abused for full domain compromise.</description>
+      <guid>https://asbawy.github.io/logs/badsuccessor</guid>
       <pubDate>Tue, 09 Jun 2026 00:00:00 GMT</pubDate>
-      <category>Active Directory</category>
-      <category>Windows Server 2025</category>
-      <category>Privilege Escalation</category>
-      <category>Red Team</category>
-      <category>Kerberos</category>
-      <category>dMSA</category>
-      <category>BadSuccessor</category>
     </item>
+  
     <item>
-      <title>Shellcode 101: From Assembly to AV Evasion</title>
-      <link>https://asbawy.github.io/logs/shellcode101</link>
-      <guid isPermaLink="true">https://asbawy.github.io/logs/shellcode101</guid>
-      <description>Go from zero to exploit-ready: learn how shellcode works, how buffer overflows weaponize it, how to survive null bytes, generate payloads with MSFvenom, and slip past modern AV/EDR. The complete guide for CTF players and Red Teamers.</description>
-      <pubDate>Mon, 08 Jun 2026 00:00:00 GMT</pubDate>
-      <category>Offensive Security</category>
-      <category>Exploit Development</category>
-      <category>Shellcode</category>
-      <category>Red Teaming</category>
-      <category>CTF</category>
-      <category>Buffer Overflow</category>
-      <category>x86-64 Assembly</category>
-      <category>Penetration Testing</category>
-      <category>MSFvenom</category>
-      <category>AV Evasion</category>
-      <category>EDR Bypass</category>
-    </item>
-    <item>
-      <title>CVE-2026-42945 — NGINX Rift: The 18-Year-Old RCE Hiding in Plain Sight</title>
+      <title><![CDATA[CVE-2026-42945 — NGINX Rift: The 18-Year-Old RCE Hiding in Plain Sight]]></title>
+      <description><![CDATA[A critical heap buffer overflow in ngx_http_rewrite_module — hiding since 2008, CVSS 9.2, unauthenticated RCE from a single crafted request.]]></description>
       <link>https://asbawy.github.io/logs/cve-2026-42945-nginx-rift</link>
-      <guid isPermaLink="true">https://asbawy.github.io/logs/cve-2026-42945-nginx-rift</guid>
-      <description>A critical heap buffer overflow in ngx_http_rewrite_module — hiding since 2008, CVSS 9.2, unauthenticated RCE from a single crafted request.</description>
+      <guid>https://asbawy.github.io/logs/cve-2026-42945-nginx-rift</guid>
       <pubDate>Thu, 04 Jun 2026 00:00:00 GMT</pubDate>
-      <category>RCE</category>
-      <category>CVE</category>
-      <category>Nginx</category>
-      <category>Heap Overflow</category>
-      <category>Exploit</category>
     </item>
+  
     <item>
-      <title>Legacy Lethality: Weaponizing OLE &amp; VBA Macros in the GenAI Era</title>
+      <title><![CDATA[Legacy Lethality: Weaponizing OLE & VBA Macros in the GenAI Era]]></title>
+      <description><![CDATA[Enterprise endpoints keep falling to attack primitives from the early 1990s. OLE and VBA macros still dominate initial access because legacy interoperability requirements override security posture. Finance, HR, and operations depend on macro-enabled workflows, and generative AI has collapsed the skill barrier—Q1 2026 telemetry shows over 60% of macro-based malware uses AI-generated obfuscation. This post covers the full attack lifecycle: trigger mechanisms, obfuscation, in-process payload injection, direct syscalls from VBA, XLM abuse, OLE weaponization without macros, and the CVE-2026-21509 kill-bit bypass.]]></description>
       <link>https://asbawy.github.io/logs/weaponizing-ole-vba-macros</link>
-      <guid isPermaLink="true">https://asbawy.github.io/logs/weaponizing-ole-vba-macros</guid>
-      <description>Enterprise endpoints keep falling to attack primitives from the early 1990s. OLE and VBA macros still dominate initial access because legacy interoperability requirements override security posture. Finance, HR, and operations depend on macro-enabled workflows, and generative AI has collapsed the skill barrier—Q1 2026 telemetry shows over 60% of macro-based malware uses AI-generated obfuscation. This post covers the full attack lifecycle: trigger mechanisms, obfuscation, in-process payload injection, direct syscalls from VBA, XLM abuse, OLE weaponization without macros, and the CVE-2026-21509 kill-bit bypass.</description>
+      <guid>https://asbawy.github.io/logs/weaponizing-ole-vba-macros</guid>
       <pubDate>Wed, 03 Jun 2026 00:00:00 GMT</pubDate>
-      <category>ole</category>
-      <category>vba</category>
-      <category>macros</category>
-      <category>red-team</category>
-      <category>malware-analysis</category>
-      <category>edr-evasion</category>
-      <category>genai</category>
-      <category>office</category>
     </item>
+  
     <item>
-      <title>Hijacking Grammarly Desktop: How a Missing DLL Leads to Silent Code Execution</title>
+      <title><![CDATA[Hijacking Grammarly Desktop: How a Missing DLL Leads to Silent Code Execution]]></title>
+      <description><![CDATA[Grammarly Desktop is a widely used writing assistant that runs in the background on Windows, checking grammar and spelling across applications. The application runs as a trusted, signed binary. We found that Grammarly Desktop loads several Windows system libraries from its own local application folder instead of from protected system directories. Because this folder lives inside the user's AppData directory, any code running as that user can place a malicious DLL file there. When Grammarly starts, it loads and executes the attacker's code with the same privileges as the logged-in user. This post explains how the vulnerability works, demonstrates three proof-of-concept attacks, and discusses how to fix the underlying flaw.]]></description>
       <link>https://asbawy.github.io/logs/grammarly-dll-hijacking-blog</link>
-      <guid isPermaLink="true">https://asbawy.github.io/logs/grammarly-dll-hijacking-blog</guid>
-      <description>Grammarly Desktop is a widely used writing assistant that runs in the background on Windows, checking grammar and spelling across applications. The application runs as a trusted, signed binary. We found that Grammarly Desktop loads several Windows system libraries from its own local application folder instead of from protected system directories. Because this folder lives inside the user&apos;s AppData directory, any code running as that user can place a malicious DLL file there. When Grammarly starts, it loads and executes the attacker&apos;s code with the same privileges as the logged-in user. This post explains how the vulnerability works, demonstrates three proof-of-concept attacks, and discusses how to fix the underlying flaw.</description>
+      <guid>https://asbawy.github.io/logs/grammarly-dll-hijacking-blog</guid>
       <pubDate>Thu, 28 May 2026 00:00:00 GMT</pubDate>
-      <category>grammarly</category>
-      <category>dll-hijacking</category>
-      <category>windows</category>
-      <category>red-team</category>
-      <category>penetration-testing</category>
-      <category>vulnerability</category>
     </item>
+  
     <item>
-      <title>Data Exfiltration Guide</title>
+      <title><![CDATA[Data Exfiltration Guide]]></title>
+      <description><![CDATA[A comprehensive red-team reference covering data exfiltration techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS — including advanced IP-over-DNS tunneling with Iodine and HTTP tunneling with Neo-reGeorg — with operational security notes and detection guidance for each method.]]></description>
       <link>https://asbawy.github.io/logs/data-exfiltration-guide</link>
-      <guid isPermaLink="true">https://asbawy.github.io/logs/data-exfiltration-guide</guid>
-      <description>A comprehensive red-team reference covering data exfiltration techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS — including advanced IP-over-DNS tunneling with Iodine and HTTP tunneling with Neo-reGeorg — with operational security notes and detection guidance for each method.</description>
+      <guid>https://asbawy.github.io/logs/data-exfiltration-guide</guid>
       <pubDate>Wed, 13 May 2026 00:00:00 GMT</pubDate>
-      <category>data-exfiltration</category>
-      <category>network</category>
-      <category>tcp</category>
-      <category>ssh</category>
-      <category>http</category>
-      <category>https</category>
-      <category>icmp</category>
-      <category>dns</category>
-      <category>tunneling</category>
-      <category>red-team</category>
-      <category>opsec</category>
-      <category>penetration-testing</category>
     </item>
+  
     <item>
-      <title>CVE-2021-43798 Grafana Directory Traversal Deep Dive</title>
+      <title><![CDATA[CVE-2021-43798 Grafana Directory Traversal Deep Dive]]></title>
+      <description><![CDATA[Deep dive into CVE-2021-43798 — unauthenticated directory traversal in Grafana 8.x via /public/plugins/. Covers root cause, manual exploitation, URL normalization pitfalls, high-value loot targets, and automation with GrafTraverse.]]></description>
       <link>https://asbawy.github.io/logs/cve-2021-43798-grafana-directory-traversal</link>
-      <guid isPermaLink="true">https://asbawy.github.io/logs/cve-2021-43798-grafana-directory-traversal</guid>
-      <description>Deep dive into CVE-2021-43798 — unauthenticated directory traversal in Grafana 8.x via /public/plugins/. Covers root cause, manual exploitation, URL normalization pitfalls, high-value loot targets, and automation with GrafTraverse.</description>
+      <guid>https://asbawy.github.io/logs/cve-2021-43798-grafana-directory-traversal</guid>
       <pubDate>Thu, 12 Jan 2023 00:00:00 GMT</pubDate>
-      <category>grafana</category>
-      <category>cve-2021-43798</category>
-      <category>directory-traversal</category>
-      <category>lfi</category>
-      <category>web</category>
-      <category>red-team</category>
-      <category>penetration-testing</category>
-      <category>automation</category>
-      <category>graftraverse</category>
     </item>
+  
   </channel>
 </rss>

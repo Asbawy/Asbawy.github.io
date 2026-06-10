@@ -22,7 +22,23 @@ async function main() {
     priority: "0.8",
   }));
 
-  const entries = [...staticPages, ...postPages];
+  const cheatDir = join(process.cwd(), "src/data/cheatsheets");
+  let cheatPages: any[] = [];
+  try {
+    const cheatFiles = readdirSync(cheatDir, { recursive: true });
+    cheatPages = cheatFiles
+      .filter((f) => typeof f === 'string' && f.endsWith(".mdx"))
+      .map((f) => {
+        const normalized = (f as string).replace(/\\/g, "/").replace(/\.mdx$/, "");
+        return {
+          path: `/cheatsheet/${normalized}`,
+          changefreq: "monthly",
+          priority: "0.7",
+        };
+      });
+  } catch (e) {}
+
+  const entries = [...staticPages, ...postPages, ...cheatPages];
 
   const urls = entries.map((e) =>
     [

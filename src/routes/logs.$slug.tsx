@@ -148,14 +148,14 @@ function PostPage() {
       </h2>
     ),
     h3: (props: any) => <h3 className="mt-8 mb-3 font-mono text-base text-foreground/90" {...props} />,
-    h4: (props: any) => <h4 className="mt-6 mb-2 font-mono text-sm text-neon-blue" {...props} />,
+    h4: (props: any) => <h4 className="mt-6 mb-2 font-mono text-sm text-neon-green" {...props} />,
     p: (props: any) => <p className="my-4 text-[15px] leading-7 text-foreground/85" {...props} />,
     ul: (props: any) => <ul className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-disc ml-5" {...props} />,
     ol: (props: any) => <ol className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-decimal ml-5" {...props} />,
     li: (props: any) => <li className="marker:text-neon-green" {...props} />,
     hr: (props: any) => <hr className="my-8 border-panel-border" {...props} />,
     a: (props: any) => (
-      <a className="text-neon-blue hover:text-glow-blue underline underline-offset-2 transition-colors" target="_blank" rel="noopener noreferrer" {...props} />
+      <a className="text-neon-green hover:text-glow-green underline underline-offset-2 transition-colors" target="_blank" rel="noopener noreferrer" {...props} />
     ),
     strong: (props: any) => <strong className="font-semibold text-foreground" {...props} />,
     code: (props: any) => {
@@ -198,7 +198,7 @@ function PostPage() {
     th: (props: any) => <th className="px-3 py-2 text-left font-semibold text-neon-green border-b border-panel-border bg-panel/50" {...props} />,
     td: (props: any) => <td className="px-3 py-2 align-top text-foreground/85" {...props} />,
     blockquote: (props: any) => (
-      <blockquote className="border-l-4 border-neon-blue pl-4 italic my-4 text-foreground/70 bg-panel/30 py-2 rounded-r" {...props} />
+      <blockquote className="border-l-4 border-neon-green pl-4 italic my-4 text-foreground/70 bg-panel/30 py-2 rounded-r" {...props} />
     ),
   }), [setLightboxSrc]);
 
@@ -206,7 +206,7 @@ function PostPage() {
 
   return (
     <CyberLayout>
-      <article className="px-6 md:px-10 py-10 max-w-6xl">
+      <article className="px-6 md:px-10 py-10 max-w-6xl bg-background/85 backdrop-blur-md rounded-xl mx-4 my-6 border border-panel-border/30">
         <Link
           to="/logs"
           className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-neon-green"
@@ -219,7 +219,7 @@ function PostPage() {
             <div className="font-mono text-[11px] text-muted-foreground flex flex-wrap items-center gap-3">
               <span>{post.date}</span>
               <span>·</span>
-              <span className="text-neon-blue">{post.category?.toLowerCase()}</span>
+              <span className="text-neon-green">{post.category?.toLowerCase()}</span>
               <span>·</span>
               <span>{post.readTime}</span>
               <span>·</span>
@@ -227,7 +227,7 @@ function PostPage() {
                 className={
                   post.severity === "Critical" ? "text-threat-high" :
                   post.severity === "High" ? "text-threat-mid" :
-                  post.severity === "Medium" ? "text-neon-blue" :
+                  post.severity === "Medium" ? "text-neon-green" :
                   "text-neon-green"
                 }
               >
@@ -330,3 +330,4 @@ function PostPage() {
     </CyberLayout>
   );
 }
+

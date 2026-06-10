@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, FileTerminal, Wrench, Activity, Skull, BookOpen, User } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 const items = [
   { to: "/", label: "/home", icon: Home },
@@ -56,7 +57,11 @@ export function SideNav() {
         })}
       </nav>
 
-      <div className="m-3 rounded-md border border-panel-border bg-panel/60 p-3 text-[11px] font-mono">
+      <div className="mx-3 mt-auto mb-2">
+        <ThemeToggle />
+      </div>
+
+      <div className="mx-3 mb-3 rounded-md border border-panel-border bg-panel/60 p-3 text-[11px] font-mono">
         <div className="flex items-center justify-between text-muted-foreground">
           <span>session</span>
           <span className="text-neon-green">● live</span>
@@ -82,6 +87,9 @@ export function TopBar() {
         <Link to="/stats" className="hover:text-neon-green">/stats</Link>
         <Link to="/cheatsheet" className="hover:text-neon-green">/cheat</Link>
         <Link to="/about" className="hover:text-neon-green">/about</Link>
+        <div className="pl-2 border-l border-panel-border">
+          <ThemeToggle />
+        </div>
       </nav>
     </div>
   );

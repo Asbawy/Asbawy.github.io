@@ -35,7 +35,7 @@ export function AuthorBio() {
                 (Mohammed Al-Kasabi)
               </span>
             </Link>
-            <p className="mt-1 font-mono text-[11px] text-neon-blue">
+            <p className="mt-1 font-mono text-[11px] text-neon-green">
               Red Team Consultant · Penetration Tester · Bug Bounty Hunter
             </p>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed max-w-lg">
@@ -79,3 +79,5 @@ export function AuthorBio() {
     </section>
   );
 }
+
+

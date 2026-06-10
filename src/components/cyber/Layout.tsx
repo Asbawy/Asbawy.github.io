@@ -2,7 +2,7 @@ import { SideNav, TopBar } from "./SideNav";
 
 export function CyberLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen flex w-full bg-background text-foreground">
+    <div className="min-h-screen flex w-full text-foreground">
       <SideNav />
       <div className="flex-1 min-w-0 flex flex-col">
         <TopBar />
@@ -55,7 +55,7 @@ export function Tag({
   const styles: Record<string, string> = {
     default: "border-panel-border text-muted-foreground",
     green: "border-neon-green/40 text-neon-green bg-neon-green/5",
-    blue: "border-neon-blue/40 text-neon-blue bg-neon-blue/5",
+    blue: "border-neon-green/40 text-neon-green bg-neon-green/5",
     red: "border-threat-high/50 text-threat-high bg-threat-high/10",
     amber: "border-threat-mid/50 text-threat-mid bg-threat-mid/10",
   };
@@ -75,3 +75,4 @@ export function tagVariantFor(tag: string) {
   if (["jwt", "llm", "prompt injection"].includes(t)) return "blue" as const;
   return "green" as const;
 }
+

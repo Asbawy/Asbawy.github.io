@@ -70,9 +70,15 @@ function Index() {
             </Link>
             <Link
               to="/tools"
-              className="inline-flex items-center gap-2 rounded-md border border-neon-blue/40 bg-neon-blue/5 px-4 py-2 text-neon-blue hover:border-glow-blue transition-all"
+              className="inline-flex items-center gap-2 rounded-md border border-neon-green/40 bg-neon-green/5 px-4 py-2 text-neon-green hover:border-glow-green transition-all"
             >
               open /tools
+            </Link>
+            <Link
+              to="/cheatsheet"
+              className="inline-flex items-center gap-2 rounded-md border border-neon-green/40 bg-neon-green/5 px-4 py-2 text-neon-green hover:border-glow-green transition-all"
+            >
+              open /cheatsheet
             </Link>
           </div>
         </div>
@@ -108,7 +114,7 @@ function Index() {
           <Panel
             title="recent posts"
             right={
-              <Link to="/logs" className="text-[10px] text-neon-blue hover:text-glow-blue">
+              <Link to="/logs" className="text-[10px] text-neon-green hover:text-glow-green">
                 view all →
               </Link>
             }
@@ -132,7 +138,7 @@ function Index() {
                       <span className={
                         p.severity === "Critical" ? "text-threat-high" :
                         p.severity === "High" ? "text-threat-mid" :
-                        p.severity === "Medium" ? "text-neon-blue" :
+                        p.severity === "Medium" ? "text-neon-green" :
                         "text-neon-green"
                       }>
                         severity: {p.severity.toLowerCase()}
@@ -157,3 +163,5 @@ function Index() {
     </CyberLayout>
   );
 }
+
+

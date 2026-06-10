@@ -5,6 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant light (&:is(.light *));
 
 
 
@@ -103,6 +104,50 @@
   --sidebar-ring: oklch(0.92 0.27 142);
 }
 
+.light {
+  --background: oklch(0.99 0.01 250);
+  --foreground: oklch(0.18 0.02 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.02 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.02 260);
+  --primary: oklch(0.45 0.16 142);
+  --primary-foreground: oklch(0.99 0.01 250);
+  --secondary: oklch(0.94 0.02 250);
+  --secondary-foreground: oklch(0.18 0.02 260);
+  --muted: oklch(0.94 0.02 250);
+  --muted-foreground: oklch(0.45 0.02 250);
+  --accent: oklch(0.94 0.02 250);
+  --accent-foreground: oklch(0.18 0.02 260);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.88 0.02 250);
+  --input: oklch(0.88 0.02 250);
+  --ring: oklch(0.45 0.16 142);
+  
+  /* Cyber Theme specific */
+  --neon-green: oklch(0.45 0.18 250); /* Blue in light mode */
+  --neon-blue: oklch(0.45 0.18 142);  /* Green in light mode */
+  --panel: oklch(0.96 0.01 250);
+  --panel-border: oklch(0.85 0.02 250);
+  --threat-low: oklch(0.45 0.18 142);
+  --threat-mid: oklch(0.55 0.18 80);
+  --threat-high: oklch(0.55 0.22 25);
+  
+  /* Sidebar */
+  --sidebar: oklch(0.97 0.01 250);
+  --sidebar-foreground: oklch(0.18 0.02 260);
+  --sidebar-primary: oklch(0.45 0.16 142);
+  --sidebar-primary-foreground: oklch(0.99 0.01 250);
+  --sidebar-accent: oklch(0.92 0.02 250);
+  --sidebar-accent-foreground: oklch(0.18 0.02 260);
+  --sidebar-border: oklch(0.85 0.02 250);
+  --sidebar-ring: oklch(0.45 0.16 142);
+  
+  /* Syntax Highlighting overrides for light mode */
+  --code-bg: oklch(0.95 0.01 250);
+}
+
 .dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
@@ -186,9 +231,7 @@
     );
   }
   .grid-bg {
-    background-image:
-      linear-gradient(to right, color-mix(in oklab, var(--panel-border) 60%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklab, var(--panel-border) 60%, transparent) 1px, transparent 1px);
+    background-image: radial-gradient(color-mix(in oklab, var(--neon-green) 15%, transparent) 1.5px, transparent 1.5px);
     background-size: 32px 32px;
   }
 }
@@ -224,4 +267,57 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklab, var(--neon-green) 40%, var(--panel-border));
+}
+
+/* Light mode overrides for highlight.js (github-dark is loaded by default) */
+.light .hljs {
+  color: #24292e !important;
+  background: transparent !important;
+}
+.light .hljs-doctag,
+.light .hljs-keyword,
+.light .hljs-meta .hljs-keyword,
+.light .hljs-template-tag,
+.light .hljs-template-variable,
+.light .hljs-type,
+.light .hljs-variable.language_ {
+  color: #d73a49 !important;
+}
+.light .hljs-title,
+.light .hljs-title.class_,
+.light .hljs-title.class_.inherited__,
+.light .hljs-title.function_ {
+  color: #6f42c1 !important;
+}
+.light .hljs-attr,
+.light .hljs-attribute,
+.light .hljs-literal,
+.light .hljs-meta,
+.light .hljs-number,
+.light .hljs-operator,
+.light .hljs-variable,
+.light .hljs-selector-attr,
+.light .hljs-selector-class,
+.light .hljs-selector-id {
+  color: #005cc5 !important;
+}
+.light .hljs-regexp,
+.light .hljs-string,
+.light .hljs-meta .hljs-string {
+  color: #032f62 !important;
+}
+.light .hljs-built_in,
+.light .hljs-symbol {
+  color: #e36209 !important;
+}
+.light .hljs-comment,
+.light .hljs-code,
+.light .hljs-formula {
+  color: #6a737d !important;
+}
+.light .hljs-name,
+.light .hljs-quote,
+.light .hljs-selector-tag,
+.light .hljs-selector-pseudo {
+  color: #22863a !important;
 }

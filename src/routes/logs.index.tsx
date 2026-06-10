@@ -38,7 +38,7 @@ function LogsPage() {
     <CyberLayout>
       <section className="px-6 md:px-10 py-10 max-w-6xl">
         <div className="font-mono text-[11px] text-muted-foreground">
-          <span className="text-neon-green">asbawy</span>:<span className="text-neon-blue">~/logs</span>$ ls -la --sort=date
+          <span className="text-neon-green">asbawy</span>:<span className="text-neon-green">~/logs</span>$ ls -la --sort=date
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /logs <span className="text-muted-foreground">— blog posts</span>
@@ -85,7 +85,7 @@ function LogsPage() {
                       <div className="flex items-center gap-3 font-mono text-[10px] text-muted-foreground">
                         <span>{p.date}</span>
                         <span>·</span>
-                        <span className="text-neon-blue">{p.category.toLowerCase()}</span>
+                        <span className="text-neon-green">{p.category.toLowerCase()}</span>
                         <span>·</span>
                         <span>{p.readTime}</span>
                       </div>
@@ -117,3 +117,4 @@ function LogsPage() {
     </CyberLayout>
   );
 }
+

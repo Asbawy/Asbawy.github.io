@@ -7,14 +7,36 @@ import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 
-function getPostPrerenderPages() {
+function getPrerenderPages() {
+  const pages: any[] = [];
+  
+  // Posts
   const postsDir = join(process.cwd(), "src/data/posts");
-  return readdirSync(postsDir)
-    .filter((file) => file.endsWith(".mdx"))
-    .map((file) => ({
-      path: `/logs/${file.replace(/\.mdx$/, "")}`,
-      prerender: { enabled: true },
-    }));
+  try {
+    const postFiles = readdirSync(postsDir);
+    postFiles.filter(f => f.endsWith(".mdx")).forEach(file => {
+      pages.push({
+        path: `/logs/${file.replace(/\.mdx$/, "")}`,
+        prerender: { enabled: true },
+      });
+    });
+  } catch (e) {}
+
+  // Cheatsheets (recursive)
+  const cheatDir = join(process.cwd(), "src/data/cheatsheets");
+  try {
+    const cheatFiles = readdirSync(cheatDir, { recursive: true });
+    cheatFiles.filter(f => typeof f === 'string' && f.endsWith(".mdx")).forEach(file => {
+      // file path might have backslashes on windows, so normalize to forward slashes
+      const normalizedPath = (file as string).replace(/\\/g, "/").replace(/\.mdx$/, "");
+      pages.push({
+        path: `/cheatsheet/${normalizedPath}`,
+        prerender: { enabled: true },
+      });
+    });
+  } catch (e) {}
+
+  return pages;
 }
 
 export default defineConfig({
@@ -33,6 +55,6 @@ export default defineConfig({
       crawlLinks: true,
       autoSubfolderIndex: false,
     },
-    pages: getPostPrerenderPages(),
+    pages: getPrerenderPages(),
   },
 });

@@ -124,7 +124,7 @@ function AboutPage() {
         {/* ── breadcrumb ── */}
         <div className="font-mono text-[11px] text-muted-foreground">
           <span className="text-neon-green">asbawy</span>:
-          <span className="text-neon-blue">~/about</span>$ cat identity.txt
+          <span className="text-neon-green">~/about</span>$ cat identity.txt
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /about <span className="text-muted-foreground">— whoami</span>
@@ -216,7 +216,7 @@ function AboutPage() {
             {hallOfFame.map((org) => (
               <span
                 key={org}
-                className="inline-flex items-center gap-1.5 rounded-md border border-neon-blue/30 bg-neon-blue/5 px-3 py-1.5 font-mono text-[11px] text-neon-blue hover:bg-neon-blue/10 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-md border border-neon-green/30 bg-neon-green/5 px-3 py-1.5 font-mono text-[11px] text-neon-green hover:bg-neon-green/10 transition-colors"
               >
                 <Bug className="h-3 w-3" />
                 {org}
@@ -274,3 +274,5 @@ function AboutPage() {
     </CyberLayout>
   );
 }
+
+

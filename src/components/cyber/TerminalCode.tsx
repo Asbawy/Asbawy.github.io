@@ -27,7 +27,7 @@ export function TerminalCode({
   };
 
   return (
-    <div className="my-5 rounded-md border border-panel-border bg-[oklch(0.12_0.02_260)] overflow-hidden shadow-lg group">
+    <div className="my-5 rounded-md border border-panel-border bg-panel/40 overflow-hidden shadow-lg group">
       <div className="flex items-center justify-between border-b border-panel-border bg-panel/80 px-3 py-2">
         <div className="flex items-center gap-1.5">
           <span className="h-3 w-3 rounded-full bg-[oklch(0.7_0.25_25)]" />
@@ -53,3 +53,4 @@ export function TerminalCode({
     </div>
   );
 }
+

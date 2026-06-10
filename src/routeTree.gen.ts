@@ -15,7 +15,9 @@ import { Route as CheatsheetRouteImport } from './routes/cheatsheet'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LogsIndexRouteImport } from './routes/logs.index'
+import { Route as CheatsheetIndexRouteImport } from './routes/cheatsheet.index'
 import { Route as LogsSlugRouteImport } from './routes/logs.$slug'
+import { Route as CheatsheetSplatRouteImport } from './routes/cheatsheet.$'
 
 const ToolsRoute = ToolsRouteImport.update({
   id: '/tools',
@@ -47,38 +49,53 @@ const LogsIndexRoute = LogsIndexRouteImport.update({
   path: '/logs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheatsheetIndexRoute = CheatsheetIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CheatsheetRoute,
+} as any)
 const LogsSlugRoute = LogsSlugRouteImport.update({
   id: '/logs/$slug',
   path: '/logs/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheatsheetSplatRoute = CheatsheetSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => CheatsheetRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/cheatsheet': typeof CheatsheetRoute
+  '/cheatsheet': typeof CheatsheetRouteWithChildren
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
+  '/cheatsheet/$': typeof CheatsheetSplatRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/cheatsheet/': typeof CheatsheetIndexRoute
   '/logs/': typeof LogsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/cheatsheet': typeof CheatsheetRoute
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
+  '/cheatsheet/$': typeof CheatsheetSplatRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/cheatsheet': typeof CheatsheetIndexRoute
   '/logs': typeof LogsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/cheatsheet': typeof CheatsheetRoute
+  '/cheatsheet': typeof CheatsheetRouteWithChildren
   '/stats': typeof StatsRoute
   '/tools': typeof ToolsRoute
+  '/cheatsheet/$': typeof CheatsheetSplatRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/cheatsheet/': typeof CheatsheetIndexRoute
   '/logs/': typeof LogsIndexRoute
 }
 export interface FileRouteTypes {
@@ -89,16 +106,19 @@ export interface FileRouteTypes {
     | '/cheatsheet'
     | '/stats'
     | '/tools'
+    | '/cheatsheet/$'
     | '/logs/$slug'
+    | '/cheatsheet/'
     | '/logs/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
-    | '/cheatsheet'
     | '/stats'
     | '/tools'
+    | '/cheatsheet/$'
     | '/logs/$slug'
+    | '/cheatsheet'
     | '/logs'
   id:
     | '__root__'
@@ -107,14 +127,16 @@ export interface FileRouteTypes {
     | '/cheatsheet'
     | '/stats'
     | '/tools'
+    | '/cheatsheet/$'
     | '/logs/$slug'
+    | '/cheatsheet/'
     | '/logs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
-  CheatsheetRoute: typeof CheatsheetRoute
+  CheatsheetRoute: typeof CheatsheetRouteWithChildren
   StatsRoute: typeof StatsRoute
   ToolsRoute: typeof ToolsRoute
   LogsSlugRoute: typeof LogsSlugRoute
@@ -165,6 +187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LogsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cheatsheet/': {
+      id: '/cheatsheet/'
+      path: '/'
+      fullPath: '/cheatsheet/'
+      preLoaderRoute: typeof CheatsheetIndexRouteImport
+      parentRoute: typeof CheatsheetRoute
+    }
     '/logs/$slug': {
       id: '/logs/$slug'
       path: '/logs/$slug'
@@ -172,13 +201,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LogsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cheatsheet/$': {
+      id: '/cheatsheet/$'
+      path: '/$'
+      fullPath: '/cheatsheet/$'
+      preLoaderRoute: typeof CheatsheetSplatRouteImport
+      parentRoute: typeof CheatsheetRoute
+    }
   }
 }
+
+interface CheatsheetRouteChildren {
+  CheatsheetSplatRoute: typeof CheatsheetSplatRoute
+  CheatsheetIndexRoute: typeof CheatsheetIndexRoute
+}
+
+const CheatsheetRouteChildren: CheatsheetRouteChildren = {
+  CheatsheetSplatRoute: CheatsheetSplatRoute,
+  CheatsheetIndexRoute: CheatsheetIndexRoute,
+}
+
+const CheatsheetRouteWithChildren = CheatsheetRoute._addFileChildren(
+  CheatsheetRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
-  CheatsheetRoute: CheatsheetRoute,
+  CheatsheetRoute: CheatsheetRouteWithChildren,
   StatsRoute: StatsRoute,
   ToolsRoute: ToolsRoute,
   LogsSlugRoute: LogsSlugRoute,
