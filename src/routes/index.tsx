@@ -11,20 +11,20 @@ import { ArrowUpRight, Terminal } from "lucide-react";
 export const Route = createFileRoute("/")(
   {
 
-  head: () => ({
-    meta: [
-      { title: "Asbawy Blog — Dev Logs, Security Research & Tools" },
-      {
-        name: "description",
-        content:
-          "Personal blog by Asbawy — security research, dev logs, automation, and scripting.",
-      },
-      { property: "og:title", content: "Asbawy Blog" },
-      { property: "og:description", content: "Dev logs, security research, and tools by Asbawy." },
-    ],
-  }),
-  component: Index,
-});
+    head: () => ({
+      meta: [
+        { title: "Asbawy Blog — Dev Logs, Security Research & Tools" },
+        {
+          name: "description",
+          content:
+            "Personal blog by Asbawy — security research, dev logs, automation, and scripting.",
+        },
+        { property: "og:title", content: "Asbawy Blog" },
+        { property: "og:description", content: "Dev logs, security research, and tools by Asbawy." },
+      ],
+    }),
+    component: Index,
+  });
 
 function Index() {
 
@@ -98,7 +98,7 @@ function Index() {
                 ["total_posts", String(postsMeta.length)],
                 ["categories", "4"],
                 ["status", "active"],
-                ["version", "v1.0"],
+                ["version", "v2.0"],
               ].map(([k, v]) => (
                 <li key={k} className="flex items-center justify-between border-b border-panel-border/60 pb-2 last:border-0">
                   <span className="text-muted-foreground">{k}</span>
@@ -131,15 +131,16 @@ function Index() {
                     key={p.slug}
                     to="/logs/$slug"
                     params={{ slug: p.slug }}
+                    preload="intent"
                     className="group rounded-md border border-panel-border bg-background/40 p-4 hover:border-neon-green/40 hover:bg-neon-green/5 transition-all"
                   >
                     <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground">
                       <span>{p.date}</span>
                       <span className={
                         p.severity === "Critical" ? "text-threat-high" :
-                        p.severity === "High" ? "text-threat-mid" :
-                        p.severity === "Medium" ? "text-neon-green" :
-                        "text-neon-green"
+                          p.severity === "High" ? "text-threat-mid" :
+                            p.severity === "Medium" ? "text-neon-green" :
+                              "text-neon-green"
                       }>
                         severity: {p.severity.toLowerCase()}
                       </span>

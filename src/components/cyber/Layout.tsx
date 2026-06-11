@@ -1,4 +1,5 @@
 import { SideNav, TopBar } from "./SideNav";
+import { CommandPalette } from "./CommandPalette";
 
 export function CyberLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export function CyberLayout({ children }: { children: React.ReactNode }) {
           <span className="text-neon-green/70">connection: encrypted · latency: 12ms</span>
         </footer>
       </div>
+      <CommandPalette />
     </div>
   );
 }

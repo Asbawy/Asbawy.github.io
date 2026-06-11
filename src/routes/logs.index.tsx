@@ -78,6 +78,7 @@ function LogsPage() {
                 <Link
                   to="/logs/$slug"
                   params={{ slug: p.slug }}
+                  preload="intent"
                   className="group block py-4 px-1 transition-colors hover:bg-neon-green/5"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">

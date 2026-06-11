@@ -2,10 +2,35 @@ import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-r
 import { CyberLayout } from "@/components/cyber/Layout";
 import { 
   Folder, FolderOpen, FileText, ChevronRight, ChevronDown, Terminal,
-  TerminalSquare, AppWindow, Network, Globe, Lock, ShieldAlert, Database, FileCode 
+  TerminalSquare, AppWindow, Network, Globe, Lock, ShieldAlert, Database, FileCode, Search 
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { getCheatsheetTree, type FileNode } from "@/data/cheatsheets";
+
+/* ── Tree filtering helper ───────────────────────────── */
+
+function filterTree(nodes: FileNode[], query: string): FileNode[] {
+  if (!query) return nodes;
+  const q = query.toLowerCase();
+
+  return nodes.reduce<FileNode[]>((acc, node) => {
+    if (node.type === "file") {
+      if (node.name.toLowerCase().includes(q) || node.meta?.title?.toLowerCase().includes(q)) {
+        acc.push(node);
+      }
+    } else {
+      // Folder — recursively filter children
+      const filteredChildren = filterTree(node.children || [], q);
+      if (filteredChildren.length > 0) {
+        acc.push({ ...node, children: filteredChildren });
+      } else if (node.name.toLowerCase().includes(q)) {
+        // Folder itself matches — include with all children
+        acc.push(node);
+      }
+    }
+    return acc;
+  }, []);
+}
 
 export const Route = createFileRoute("/cheatsheet")({
   head: () => ({
@@ -46,8 +71,10 @@ function getIconForNode(name: string, isFile: boolean, isOpen: boolean) {
 
 /* ── Tree item ───────────────────────────────────────── */
 
-function TreeItem({ node, depth = 0 }: { node: FileNode; depth?: number }) {
+function TreeItem({ node, depth = 0, searchQuery = "" }: { node: FileNode; depth?: number; searchQuery?: string }) {
   const [isOpen, setIsOpen] = useState(true);
+  // Auto-expand folders when searching
+  const effectiveOpen = searchQuery ? true : isOpen;
   const isFile = node.type === "file";
 
   const router = useRouterState();
@@ -63,6 +90,7 @@ function TreeItem({ node, depth = 0 }: { node: FileNode; depth?: number }) {
         <Link
           to="/cheatsheet/$"
           params={{ _splat: node.path! }}
+          preload="intent"
           className={`
             group flex items-center gap-2 py-[5px] pr-3 w-full
             font-mono text-[13px] leading-tight whitespace-nowrap
@@ -75,7 +103,7 @@ function TreeItem({ node, depth = 0 }: { node: FileNode; depth?: number }) {
           style={{ paddingLeft: indent + 20 }}
         >
           {getIconForNode(node.name, true, false)}
-          <span>{node.name}</span>
+          <HighlightMatch text={node.name} query={searchQuery} />
         </Link>
       ) : (
         <button
@@ -85,18 +113,18 @@ function TreeItem({ node, depth = 0 }: { node: FileNode; depth?: number }) {
             text-foreground/90 hover:bg-white/[0.04] transition-colors duration-150
           "
           style={{ paddingLeft: indent }}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => setIsOpen(!effectiveOpen)}
         >
-          {isOpen
+          {effectiveOpen
             ? <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
             : <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
           }
-          {getIconForNode(node.name, false, isOpen)}
+          {getIconForNode(node.name, false, effectiveOpen)}
           <span className="font-semibold">{node.name}</span>
         </button>
       )}
 
-      {!isFile && isOpen && node.children && (
+      {!isFile && effectiveOpen && node.children && (
         <div className="relative">
           {/* Indent guide line */}
           <div
@@ -104,11 +132,26 @@ function TreeItem({ node, depth = 0 }: { node: FileNode; depth?: number }) {
             style={{ left: indent + 7 }}
           />
           {node.children.map((child, i) => (
-            <TreeItem key={child.name + i} node={child} depth={depth + 1} />
+            <TreeItem key={child.name + i} node={child} depth={depth + 1} searchQuery={searchQuery} />
           ))}
         </div>
       )}
     </>
+  );
+}
+
+/* ── Highlight matching text ─────────────────────────── */
+
+function HighlightMatch({ text, query }: { text: string; query: string }) {
+  if (!query) return <span>{text}</span>;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return <span>{text}</span>;
+  return (
+    <span>
+      {text.slice(0, idx)}
+      <span className="bg-neon-green/20 text-neon-green rounded px-0.5">{text.slice(idx, idx + query.length)}</span>
+      {text.slice(idx + query.length)}
+    </span>
   );
 }
 
@@ -117,6 +160,9 @@ function TreeItem({ node, depth = 0 }: { node: FileNode; depth?: number }) {
 function CheatsheetLayout() {
   const tree = getCheatsheetTree();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTree = useMemo(() => filterTree(tree, searchQuery), [tree, searchQuery]);
 
   return (
     <CyberLayout>
@@ -182,11 +228,30 @@ function CheatsheetLayout() {
                   </button>
                 </div>
 
+                {/* Search / Filter */}
+                <div className="shrink-0 px-2 py-2 border-b border-panel-border/30">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                    <input
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="filter files…"
+                      className="w-full rounded border border-panel-border/50 bg-background/60 pl-7 pr-2 py-1.5 font-mono text-[11px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-neon-green/40 transition-colors"
+                    />
+                  </div>
+                </div>
+
                 {/* Tree */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 scrollbar-thin">
-                  {tree.map((node, i) => (
-                    <TreeItem key={node.name + i} node={node} />
-                  ))}
+                  {filteredTree.length > 0 ? (
+                    filteredTree.map((node, i) => (
+                      <TreeItem key={node.name + i} node={node} searchQuery={searchQuery} />
+                    ))
+                  ) : (
+                    <div className="px-4 py-6 text-center font-mono text-[11px] text-muted-foreground/60">
+                      No matching files
+                    </div>
+                  )}
                 </div>
               </div>
 

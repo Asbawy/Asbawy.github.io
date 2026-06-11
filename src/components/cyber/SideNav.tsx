@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, FileTerminal, Wrench, Activity, Skull, BookOpen, User } from "lucide-react";
+import { Home, FileTerminal, Wrench, Activity, Skull, BookOpen, User, Search } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 
 const items = [
@@ -57,7 +57,19 @@ export function SideNav() {
         })}
       </nav>
 
-      <div className="mx-3 mt-auto mb-2">
+      <div className="mx-3 mt-auto mb-2 space-y-2">
+        <button
+          onClick={() => {
+            document.dispatchEvent(
+              new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true })
+            );
+          }}
+          className="flex w-full items-center gap-2 rounded-md border border-panel-border px-3 py-2 font-mono text-xs text-muted-foreground hover:border-neon-green/30 hover:text-foreground transition-all"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span className="flex-1 text-left">Search</span>
+          <kbd className="rounded border border-panel-border bg-background/60 px-1.5 py-0.5 text-[9px]">⌘K</kbd>
+        </button>
         <ThemeToggle />
       </div>
 
