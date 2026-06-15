@@ -141,7 +141,7 @@ function CheatsheetViewer() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="w-full max-w-7xl mx-auto px-6 md:px-10 py-8 bg-background/85 backdrop-blur-md rounded-xl mx-4 my-6 border border-panel-border/30">
+        <div className="w-full max-w-7xl mx-auto px-6 md:px-10 py-8 bg-background/95 rounded-xl mx-4 my-6 border border-panel-border/30">
           {/* Title from frontmatter */}
           {meta.title && (
             <div className="mb-8 pb-6 border-b border-panel-border/50">

@@ -206,7 +206,7 @@ function AboutPage() {
           {/* Scanlines */}
           <div className="absolute inset-0 scanlines opacity-30 pointer-events-none" />
           {/* Radial glow behind avatar */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-green/[0.03] rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-green/[0.03] rounded-full blur-3xl pointer-events-none" />
         </div>
 
         <div className="relative px-6 md:px-10 py-16 md:py-24 max-w-5xl">
@@ -268,7 +268,7 @@ function AboutPage() {
               </div>
 
               {/* Terminal-style bio */}
-              <div className="mt-6 rounded-lg border border-panel-border bg-panel/40 backdrop-blur-sm p-4 md:p-5 font-mono text-xs space-y-1.5 max-w-2xl">
+              <div className="mt-6 rounded-lg border border-panel-border bg-panel/60 p-4 md:p-5 font-mono text-xs space-y-1.5 max-w-2xl">
                 <div className="flex items-center gap-1.5 text-muted-foreground/60 mb-3">
                   <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.7_0.25_25)]" />
                   <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.82_0.18_80)]" />
@@ -311,7 +311,7 @@ function AboutPage() {
             {stats.map((s) => (
               <div
                 key={s.label}
-                className="group rounded-xl border border-panel-border bg-panel/40 backdrop-blur-sm p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300"
+                className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300"
               >
                 <AnimatedCount target={s.value} suffix={s.suffix} />
                 <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -421,7 +421,7 @@ function AboutPage() {
 
         {/* ── Footer terminal ── */}
         <Reveal delay={300}>
-          <div className="rounded-xl border border-panel-border bg-panel/40 backdrop-blur-sm p-5 font-mono text-xs text-muted-foreground">
+          <div className="rounded-xl border border-panel-border bg-panel/60 p-5 font-mono text-xs text-muted-foreground">
             <div className="flex items-center gap-1.5 mb-3">
               <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.7_0.25_25)]" />
               <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.82_0.18_80)]" />

@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, FileTerminal, Wrench, Activity, Skull, BookOpen, User, Search } from "lucide-react";
+import { Home, FileTerminal, Wrench, Activity, BookOpen, User, Search } from "lucide-react";
+import { EyeOfRa } from "./EyeOfRa";
 import { ThemeToggle } from "./ThemeToggle";
 
 const items = [
@@ -15,19 +16,19 @@ export function SideNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isActive = (to: string) =>
     to === "/" ? pathname === "/" : pathname.startsWith(to);
-
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-panel-border bg-sidebar/80 backdrop-blur-md sticky top-0 h-screen font-mono">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-panel-border bg-sidebar sticky top-0 h-screen font-mono">
       <div className="px-5 py-5 border-b border-panel-border flex items-center gap-3">
-        <div className="relative">
-          <Skull className="h-5 w-5 text-neon-green" />
-          <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-neon-green pulse-dot" />
-        </div>
+        <Link to="/" className="block focus:outline-none">
+          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-neon-green/30 hover:border-neon-green transition-all shadow-[0_0_15px_color-mix(in_oklab,var(--neon-green)_20%,transparent)] hover:shadow-[0_0_20px_color-mix(in_oklab,var(--neon-green)_40%,transparent)] p-0.5 duration-300 cursor-pointer">
+            <EyeOfRa className="h-10 w-10 object-contain" />
+          </div>
+        </Link>
         <div className="flex flex-col leading-tight">
           <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            node://
+            root://
           </span>
-          <span className="text-sm text-foreground text-glow-green">Asbawy</span>
+          <span className="text-base text-foreground text-glow-green">Asbawy</span>
         </div>
       </div>
 
@@ -87,10 +88,14 @@ export function SideNav() {
 
 export function TopBar() {
   return (
-    <div className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-panel-border bg-background/90 backdrop-blur px-4 py-3 font-mono">
-      <div className="flex items-center gap-2">
-        <Skull className="h-4 w-4 text-neon-green" />
-        <span className="text-sm text-glow-green">Asbawy</span>
+    <div className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-panel-border bg-background/95 px-4 py-3 font-mono">
+      <div className="flex items-center gap-3">
+        <Link to="/" className="block focus:outline-none">
+          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-neon-green/30 p-0.5">
+            <EyeOfRa className="h-7 w-7 object-contain" />
+          </div>
+        </Link>
+        <span className="text-base text-glow-green">Asbawy</span>
       </div>
       <nav className="flex items-center gap-3 text-xs text-muted-foreground">
         <Link to="/" className="hover:text-neon-green">/home</Link>

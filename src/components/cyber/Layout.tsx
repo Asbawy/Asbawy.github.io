@@ -31,7 +31,7 @@ export function Panel({
 }) {
   return (
     <section
-      className={`rounded-lg border border-panel-border bg-panel/60 backdrop-blur-sm overflow-hidden ${className}`}
+      className={`rounded-lg border border-panel-border bg-panel/80 overflow-hidden ${className}`}
     >
       {title && (
         <header className="flex items-center justify-between border-b border-panel-border px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">

@@ -10,7 +10,7 @@ import {
 
 import hljsCss from "highlight.js/styles/github-dark.css?url";
 import appCss from "../styles.css?url";
-import { MatrixBackground } from "@/components/cyber/MatrixBackground";
+import { CyberBackground } from "@/components/cyber/MatrixBackground";
 
 import { Terminal, Home, AlertCircle } from "lucide-react";
 
@@ -108,8 +108,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: hljsCss,
       },
-      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-      { rel: "apple-touch-icon", href: "/favicon.svg" },
+      { rel: "icon", type: "image/png", href: "/eye-of-ra.png" },
+      { rel: "apple-touch-icon", href: "/eye-of-ra.png" },
       { rel: "canonical", href: "https://asbawy.github.io" },
       { rel: "alternate", type: "application/rss+xml", title: "Asbawy Blog RSS Feed", href: "https://asbawy.github.io/feed.xml" },
     ],
@@ -134,7 +134,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <MatrixBackground />
+        <CyberBackground />
         {children}
         <Scripts />
       </body>

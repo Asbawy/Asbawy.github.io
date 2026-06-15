@@ -2,7 +2,7 @@ import { Rss } from "lucide-react";
 
 export function RssSubscribe() {
   return (
-    <section className="mt-8 rounded-lg border border-panel-border bg-panel/60 backdrop-blur-sm overflow-hidden">
+    <section className="mt-8 rounded-lg border border-panel-border bg-panel/80 overflow-hidden">
       <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         {/* Icon + glow */}
         <div className="relative shrink-0">

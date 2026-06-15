@@ -3,7 +3,7 @@ import { Github, ExternalLink, BookOpen } from "lucide-react";
 
 export function AuthorBio() {
   return (
-    <section className="mt-12 rounded-lg border border-panel-border bg-panel/60 backdrop-blur-sm overflow-hidden">
+    <section className="mt-12 rounded-lg border border-panel-border bg-panel/80 overflow-hidden">
       <header className="flex items-center border-b border-panel-border px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
         <span className="flex items-center gap-2">
           <span className="text-neon-green">▸</span>

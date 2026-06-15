@@ -17,18 +17,22 @@ const threatLevels = [
 ];
 
 export function SystemStatus() {
-  const [uptime, setUptime] = useState(412932);
-  const [mem, setMem] = useState(38);
-  const [cpu, setCpu] = useState(22);
-  const [net, setNet] = useState(412);
+  const [metrics, setMetrics] = useState({
+    uptime: 412932,
+    mem: 38,
+    cpu: 22,
+    net: 412,
+  });
   const [threat, setThreat] = useState(threatLevels[0]);
 
   useEffect(() => {
     const id = setInterval(() => {
-      setUptime((u) => u + 1);
-      setMem((m) => Math.max(18, Math.min(92, m + (Math.random() - 0.5) * 6)));
-      setCpu((c) => Math.max(5, Math.min(95, c + (Math.random() - 0.5) * 10)));
-      setNet((n) => Math.max(80, Math.min(1200, n + (Math.random() - 0.5) * 80)));
+      setMetrics((prev) => ({
+        uptime: prev.uptime + 1,
+        mem: Math.max(18, Math.min(92, prev.mem + (Math.random() - 0.5) * 6)),
+        cpu: Math.max(5, Math.min(95, prev.cpu + (Math.random() - 0.5) * 10)),
+        net: Math.max(80, Math.min(1200, prev.net + (Math.random() - 0.5) * 80)),
+      }));
     }, 1000);
     return () => clearInterval(id);
   }, []);
@@ -68,27 +72,27 @@ export function SystemStatus() {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="flex items-center gap-2"><Activity className="h-3.5 w-3.5" />uptime</span>
-            <span className="text-foreground">{fmtUptime(uptime)}</span>
+            <span className="text-foreground">{fmtUptime(metrics.uptime)}</span>
           </div>
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="flex items-center gap-2"><Wifi className="h-3.5 w-3.5" />throughput</span>
-            <span className="text-neon-green">{net.toFixed(0)} kB/s</span>
+            <span className="text-neon-green">{metrics.net.toFixed(0)} kB/s</span>
           </div>
         </div>
         <div className="space-y-3">
           <div>
             <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
               <span className="flex items-center gap-1"><Cpu className="h-3 w-3" />cpu</span>
-              <span className="text-foreground">{cpu.toFixed(0)}%</span>
+              <span className="text-foreground">{metrics.cpu.toFixed(0)}%</span>
             </div>
-            <Bar value={cpu} color="bg-neon-green" />
+            <Bar value={metrics.cpu} color="bg-neon-green" />
           </div>
           <div>
             <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
               <span className="flex items-center gap-1"><MemoryStick className="h-3 w-3" />mem</span>
-              <span className="text-foreground">{mem.toFixed(0)}%</span>
+              <span className="text-foreground">{metrics.mem.toFixed(0)}%</span>
             </div>
-            <Bar value={mem} color="bg-neon-green" />
+            <Bar value={metrics.mem} color="bg-neon-green" />
           </div>
         </div>
       </div>

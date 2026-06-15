@@ -206,7 +206,7 @@ function PostPage() {
 
   return (
     <CyberLayout>
-      <article className="px-6 md:px-10 py-10 max-w-6xl bg-background/85 backdrop-blur-md rounded-xl mx-4 my-6 border border-panel-border/30">
+      <article className="px-6 md:px-10 py-10 max-w-6xl bg-background/95 rounded-xl mx-4 my-6 border border-panel-border/30">
         <Link
           to="/logs"
           className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-neon-green"

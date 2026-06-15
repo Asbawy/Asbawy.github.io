@@ -47,7 +47,7 @@ function Index() {
           <h1 className="sr-only">Asbawy — personal blog and dev logs</h1>
 
 
-          <div className="mt-6 rounded-lg border border-panel-border bg-panel/70 backdrop-blur p-5 md:p-7 max-w-3xl">
+          <div className="mt-6 rounded-lg border border-panel-border bg-panel/80 p-5 md:p-7 max-w-3xl">
             <Typewriter
               className="text-base md:text-xl leading-relaxed"
               lines={[
