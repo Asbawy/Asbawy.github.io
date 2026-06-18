@@ -14,11 +14,13 @@ export function AuthorBio() {
         <div className="flex items-start gap-4">
           {/* Avatar */}
           <Link to="/about" className="shrink-0 group">
-            <div className="rounded-md border border-neon-green/30 bg-panel/60 p-[2px] group-hover:border-neon-green/60 group-hover:shadow-[0_0_12px_rgba(0,255,136,0.1)] transition-all duration-300">
+            <div className="relative rounded-full bg-neon-green/5 p-1 border border-neon-green/30 shadow-[0_0_10px_rgba(0,255,136,0.1)] hover:border-neon-green/45 hover:shadow-[0_0_15px_rgba(0,255,136,0.2)] transition-all duration-300 backdrop-blur-md overflow-hidden">
+              {/* Soft glowing backdrop to illuminate the dark logo */}
+              <div className="absolute inset-1 rounded-full bg-neon-green/20 blur-md pointer-events-none" />
               <img
-                src="/asbawy.webp"
-                alt="Asbawy"
-                className="h-14 w-14 rounded object-cover grayscale-[30%] group-hover:grayscale-0 transition-all duration-500"
+                src="/eye-of-ra.png"
+                alt="Eye of Ra"
+                className="relative z-10 h-12 w-12 object-contain hover:scale-105 transition-transform duration-500"
                 loading="lazy"
               />
             </div>

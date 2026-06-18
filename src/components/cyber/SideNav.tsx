@@ -20,8 +20,10 @@ export function SideNav() {
     <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-panel-border bg-sidebar sticky top-0 h-screen font-mono">
       <div className="px-5 py-5 border-b border-panel-border flex items-center gap-3">
         <Link to="/" className="block focus:outline-none">
-          <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center border-2 border-neon-green/30 hover:border-neon-green transition-all shadow-[0_0_15px_color-mix(in_oklab,var(--neon-green)_20%,transparent)] hover:shadow-[0_0_20px_color-mix(in_oklab,var(--neon-green)_40%,transparent)] p-0.5 duration-300 cursor-pointer">
-            <EyeOfRa className="h-10 w-10 object-contain" />
+          <div className="relative w-12 h-12 rounded-full bg-neon-green/5 flex items-center justify-center border border-neon-green/30 hover:border-neon-green/60 transition-all shadow-[0_0_15px_rgba(0,255,136,0.15)] hover:shadow-[0_0_22px_rgba(0,255,136,0.3)] p-1 duration-300 cursor-pointer backdrop-blur-md overflow-hidden">
+            {/* Soft glowing backdrop to illuminate the dark logo */}
+            <div className="absolute inset-0.5 rounded-full bg-neon-green/20 blur-md pointer-events-none" />
+            <EyeOfRa className="relative z-10 h-9 w-9 object-contain hover:scale-105 transition-transform duration-300" />
           </div>
         </Link>
         <div className="flex flex-col leading-tight">
@@ -91,8 +93,10 @@ export function TopBar() {
     <div className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-panel-border bg-background/95 px-4 py-3 font-mono">
       <div className="flex items-center gap-3">
         <Link to="/" className="block focus:outline-none">
-          <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-neon-green/30 p-0.5">
-            <EyeOfRa className="h-7 w-7 object-contain" />
+          <div className="relative w-8 h-8 rounded-full bg-neon-green/5 flex items-center justify-center border border-neon-green/30 shadow-[0_0_10px_rgba(0,255,136,0.12)] p-0.5 backdrop-blur-md overflow-hidden">
+            {/* Soft glowing backdrop to illuminate the dark logo */}
+            <div className="absolute inset-0.5 rounded-full bg-neon-green/20 blur-sm pointer-events-none" />
+            <EyeOfRa className="relative z-10 h-6 w-6 object-contain" />
           </div>
         </Link>
         <span className="text-base text-glow-green">Asbawy</span>

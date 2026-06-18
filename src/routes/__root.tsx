@@ -92,11 +92,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "Asbawy Blog" },
       { property: "og:description", content: "Asbawy's personal blog — security research, dev logs, and tools." },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "https://asbawy.github.io/asbawy.jpg" },
+      { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
       { property: "og:url", content: "https://asbawy.github.io" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@Asbawy" },
-      { name: "twitter:image", content: "https://asbawy.github.io/asbawy.jpg" },
+      { name: "twitter:image", content: "https://asbawy.github.io/eye-of-ra.png" },
       { name: "google-site-verification", content: "-wRV8UzJbo8W6toGN1s2sXQCwhjDhT_qUoeUTUCgt0g" },
     ],
     links: [

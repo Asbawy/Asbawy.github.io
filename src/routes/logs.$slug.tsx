@@ -32,9 +32,9 @@ export const Route = createFileRoute("/logs/$slug")({
             { property: "og:description", content: p.excerpt },
             { property: "og:type", content: "article" },
             { property: "og:url", content: url },
-            { property: "og:image", content: "https://asbawy.github.io/asbawy.jpg" },
+            { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
             { name: "twitter:card", content: "summary_large_image" },
-            { name: "twitter:image", content: "https://asbawy.github.io/asbawy.jpg" },
+            { name: "twitter:image", content: "https://asbawy.github.io/eye-of-ra.png" },
           ]
         : [{ title: "Asbawy Blog" }],
       links: [

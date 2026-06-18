@@ -217,33 +217,16 @@ function AboutPage() {
           </div>
 
           <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-center md:items-start">
-            {/* ── Avatar with glowing frame ── */}
+            {/* ── Avatar/Logo in circle view ── */}
             <Reveal className="shrink-0">
-              <div className="relative group">
-                {/* Outer glow ring */}
-                <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-neon-green/20 via-transparent to-neon-green/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-
-                {/* Avatar frame */}
-                <div className="relative">
-                  {/* Rotating border effect */}
-                  <div className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-neon-green via-neon-green/40 to-neon-green opacity-40 group-hover:opacity-70 transition-opacity duration-500" style={{ mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)", maskComposite: "exclude", padding: "2px", borderRadius: "12px" }} />
-
-                  <div className="relative rounded-xl overflow-hidden border-2 border-transparent">
-                    <img
-                      src="/asbawy.webp"
-                      alt="Asbawy"
-                      className="h-36 w-36 md:h-44 md:w-44 object-cover grayscale-[20%] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700"
-                    />
-                    {/* Overlay scan effect on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-neon-green/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  </div>
-
-                  {/* Status indicator */}
-                  <div className="absolute -bottom-1.5 -right-1.5 flex items-center gap-1 rounded-full bg-background border border-neon-green/50 px-2 py-0.5">
-                    <span className="h-2 w-2 rounded-full bg-neon-green pulse-dot" />
-                    <span className="font-mono text-[9px] text-neon-green uppercase">online</span>
-                  </div>
-                </div>
+              <div className="relative rounded-full overflow-hidden bg-neon-green/5 p-2.5 border border-neon-green/30 shadow-[0_0_25px_rgba(0,255,136,0.15)] hover:border-neon-green/50 hover:shadow-[0_0_30px_rgba(0,255,136,0.3)] transition-all duration-300 backdrop-blur-md">
+                {/* Soft glowing backdrop to illuminate the dark logo */}
+                <div className="absolute inset-1.5 rounded-full bg-neon-green/25 blur-xl pointer-events-none" />
+                <img
+                  src="/eye-of-ra.png"
+                  alt="Eye of Ra"
+                  className="relative z-10 h-36 w-36 md:h-44 md:w-44 object-contain hover:scale-105 transition-transform duration-500"
+                />
               </div>
             </Reveal>
 
