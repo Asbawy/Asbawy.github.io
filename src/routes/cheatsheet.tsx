@@ -2,7 +2,8 @@ import { createFileRoute, Outlet, Link, useRouterState } from "@tanstack/react-r
 import { CyberLayout } from "@/components/cyber/Layout";
 import { 
   Folder, FolderOpen, FileText, ChevronRight, ChevronDown, Terminal,
-  TerminalSquare, AppWindow, Network, Globe, Lock, ShieldAlert, Database, FileCode, Search 
+  TerminalSquare, AppWindow, Network, Globe, Lock, ShieldAlert, Database, FileCode, Search,
+  FolderKey, KeyRound 
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { getCheatsheetTree, type FileNode } from "@/data/cheatsheets";
@@ -56,6 +57,9 @@ function getIconForNode(name: string, isFile: boolean, isOpen: boolean) {
     if (n.includes("network")) return <Network className="h-4 w-4 shrink-0 text-cyan-400" />;
     if (n.includes("web") || n.includes("http")) return <Globe className="h-4 w-4 shrink-0 text-purple-400" />;
     if (n.includes("privesc")) return <Lock className="h-4 w-4 shrink-0 text-red-400" />;
+    if (n.includes("active directory") || n.includes("active_directory") || n === "ad") {
+      return <FolderKey className="h-4 w-4 shrink-0 text-sky-400" />;
+    }
     return isOpen
       ? <FolderOpen className="h-4 w-4 shrink-0 text-neon-green" />
       : <Folder className="h-4 w-4 shrink-0 text-neon-green" />;
@@ -66,6 +70,15 @@ function getIconForNode(name: string, isFile: boolean, isOpen: boolean) {
   if (n.includes("sql") || n.includes("db"))        return <Database className="h-4 w-4 shrink-0 text-orange-400" />;
   if (n.includes("script") || n.includes("code"))   return <FileCode className="h-4 w-4 shrink-0 text-green-400" />;
   if (n.includes("exploit") || n.includes("cve"))   return <ShieldAlert className="h-4 w-4 shrink-0 text-red-400" />;
+  if (
+    n.includes("active directory") || 
+    n.includes("active_directory") || 
+    n.includes("ad_") || 
+    n.includes("_ad") || 
+    n === "ad"
+  ) {
+    return <KeyRound className="h-4 w-4 shrink-0 text-sky-400" />;
+  }
   return <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />;
 }
 

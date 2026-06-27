@@ -13,6 +13,7 @@ tags:
 severity: "Critical"
 excerpt: "Grammarly Desktop is a widely used writing assistant that runs in the background on Windows, checking grammar and spelling across applications. The application runs as a trusted, signed binary. We found that Grammarly Desktop loads several Windows system libraries from its own local application folder instead of from protected system directories. Because this folder lives inside the user's AppData directory, any code running as that user can place a malicious DLL file there. When Grammarly starts, it loads and executes the attacker's code with the same privileges as the logged-in user. This post explains how the vulnerability works, demonstrates three proof-of-concept attacks, and discusses how to fix the underlying flaw."
 readTime: "13 min"
+url: "https://asbawy.github.io/logs/grammarly-dll-hijacking-blog"
 ---
 
 
