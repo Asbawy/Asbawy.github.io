@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import { readdirSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -27,11 +28,12 @@ async function main() {
   try {
     const cheatFiles = readdirSync(cheatDir, { recursive: true });
     cheatPages = cheatFiles
-      .filter((f) => typeof f === 'string' && f.endsWith(".mdx"))
+      .filter((f) => typeof f === "string" && f.endsWith(".mdx"))
       .map((f) => {
         const normalized = (f as string).replace(/\\/g, "/").replace(/\.mdx$/, "");
+        const escaped = normalized.split("/").map(encodeURIComponent).join("/");
         return {
-          path: `/cheatsheet/${normalized}`,
+          path: `/cheatsheet/${escaped}`,
           changefreq: "monthly",
           priority: "0.7",
         };
@@ -47,7 +49,7 @@ async function main() {
       `    <changefreq>${e.changefreq}</changefreq>`,
       `    <priority>${e.priority}</priority>`,
       "  </url>",
-    ].join("\n")
+    ].join("\n"),
   );
 
   const xml = [

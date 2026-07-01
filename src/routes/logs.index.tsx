@@ -9,14 +9,17 @@ export const Route = createFileRoute("/logs/")({
   head: () => ({
     meta: [
       { title: "/logs — Asbawy Blog" },
-      { name: "description", content: "Browse all posts on Asbawy's blog. Filter by category or search by title and tag." },
+      {
+        name: "description",
+        content:
+          "Browse all posts on Asbawy's blog. Filter by category or search by title and tag.",
+      },
       { property: "og:title", content: "/logs — Asbawy Blog" },
       { property: "og:description", content: "All blog posts by Asbawy." },
     ],
   }),
   component: LogsPage,
 });
-
 
 const categories = ["All", "Web", "AI Security", "Automation", "Scripting", "Network"] as const;
 
@@ -38,7 +41,8 @@ function LogsPage() {
     <CyberLayout>
       <section className="px-6 md:px-10 py-10 max-w-6xl">
         <div className="font-mono text-[11px] text-muted-foreground">
-          <span className="text-neon-green">asbawy</span>:<span className="text-neon-green">~/logs</span>$ ls -la --sort=date
+          <span className="text-neon-green">asbawy</span>:
+          <span className="text-neon-green">~/logs</span>$ ls -la --sort=date
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /logs <span className="text-muted-foreground">— blog posts</span>
@@ -97,7 +101,9 @@ function LogsPage() {
                     </div>
                     <div className="flex flex-wrap gap-1.5 md:justify-end md:w-[320px] shrink-0 mt-3 md:mt-0">
                       {p.tags.map((t) => (
-                        <Tag key={t} variant={tagVariantFor(t)}>{t}</Tag>
+                        <Tag key={t} variant={tagVariantFor(t)}>
+                          {t}
+                        </Tag>
                       ))}
                     </div>
                   </div>
@@ -118,4 +124,3 @@ function LogsPage() {
     </CyberLayout>
   );
 }
-

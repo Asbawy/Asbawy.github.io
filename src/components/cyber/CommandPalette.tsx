@@ -39,7 +39,7 @@ export function CommandPalette() {
       { label: "/cheatsheet", to: "/cheatsheet", icon: BookOpen },
       { label: "/about", to: "/about", icon: User },
     ],
-    []
+    [],
   );
 
   const go = (path: string) => {
@@ -163,9 +163,13 @@ export function CommandPalette() {
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-panel-border px-4 py-2 text-[10px] text-muted-foreground/60">
           <span>
-            <kbd className="rounded border border-panel-border bg-background/60 px-1 py-0.5">↑↓</kbd>{" "}
+            <kbd className="rounded border border-panel-border bg-background/60 px-1 py-0.5">
+              ↑↓
+            </kbd>{" "}
             navigate{" "}
-            <kbd className="rounded border border-panel-border bg-background/60 px-1 py-0.5 ml-1">↵</kbd>{" "}
+            <kbd className="rounded border border-panel-border bg-background/60 px-1 py-0.5 ml-1">
+              ↵
+            </kbd>{" "}
             select
           </span>
           <span className="text-neon-green/40">cmd_palette v1</span>

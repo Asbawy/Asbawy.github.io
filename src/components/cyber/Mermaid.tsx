@@ -89,7 +89,7 @@ export function Mermaid({ chart }: { chart: string }) {
         // Add responsive width and auto height
         processedSvg = processedSvg.replace(
           /(<svg)/i,
-          '$1 style="width:100%;height:auto;max-height:none"'
+          '$1 style="width:100%;height:auto;max-height:none"',
         );
 
         setSvg(processedSvg);
@@ -135,9 +135,7 @@ export function Mermaid({ chart }: { chart: string }) {
       >
         {error ? (
           <div className="py-6 px-4 text-center">
-            <div className="text-threat-high font-mono text-sm mb-2">
-              // diagram render error
-            </div>
+            <div className="text-threat-high font-mono text-sm mb-2">// diagram render error</div>
             <pre className="text-xs text-muted-foreground whitespace-pre-wrap max-w-lg mx-auto">
               {error}
             </pre>

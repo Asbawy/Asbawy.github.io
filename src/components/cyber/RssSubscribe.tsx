@@ -14,12 +14,10 @@ export function RssSubscribe() {
 
         {/* Text */}
         <div className="min-w-0 flex-1">
-          <h3 className="font-mono text-sm text-foreground">
-            Stay in the loop
-          </h3>
+          <h3 className="font-mono text-sm text-foreground">Stay in the loop</h3>
           <p className="mt-1 font-mono text-[11px] text-muted-foreground leading-relaxed">
-            Subscribe via RSS to get new posts delivered to your reader.
-            Works with Feedly, Inoreader, Newsblur, and any RSS client.
+            Subscribe via RSS to get new posts delivered to your reader. Works with Feedly,
+            Inoreader, Newsblur, and any RSS client.
           </p>
         </div>
 
@@ -37,5 +35,3 @@ export function RssSubscribe() {
     </section>
   );
 }
-
-

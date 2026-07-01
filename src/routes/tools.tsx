@@ -1,23 +1,25 @@
-
-
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { JwtDecoder, PayloadEncoder } from "@/components/cyber/Tools";
 
 export const Route = createFileRoute("/tools")({
-
   head: () => ({
     meta: [
       { title: "/tools — Asbawy Blog" },
-      { name: "description", content: "Browser-only utilities — JWT decoder, payload encoder, and more." },
+      {
+        name: "description",
+        content: "Browser-only utilities — JWT decoder, payload encoder, and more.",
+      },
       { property: "og:title", content: "/tools — Asbawy Blog" },
-      { property: "og:description", content: "Interactive tools by Asbawy. Everything runs in your browser." },
+      {
+        property: "og:description",
+        content: "Interactive tools by Asbawy. Everything runs in your browser.",
+      },
     ],
   }),
   component: ToolsPage,
 });
-
 
 const tabs = [
   { id: "jwt", label: "jwt_decoder" },
@@ -30,9 +32,9 @@ function ToolsPage() {
   return (
     <CyberLayout>
       <section className="px-6 md:px-10 py-10 max-w-5xl">
-
         <div className="font-mono text-[11px] text-muted-foreground">
-          <span className="text-neon-green">asbawy</span>:<span className="text-neon-green">~/tools</span>$ ./run
+          <span className="text-neon-green">asbawy</span>:
+          <span className="text-neon-green">~/tools</span>$ ./run
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /tools <span className="text-muted-foreground">— offline_utils</span>
@@ -40,7 +42,6 @@ function ToolsPage() {
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Everything below runs in your browser. No network calls — paste away.
         </p>
-
 
         <div className="mt-6 flex gap-2 border-b border-panel-border">
           {tabs.map((t) => (
@@ -58,12 +59,8 @@ function ToolsPage() {
           ))}
         </div>
 
-
-        <div className="mt-6">
-          {tab === "jwt" ? <JwtDecoder /> : <PayloadEncoder />}
-        </div>
+        <div className="mt-6">{tab === "jwt" ? <JwtDecoder /> : <PayloadEncoder />}</div>
       </section>
     </CyberLayout>
   );
 }
-

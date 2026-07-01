@@ -1,18 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const BASE_URL = "https://asbawy.github.io";
 
 function getFrontmatter(content: string) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---(?:\r?\n)([\s\S]*?)(?:\r?\n)---/);
   if (!match) return {};
-  const lines = match[1].split('\n');
+  const lines = match[1].split(/\r?\n/);
   const fm: Record<string, string> = {};
   for (const line of lines) {
-    const colon = line.indexOf(':');
+    const colon = line.indexOf(":");
     if (colon !== -1) {
       const key = line.slice(0, colon).trim();
-      const val = line.slice(colon + 1).trim().replace(/^"|"$/g, '');
+      const val = line
+        .slice(colon + 1)
+        .trim()
+        .replace(/^"|"$/g, "");
       fm[key] = val;
     }
   }
@@ -21,16 +25,16 @@ function getFrontmatter(content: string) {
 
 async function main() {
   const items: any[] = [];
-  
+
   // Posts
   const postsDir = join(process.cwd(), "src/data/posts");
   try {
     if (existsSync(postsDir)) {
-      const postFiles = readdirSync(postsDir).filter(f => f.endsWith(".mdx"));
+      const postFiles = readdirSync(postsDir).filter((f) => f.endsWith(".mdx"));
       for (const f of postFiles) {
         const fullPath = join(postsDir, f);
         if (statSync(fullPath).isFile()) {
-          const content = readFileSync(fullPath, 'utf-8');
+          const content = readFileSync(fullPath, "utf-8");
           const fm = getFrontmatter(content);
           if (fm.title) {
             items.push({
@@ -43,7 +47,7 @@ async function main() {
         }
       }
     }
-  } catch(e) {
+  } catch (e) {
     console.error("Error reading posts:", e);
   }
 
@@ -53,17 +57,18 @@ async function main() {
     if (existsSync(cheatDir)) {
       const cheatFiles = readdirSync(cheatDir, { recursive: true });
       for (const f of cheatFiles) {
-        if (typeof f === 'string' && f.endsWith(".mdx")) {
+        if (typeof f === "string" && f.endsWith(".mdx")) {
           const fullPath = join(cheatDir, f);
           if (statSync(fullPath).isFile()) {
-            const content = readFileSync(fullPath, 'utf-8');
+            const content = readFileSync(fullPath, "utf-8");
             const fm = getFrontmatter(content);
             if (fm.title) {
               const normalized = f.replace(/\\/g, "/").replace(/\.mdx$/, "");
+              const escaped = normalized.split("/").map(encodeURIComponent).join("/");
               items.push({
                 title: fm.title,
                 description: fm.excerpt || "",
-                link: `${BASE_URL}/cheatsheet/${normalized}`,
+                link: `${BASE_URL}/cheatsheet/${escaped}`,
                 date: fm.date || new Date().toISOString(),
               });
             }
@@ -71,14 +76,16 @@ async function main() {
         }
       }
     }
-  } catch(e) {
+  } catch (e) {
     console.error("Error reading cheatsheets:", e);
   }
 
   // Sort by date desc
   items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const rssItems = items.map(item => `
+  const rssItems = items
+    .map(
+      (item) => `
     <item>
       <title><![CDATA[${item.title}]]></title>
       <description><![CDATA[${item.description}]]></description>
@@ -86,7 +93,9 @@ async function main() {
       <guid>${item.link}</guid>
       <pubDate>${new Date(item.date).toUTCString()}</pubDate>
     </item>
-  `).join('');
+  `,
+    )
+    .join("");
 
   const xml = `<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">

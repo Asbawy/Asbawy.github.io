@@ -90,14 +90,16 @@ function Slot({
     tone === "green"
       ? "text-neon-green"
       : tone === "blue"
-      ? "text-neon-green"
-      : "text-muted-foreground";
+        ? "text-neon-green"
+        : "text-muted-foreground";
   return (
     <div className="rounded-md border border-panel-border bg-background/60">
       <div className="border-b border-panel-border px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </div>
-      <pre className={`max-h-48 overflow-auto p-3 text-[11px] break-all whitespace-pre-wrap ${color}`}>
+      <pre
+        className={`max-h-48 overflow-auto p-3 text-[11px] break-all whitespace-pre-wrap ${color}`}
+      >
         {content ?? "// invalid"}
       </pre>
     </div>
@@ -135,8 +137,9 @@ export function PayloadEncoder() {
   const url = useMemo(() => encodeURIComponent(text), [text]);
   const htmlEntities = useMemo(
     () =>
-      text.replace(/[&<>"']/g, (c) =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!),
+      text.replace(
+        /[&<>"']/g,
+        (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
       ),
     [text],
   );
@@ -145,7 +148,16 @@ export function PayloadEncoder() {
     const variants: { label: string; out: string | null }[] = [
       { label: "base64", out: b64urlDecode(val) },
       { label: "hex", out: fromHex(val) },
-      { label: "url", out: (() => { try { return decodeURIComponent(val); } catch { return null; } })() },
+      {
+        label: "url",
+        out: (() => {
+          try {
+            return decodeURIComponent(val);
+          } catch {
+            return null;
+          }
+        })(),
+      },
     ];
     return variants.filter((v) => v.out && v.out !== val);
   };
@@ -184,4 +196,3 @@ export function PayloadEncoder() {
     </Panel>
   );
 }
-

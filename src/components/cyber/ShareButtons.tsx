@@ -55,5 +55,3 @@ export function ShareButtons({ title, slug }: { title: string; slug: string }) {
     </div>
   );
 }
-
-

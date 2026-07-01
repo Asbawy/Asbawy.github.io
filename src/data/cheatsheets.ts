@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ComponentType } from "react";
 import { lazy } from "react";
 
@@ -5,6 +6,11 @@ export type CheatsheetMeta = {
   title?: string;
   excerpt?: string;
   date?: string;
+  updated?: string;
+  category?: "Linux" | "Windows" | "Active Directory" | "Network" | "Web" | "Tools";
+  tags?: string[];
+  difficulty?: "Beginner" | "Intermediate" | "Advanced";
+  readTime?: string;
   [key: string]: any;
 };
 
@@ -17,14 +23,13 @@ export type FileNode = {
 };
 
 // Eager glob to get frontmatter
-const mdxModules = import.meta.glob<{ frontmatter: CheatsheetMeta }>(
-  "./cheatsheets/**/*.mdx",
-  { eager: true }
-);
+const mdxModules = import.meta.glob<{ frontmatter: CheatsheetMeta }>("./cheatsheets/**/*.mdx", {
+  eager: true,
+});
 
 // Lazy glob for actual React components
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: CheatsheetMeta }>(
-  "./cheatsheets/**/*.mdx"
+  "./cheatsheets/**/*.mdx",
 );
 
 export const cheatsheetFiles = Object.entries(mdxModules).map(([path, mod]) => {
@@ -80,5 +85,5 @@ export const CheatsheetMdxComponents: Record<string, ComponentType<any>> = Objec
         return { default: mod.default };
       }),
     ];
-  })
+  }),
 );

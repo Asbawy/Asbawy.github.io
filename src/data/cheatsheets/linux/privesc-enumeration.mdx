@@ -2,45 +2,21 @@
 title: "Linux Privilege Escalation: Enumeration Cheatsheet"
 excerpt: "Copy-paste-ready enumeration commands covering every critical Linux privesc vector — OS, users, network, files, capabilities, and scheduled tasks. Built for Red Teamers, pentesters, and CTF players."
 url: "https://asbawy.github.io/cheatsheet/linux/privesc-enumeration"
----
-
-## Table of Contents
-
-- [OS Enumeration](#os-enumeration)
-  - [Kernel & Architecture](#kernel-architecture)
-  - [Kernel Compile Info](#kernel-compile-info)
-  - [OS Release](#os-release)
-  - [Storage & Filesystems](#storage-filesystems)
-  - [Running Processes](#running-processes)
-  - [Scheduled Tasks](#scheduled-tasks)
-  - [Installed Packages](#installed-packages)
-- [User Enumeration](#user-enumeration)
-  - [Current User Context](#current-user-context)
-  - [Environment Variables](#environment-variables)
-  - [Command History](#command-history)
-  - [Sudo Permissions](#sudo-permissions)
-  - [/etc/passwd](#etc-passwd)
-  - [/etc/shadow](#etc-shadow)
-  - [SSH Keys](#ssh-keys)
-  - [User Capabilities](#user-capabilities)
-- [Network Enumeration](#network-enumeration)
-  - [Interfaces & Routes](#interfaces-routes)
-  - [Active Connections & Listening Ports](#active-connections-listening-ports)
-- [File System Enumeration](#file-system-enumeration)
-  - [SUID / SGID Binaries](#suid-sgid-binaries)
-  - [Writable Directories & Files](#writable-directories-files)
-  - [Sensitive File Discovery](#sensitive-file-discovery)
-  - [Dev Tools & Scripting Languages](#dev-tools-scripting-languages)
-  - [Linux Capabilities](#linux-capabilities)
-- [Quick Reference](#quick-reference)
-
+date: "2026-06-05"
+updated: "2026-06-20"
+category: "Linux"
+tags: ["linux", "privesc", "enumeration", "shell", "system", "network"]
+difficulty: "Beginner"
+readTime: "10 mins"
 ---
 
 <Callout type="info">
-**Methodology first.** Enumerate fully before exploiting anything. Work top-to-bottom: **OS → Users → Network → Files → Capabilities**. One skipped category is one missed path to root.
+  **Methodology first.** Enumerate fully before exploiting anything. Work top-to-bottom: **OS →
+  Users → Network → Files → Capabilities**. One skipped category is one missed path to root.
 </Callout>
 
 ---
+
 ## OS Enumeration
 
 ### Kernel & Architecture
@@ -52,11 +28,13 @@ uname -m          # CPU architecture: x86_64 / aarch64 / i686
 ```
 
 **What to extract from `uname -a` output:**
+
 - **Kernel version** — run through [Linux Exploit Suggester](https://github.com/The-Z-Labs/linux-exploit-suggester) and cross-check on [Exploit-DB](https://www.exploit-db.com/)
 - **Architecture** — determines which precompiled exploit binaries will execute
 
 <Callout type="warning">
-**Architecture mismatch kills payloads silently.** A `x86_64` exploit will not run on `aarch64`. Always confirm `uname -m` before uploading any compiled binary.
+  **Architecture mismatch kills payloads silently.** A `x86_64` exploit will not run on `aarch64`.
+  Always confirm `uname -m` before uploading any compiled binary.
 </Callout>
 
 ### Kernel Compile Info
@@ -66,6 +44,7 @@ cat /proc/version
 ```
 
 Example output:
+
 ```
 Linux version 6.8.0-41-generic (buildd@lcy02-amd64-077) (x86_64-linux-gnu-gcc-13 (Ubuntu 13.2.0-23ubuntu4) 13.2.0 ...)
 ```
@@ -91,10 +70,10 @@ df -h                    # mounted filesystems with usage
 ```
 
 <Callout type="info">
-**`/etc/fstab`**
-- **Unmounted partitions** — potentially weaker permissions or cached sensitive data
-- **NFS mounts with `no_root_squash`** — local root on the attacker machine becomes root on the NFS share
-- **CIFS/SMB mounts with inline credentials** — `username=` and `password=` options are plaintext in the file
+  **`/etc/fstab`** - **Unmounted partitions** — potentially weaker permissions or cached sensitive
+  data - **NFS mounts with `no_root_squash`** — local root on the attacker machine becomes root on
+  the NFS share - **CIFS/SMB mounts with inline credentials** — `username=` and `password=` options
+  are plaintext in the file
 </Callout>
 
 ### Running Processes
@@ -105,11 +84,13 @@ ps axjf       # all processes in forest/tree view
 ```
 
 **`ps aux` columns to focus on:**
+
 - **USER** — processes running as `root` that reference writable scripts are your target
 - **COMMAND** — look for web servers, database processes, custom application scripts
 
 <Callout type="info">
-Tree view (`ps axjf`) exposes **parent-child relationships** — spot scripts spawned by root daemons that might be replaceable or injectable.
+  Tree view (`ps axjf`) exposes **parent-child relationships** — spot scripts spawned by root
+  daemons that might be replaceable or injectable.
 </Callout>
 
 ### Scheduled Tasks
@@ -161,7 +142,10 @@ systemctl cat apt-daily.service     # view the full unit file and ExecStart path
 </Tabs>
 
 <Callout type="danger">
-**Cron/timer privesc trigger:** If a root-owned scheduled task calls a script at a world-writable path (`/tmp/`, `/home/user/script.sh`), overwrite that script with a payload. **Check permissions on every path referenced** in crontab entries and timer unit files — not just the script itself, but every directory in the path.
+  **Cron/timer privesc trigger:** If a root-owned scheduled task calls a script at a world-writable
+  path (`/tmp/`, `/home/user/script.sh`), overwrite that script with a payload. **Check permissions
+  on every path referenced** in crontab entries and timer unit files — not just the script itself,
+  but every directory in the path.
 </Callout>
 
 ### Installed Packages
@@ -187,6 +171,7 @@ whoami                # username only
 ```
 
 Example output:
+
 ```
 uid=1001(asbawy) gid=1001(asbawy) groups=1001(asbawy),100(users)
 uid=1002(matt) gid=1002(matt) groups=1002(matt),27(sudo),116(admin)
@@ -194,14 +179,14 @@ uid=1002(matt) gid=1002(matt) groups=1002(matt),27(sudo),116(admin)
 
 **High-value group memberships — flag and act on immediately:**
 
-| Group | Escalation Vector |
-|---|---|
-| `sudo` / `wheel` | Check `sudo -l` immediately |
-| `docker` | `docker run -v /:/mnt -it alpine chroot /mnt sh` |
-| `disk` | Raw block device read via `debugfs /dev/sda1` |
-| `lxd` / `lxc` | Container image import → host root escape |
-| `adm` | Read `/var/log/auth.log` — credentials in logs |
-| `shadow` | Read `/etc/shadow` password hashes |
+| Group            | Escalation Vector                                |
+| ---------------- | ------------------------------------------------ |
+| `sudo` / `wheel` | Check `sudo -l` immediately                      |
+| `docker`         | `docker run -v /:/mnt -it alpine chroot /mnt sh` |
+| `disk`           | Raw block device read via `debugfs /dev/sda1`    |
+| `lxd` / `lxc`    | Container image import → host root escape        |
+| `adm`            | Read `/var/log/auth.log` — credentials in logs   |
+| `shadow`         | Read `/etc/shadow` password hashes               |
 
 ### Environment Variables
 
@@ -211,12 +196,15 @@ printenv
 ```
 
 **Hunt for:**
+
 - **`PATH`** — writable directory earlier in PATH → hijack a binary called by root
 - **`LD_PRELOAD` / `LD_LIBRARY_PATH`** — if preserved across `sudo` → shared library injection
 - **Credential patterns** — `*_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `DATABASE_URL`, `AWS_*`
 
 <Callout type="danger">
-If `sudo -l` output shows `env_keep+=LD_PRELOAD`, you have a **trivial root escalation**. Compile a malicious `.so` that calls `setuid(0)` + `execvp("/bin/bash")` in its constructor, then run any `sudo`-allowed command with it set.
+  If `sudo -l` output shows `env_keep+=LD_PRELOAD`, you have a **trivial root escalation**. Compile
+  a malicious `.so` that calls `setuid(0)` + `execvp("/bin/bash")` in its constructor, then run any
+  `sudo`-allowed command with it set.
 </Callout>
 
 ### Command History
@@ -237,6 +225,7 @@ sudo -l
 ```
 
 Example output:
+
 ```
 Matching Defaults entries for asbawy on linux-enumeration:
     env_reset, mail_badpass, secure_path=...
@@ -246,7 +235,10 @@ User asbawy may run the following commands on linux-enumeration:
 ```
 
 <Callout type="danger">
-**Every `NOPASSWD` entry is a potential root shell.** Cross-reference every allowed binary at [GTFOBins](https://gtfobins.github.io/) → filter by `sudo`. Common vectors that always have entries: `nmap`, `vim`, `find`, `python`, `perl`, `ruby`, `awk`, `less`, `more`, `tee`, `cp`, `tar`, `bash`, `curl`, `wget`, `env`.
+  **Every `NOPASSWD` entry is a potential root shell.** Cross-reference every allowed binary at
+  [GTFOBins](https://gtfobins.github.io/) → filter by `sudo`. Common vectors that always have
+  entries: `nmap`, `vim`, `find`, `python`, `perl`, `ruby`, `awk`, `less`, `more`, `tee`, `cp`,
+  `tar`, `bash`, `curl`, `wget`, `env`.
 </Callout>
 
 ### /etc/passwd
@@ -278,17 +270,18 @@ cat /etc/shadow          # attempt read — succeeds if misconfigured or your us
 <Callout type="danger">
 If `/etc/shadow` is readable, extract all hashes and crack offline. Hash format identification:
 
-| Prefix | Algorithm | Hashcat Mode |
-|---|---|---|
-| `$6$` | SHA-512crypt | `-m 1800` |
-| `$5$` | SHA-256crypt | `-m 7400` |
-| `$2y$` / `$2b$` | bcrypt | `-m 3200` |
-| `$1$` | MD5crypt | `-m 500` |
+| Prefix          | Algorithm    | Hashcat Mode |
+| --------------- | ------------ | ------------ |
+| `$6$`           | SHA-512crypt | `-m 1800`    |
+| `$5$`           | SHA-256crypt | `-m 7400`    |
+| `$2y$` / `$2b$` | bcrypt       | `-m 3200`    |
+| `$1$`           | MD5crypt     | `-m 500`     |
 
 ```bash
 hashcat -m 1800 shadow_hashes.txt /usr/share/wordlists/rockyou.txt
 john --wordlist=/usr/share/wordlists/rockyou.txt shadow_hashes.txt
 ```
+
 </Callout>
 
 ### SSH Keys
@@ -317,6 +310,7 @@ ssh2john id_rsa > id_rsa.hash
 john --wordlist=/usr/share/wordlists/rockyou.txt id_rsa.hash
 # hashcat equivalent: hashcat -m 22921
 ```
+
 </Callout>
 
 ### User Capabilities
@@ -340,11 +334,9 @@ ifconfig             # legacy equivalent (net-tools package)
 ```
 
 <Callout type="info">
-**Interface signatures:**
-- `docker0` → Docker running locally; potential container escape or Docker socket abuse
-- `tun0` / `wg0` → VPN active
-- `virbr0` → KVM/libvirt hypervisor
-- **Multiple non-loopback interfaces** → active pivot point; map all subnets with `ip route`
+  **Interface signatures:** - `docker0` → Docker running locally; potential container escape or
+  Docker socket abuse - `tun0` / `wg0` → VPN active - `virbr0` → KVM/libvirt hypervisor - **Multiple
+  non-loopback interfaces** → active pivot point; map all subnets with `ip route`
 </Callout>
 
 ### Active Connections & Listening Ports
@@ -377,6 +369,7 @@ Services bound to `127.0.0.1` are invisible externally but fully accessible on t
 ```bash
 ssh -L 8080:127.0.0.1:8080 user@target   # forward target's local port 8080 to attacker:8080
 ```
+
 </Callout>
 
 ---
@@ -397,7 +390,9 @@ find / -type f \( -perm -u=s -o -perm -g=s \) 2>/dev/null
 ```
 
 <Callout type="danger">
-**Every result is a potential root shell.** Feed each binary directly to [GTFOBins](https://gtfobins.github.io/) and filter by `suid`. Non-standard or custom SUID binaries not listed in GTFOBins warrant manual reverse engineering with `ltrace`, `strace`, or `ghidra`.
+  **Every result is a potential root shell.** Feed each binary directly to
+  [GTFOBins](https://gtfobins.github.io/) and filter by `suid`. Non-standard or custom SUID binaries
+  not listed in GTFOBins warrant manual reverse engineering with `ltrace`, `strace`, or `ghidra`.
 </Callout>
 
 ### Writable Directories & Files
@@ -414,7 +409,9 @@ find / -user root -writable -type f 2>/dev/null | grep -v proc
 ```
 
 <Callout type="warning">
-Writable files **outside** `/tmp` and your own home directory are anomalies. Scripts called by root-owned cron jobs or systemd services at writable paths are direct escalation paths. Overwrite them with a payload before the next trigger fires.
+  Writable files **outside** `/tmp` and your own home directory are anomalies. Scripts called by
+  root-owned cron jobs or systemd services at writable paths are direct escalation paths. Overwrite
+  them with a payload before the next trigger fires.
 </Callout>
 
 ### Sensitive File Discovery
@@ -446,7 +443,9 @@ find / -name "gcc*" -type f 2>/dev/null
 ```
 
 <Callout type="info">
-Available interpreters determine your payload options **without transferring extra binaries**. `python3` + `gcc` on target = compile and execute arbitrary C on the box. `perl` + `python` = multiple GTFOBins shell escape routes available.
+  Available interpreters determine your payload options **without transferring extra binaries**.
+  `python3` + `gcc` on target = compile and execute arbitrary C on the box. `perl` + `python` =
+  multiple GTFOBins shell escape routes available.
 </Callout>
 
 ### Linux Capabilities
@@ -456,6 +455,7 @@ getcap -r / 2>/dev/null
 ```
 
 Example output:
+
 ```
 /usr/bin/python3.10 = cap_setuid+ep
 /usr/bin/perl        = cap_setuid+ep
@@ -465,16 +465,17 @@ Example output:
 <Callout type="danger">
 **Capabilities are the most overlooked privesc vector.** They grant individual kernel privileges to binaries **without the SUID bit** — completely invisible to basic `ls -la` audits and missed by many automated tools.
 
-| Capability | Impact |
-|---|---|
-| `cap_setuid` | `setuid(0)` → instant root shell |
-| `cap_setgid` | `setgid(0)` → root group escalation |
-| `cap_dac_read_search` | Bypass all file read permissions → dump `/etc/shadow`, read any file |
-| `cap_sys_admin` | Near-omnipotent: mount, ptrace, namespace ops, `CAP_SYS_ADMIN` exploits |
-| `cap_net_raw` | Capture raw network traffic |
-| `cap_net_bind_service` | Bind to privileged ports < 1024 |
+| Capability             | Impact                                                                  |
+| ---------------------- | ----------------------------------------------------------------------- |
+| `cap_setuid`           | `setuid(0)` → instant root shell                                        |
+| `cap_setgid`           | `setgid(0)` → root group escalation                                     |
+| `cap_dac_read_search`  | Bypass all file read permissions → dump `/etc/shadow`, read any file    |
+| `cap_sys_admin`        | Near-omnipotent: mount, ptrace, namespace ops, `CAP_SYS_ADMIN` exploits |
+| `cap_net_raw`          | Capture raw network traffic                                             |
+| `cap_net_bind_service` | Bind to privileged ports < 1024                                         |
 
 The `+ep` suffix = **Effective + Permitted** — capability is active on execution. Cross-reference all hits at [GTFOBins → Capabilities](https://gtfobins.github.io/#capabilities).
+
 </Callout>
 
 ```bash
@@ -496,33 +497,33 @@ The `+ep` suffix = **Effective + Permitted** — capability is active on executi
 
 ## Quick Reference
 
-| Command | Purpose |
-|---|---|
-| `uname -a` | Full kernel version string |
-| `uname -m` | CPU architecture (x86_64 / aarch64) |
-| `cat /proc/version` | Kernel compile info + compiler version |
-| `cat /etc/issue && cat /etc/os-release` | OS name and version |
-| `lsblk` | Block devices + mount points |
-| `cat /etc/fstab` | All filesystems incl. unmounted, NFS, CIFS |
-| `ps aux` | All running processes with owners |
-| `cat /etc/crontab && cat /etc/cron.d/*` | Root cron jobs |
-| `systemctl list-timers --all` | systemd scheduled timers |
-| `dpkg -l` | Installed packages + versions |
-| `id` | Current UID, GID, group memberships |
-| `sudo -l` | Allowed sudo commands |
-| `env` | Environment variables — PATH, LD_PRELOAD, secrets |
-| `cat ~/.bash_history` | Command history |
-| `cat /etc/passwd \| grep /bin/bash` | Real interactive users |
-| `ls -la /etc/shadow` | Shadow file permissions |
-| `find / -name id_rsa 2>/dev/null` | Private SSH keys |
-| `find / -perm -u=s -type f 2>/dev/null` | SUID binaries |
-| `find / -perm -g=s -type f 2>/dev/null` | SGID binaries |
-| `find / -type d -perm -0002 2>/dev/null` | World-writable directories |
-| `find / -perm -0002 -type f 2>/dev/null \| grep -v proc` | World-writable files |
-| `find / -user root -writable -type f 2>/dev/null \| grep -v proc` | Root-owned, user-writable files |
-| `find / -name ".env" -type f 2>/dev/null` | .env credential files |
-| `find / -name "*.bak" -type f 2>/dev/null` | Backup files |
-| `find / -mtime -5 -type f 2>/dev/null \| grep -v proc` | Recently modified files |
-| `getcap -r / 2>/dev/null` | Linux capabilities on binaries |
-| `ip addr && ip route` | Network interfaces and routing table |
-| `ss -tpln` | TCP listening ports + process names |
+| Command                                                           | Purpose                                           |
+| ----------------------------------------------------------------- | ------------------------------------------------- |
+| `uname -a`                                                        | Full kernel version string                        |
+| `uname -m`                                                        | CPU architecture (x86_64 / aarch64)               |
+| `cat /proc/version`                                               | Kernel compile info + compiler version            |
+| `cat /etc/issue && cat /etc/os-release`                           | OS name and version                               |
+| `lsblk`                                                           | Block devices + mount points                      |
+| `cat /etc/fstab`                                                  | All filesystems incl. unmounted, NFS, CIFS        |
+| `ps aux`                                                          | All running processes with owners                 |
+| `cat /etc/crontab && cat /etc/cron.d/*`                           | Root cron jobs                                    |
+| `systemctl list-timers --all`                                     | systemd scheduled timers                          |
+| `dpkg -l`                                                         | Installed packages + versions                     |
+| `id`                                                              | Current UID, GID, group memberships               |
+| `sudo -l`                                                         | Allowed sudo commands                             |
+| `env`                                                             | Environment variables — PATH, LD_PRELOAD, secrets |
+| `cat ~/.bash_history`                                             | Command history                                   |
+| `cat /etc/passwd \| grep /bin/bash`                               | Real interactive users                            |
+| `ls -la /etc/shadow`                                              | Shadow file permissions                           |
+| `find / -name id_rsa 2>/dev/null`                                 | Private SSH keys                                  |
+| `find / -perm -u=s -type f 2>/dev/null`                           | SUID binaries                                     |
+| `find / -perm -g=s -type f 2>/dev/null`                           | SGID binaries                                     |
+| `find / -type d -perm -0002 2>/dev/null`                          | World-writable directories                        |
+| `find / -perm -0002 -type f 2>/dev/null \| grep -v proc`          | World-writable files                              |
+| `find / -user root -writable -type f 2>/dev/null \| grep -v proc` | Root-owned, user-writable files                   |
+| `find / -name ".env" -type f 2>/dev/null`                         | .env credential files                             |
+| `find / -name "*.bak" -type f 2>/dev/null`                        | Backup files                                      |
+| `find / -mtime -5 -type f 2>/dev/null \| grep -v proc`            | Recently modified files                           |
+| `getcap -r / 2>/dev/null`                                         | Linux capabilities on binaries                    |
+| `ip addr && ip route`                                             | Network interfaces and routing table              |
+| `ss -tpln`                                                        | TCP listening ports + process names               |

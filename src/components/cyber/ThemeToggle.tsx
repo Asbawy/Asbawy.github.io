@@ -8,7 +8,7 @@ export function ThemeToggle() {
     // Check local storage or system preference on mount
     const savedTheme = localStorage.getItem("theme");
     const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
-    
+
     if (savedTheme === "light" || (!savedTheme && prefersLight)) {
       setIsLight(true);
       document.documentElement.classList.add("light");
@@ -33,7 +33,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className={`flex items-center gap-2 rounded-md px-3 py-2 border transition-all text-xs w-full text-left
+      className={`flex items-center gap-2 rounded-md px-3 py-2 border transition-all text-xs w-full text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/60
         ${
           isLight
             ? "border-neon-green/40 bg-neon-green/5 text-neon-green text-glow-green"
@@ -46,5 +46,3 @@ export function ThemeToggle() {
     </button>
   );
 }
-
-

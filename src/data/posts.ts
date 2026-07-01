@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ComponentType } from "react";
 import { lazy } from "react";
 
@@ -17,13 +18,10 @@ export type Post = PostMeta;
 
 // Eager: load the modules to get their frontmatter export.
 // remark-mdx-frontmatter automatically exports YAML frontmatter as `frontmatter`.
-const mdxModules = import.meta.glob<{ frontmatter: PostMeta }>(
-  "./posts/*.mdx",
-  { eager: true }
-);
+const mdxModules = import.meta.glob<{ frontmatter: PostMeta }>("./posts/*.mdx", { eager: true });
 
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: PostMeta }>(
-  "./posts/*.mdx"
+  "./posts/*.mdx",
 );
 
 export const postsMeta: PostMeta[] = Object.values(mdxModules)
@@ -47,7 +45,7 @@ export const MdxComponents: Record<string, ComponentType<any>> = Object.fromEntr
         return { default: mod.default };
       }),
     ];
-  })
+  }),
 );
 
 export async function getPostContent(slug: string): Promise<Post | undefined> {

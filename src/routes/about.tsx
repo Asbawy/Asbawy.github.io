@@ -31,8 +31,7 @@ export const Route = createFileRoute("/about")({
       { property: "og:title", content: "/about — Asbawy" },
       {
         property: "og:description",
-        content:
-          "Red Team Consultant | Penetration Tester ",
+        content: "Red Team Consultant | Penetration Tester ",
       },
     ],
   }),
@@ -63,14 +62,17 @@ function AnimatedCount({ target, suffix = "" }: { target: number; suffix?: strin
           }, 16);
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [target]);
 
   return (
-    <span ref={ref} className="text-3xl md:text-4xl font-mono text-neon-green text-glow-green tabular-nums">
+    <span
+      ref={ref}
+      className="text-3xl md:text-4xl font-mono text-neon-green text-glow-green tabular-nums"
+    >
       {count}
       {suffix}
     </span>
@@ -78,7 +80,15 @@ function AnimatedCount({ target, suffix = "" }: { target: number; suffix?: strin
 }
 
 /* ── stagger reveal ── */
-function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
+function Reveal({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -90,7 +100,7 @@ function Reveal({ children, delay = 0, className = "" }: { children: React.React
           observer.disconnect();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
@@ -107,7 +117,15 @@ function Reveal({ children, delay = 0, className = "" }: { children: React.React
 }
 
 /* ── skill progress bar ── */
-function SkillBar({ label, level, icon: Icon }: { label: string; level: number; icon: typeof Shield }) {
+function SkillBar({
+  label,
+  level,
+  icon: Icon,
+}: {
+  label: string;
+  level: number;
+  icon: typeof Shield;
+}) {
   const [width, setWidth] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -119,7 +137,7 @@ function SkillBar({ label, level, icon: Icon }: { label: string; level: number; 
           observer.disconnect();
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
@@ -137,7 +155,10 @@ function SkillBar({ label, level, icon: Icon }: { label: string; level: number; 
       <div className="h-1.5 w-full rounded-full bg-panel-border/40 overflow-hidden">
         <div
           className="h-full rounded-full bg-gradient-to-r from-neon-green/70 to-neon-green transition-all duration-1000 ease-out"
-          style={{ width: `${width}%`, boxShadow: width > 0 ? "0 0 8px rgba(0, 255, 136, 0.3)" : "none" }}
+          style={{
+            width: `${width}%`,
+            boxShadow: width > 0 ? "0 0 8px rgba(0, 255, 136, 0.3)" : "none",
+          }}
         />
       </div>
     </div>
@@ -146,13 +167,6 @@ function SkillBar({ label, level, icon: Icon }: { label: string; level: number; 
 
 /* ── main page ── */
 function AboutPage() {
-  const stats = [
-    { label: "vulns_found", value: 250, suffix: "+" },
-    { label: "orgs_recognized", value: 50, suffix: "+" },
-    { label: "thm_rank", value: 1, suffix: "%" },
-    { label: "experience", value: 5, suffix: "y" },
-  ];
-
   const skillBars = [
     { label: "Web / API Pentesting", level: 95, icon: Crosshair },
     { label: "Mobile (Android/iOS)", level: 85, icon: Cpu },
@@ -166,10 +180,7 @@ function AboutPage() {
     { cat: "Platforms", items: ["Burp Suite", "Metasploit", "BloodHound", "Frida / Ghidra"] },
   ];
 
-  const hallOfFame = [
-    "Vimeo", "AT&T", "Elisa Oyj", "Mezmo",
-    "Atlassian", "Doximity", "KnowBe4",
-  ];
+  const hallOfFame = ["Vimeo", "AT&T", "Elisa Oyj", "Mezmo", "Atlassian", "Doximity", "KnowBe4"];
 
   const certs = [
     { name: "Advanced Penetration Testing", issuer: "Cybrary" },
@@ -187,7 +198,11 @@ function AboutPage() {
   const socials = [
     { icon: Github, label: "github.com/Asbawy", href: "https://github.com/Asbawy" },
     { icon: BookOpen, label: "asbawy.medium.com", href: "https://asbawy.medium.com" },
-    { icon: Linkedin, label: "linkedin.com/in/mhmmdashraf", href: "https://linkedin.com/in/mhmmdashraf" },
+    {
+      icon: Linkedin,
+      label: "linkedin.com/in/mhmmdashraf",
+      href: "https://linkedin.com/in/mhmmdashraf",
+    },
     { icon: Mail, label: "eng.mhmmd@yahoo.com", href: "mailto:eng.mhmmd@yahoo.com" },
   ];
 
@@ -271,11 +286,14 @@ function AboutPage() {
                 <div className="flex items-center gap-1.5">
                   <GraduationCap className="h-3 w-3 text-muted-foreground/60 shrink-0" />
                   <span className="text-muted-foreground">edu:</span>{" "}
-                  <span className="text-foreground">B.Eng Electronics & Communications — Mansoura University</span>
+                  <span className="text-foreground">
+                    B.Eng Electronics & Communications — Mansoura University
+                  </span>
                 </div>
                 <div className="!mt-3 pt-3 border-t border-panel-border/50 text-muted-foreground leading-relaxed">
-                  Red Team operator specializing in web, mobile, network, and AD penetration testing.
-                  Recognized Bug Bounty Hunter by Atlassian, Doximity, Canva, Mezmo, and 50+ organizations worldwide.
+                  Red Team operator specializing in web, mobile, network, and AD penetration
+                  testing. Recognized Bug Bounty Hunter by Atlassian, Doximity, Canva, Mezmo, and
+                  50+ organizations worldwide.
                 </div>
               </div>
             </Reveal>
@@ -287,21 +305,51 @@ function AboutPage() {
           CONTENT SECTIONS
       ═══════════════════════════════════════════════════════════ */}
       <section className="px-6 md:px-10 py-10 max-w-5xl space-y-8">
-
         {/* ── Stats row ── */}
         <Reveal>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {stats.map((s) => (
-              <div
-                key={s.label}
-                className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300"
-              >
-                <AnimatedCount target={s.value} suffix={s.suffix} />
+            {/* Stat 1: Vulnerabilities Found */}
+            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
+              <AnimatedCount target={250} suffix="+" />
+              <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                vulns_found
+              </div>
+            </div>
+
+            {/* Stat 2: Organizations Recognized */}
+            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
+              <AnimatedCount target={50} suffix="+" />
+              <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                orgs_recognized
+              </div>
+            </div>
+
+            {/* Stat 3: Hack The Box Global Rank */}
+            <a
+              href="https://profile.hackthebox.com/profile/019dc6a8-c662-7226-a4e9-fe02c60c2ccd"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] hover:shadow-[0_0_20px_rgba(0,255,136,0.05)] transition-all duration-300 flex flex-col justify-between min-h-[135px] focus:outline-none focus-visible:ring-1 focus-visible:ring-neon-green"
+            >
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <AnimatedCount target={320} />
                 <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {s.label}
+                  htb_global_rank
                 </div>
               </div>
-            ))}
+              <div className="mt-3 pt-2 w-full border-t border-panel-border/30 font-mono text-[10px] text-muted-foreground/80 group-hover:text-neon-green/80 transition-colors flex items-center justify-center gap-1.5">
+                <span>Asbawy</span>
+                <span className="text-neon-green font-semibold">(Pro Hacker)</span>
+              </div>
+            </a>
+
+            {/* Stat 4: Years of Experience */}
+            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
+              <AnimatedCount target={5} suffix="y" />
+              <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                experience
+              </div>
+            </div>
           </div>
         </Reveal>
 
@@ -409,7 +457,9 @@ function AboutPage() {
               <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.7_0.25_25)]" />
               <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.82_0.18_80)]" />
               <div className="h-2.5 w-2.5 rounded-full bg-neon-green" />
-              <span className="ml-2 text-[10px] uppercase tracking-widest text-muted-foreground/60">terminal</span>
+              <span className="ml-2 text-[10px] uppercase tracking-widest text-muted-foreground/60">
+                terminal
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Terminal className="h-3.5 w-3.5 text-neon-green" />

@@ -8,9 +8,10 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 
-import hljsCss from "highlight.js/styles/github-dark.css?url";
+import "highlight.js/styles/github-dark.css";
 import appCss from "../styles.css?url";
 import { CyberBackground } from "@/components/cyber/MatrixBackground";
+import { BackToTop } from "@/components/cyber/BackToTop";
 
 import { Terminal, Home, AlertCircle } from "lucide-react";
 
@@ -21,17 +22,27 @@ function NotFoundComponent() {
         <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-threat-high/10 mb-6 border border-threat-high/30">
           <AlertCircle className="h-10 w-10 text-threat-high animate-pulse" />
         </div>
-        
+
         <h1 className="text-5xl md:text-6xl font-bold text-threat-high mb-2">404</h1>
-        <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-6">CONNECTION REFUSED</h2>
-        
+        <h2 className="text-xl md:text-2xl font-semibold text-foreground mb-6">
+          CONNECTION REFUSED
+        </h2>
+
         <div className="bg-background/50 border border-panel-border rounded-md p-4 text-left text-[13px] text-muted-foreground space-y-2 mb-8 font-mono">
-          <div><span className="text-neon-green font-bold">$</span> <span className="opacity-80">curl -I /requested-path</span></div>
+          <div>
+            <span className="text-neon-green font-bold">$</span>{" "}
+            <span className="opacity-80">curl -I /requested-path</span>
+          </div>
           <div className="text-threat-mid">HTTP/2 404 Not Found</div>
-          <div className="text-threat-mid">X-Error: Resource permanently displaced or never existed</div>
-          <div className="pt-2"><span className="text-neon-green font-bold">$</span> <span className="opacity-80">traceroute target</span></div>
-          <div className="text-foreground/60">1  localhost (127.0.0.1)  0.032 ms</div>
-          <div className="text-threat-mid">2  * * * (Destination Host Unreachable)</div>
+          <div className="text-threat-mid">
+            X-Error: Resource permanently displaced or never existed
+          </div>
+          <div className="pt-2">
+            <span className="text-neon-green font-bold">$</span>{" "}
+            <span className="opacity-80">traceroute target</span>
+          </div>
+          <div className="text-foreground/60">1 localhost (127.0.0.1) 0.032 ms</div>
+          <div className="text-threat-mid">2 * * * (Destination Host Unreachable)</div>
         </div>
 
         <Link
@@ -87,10 +98,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Asbawy Blog" },
-      { name: "description", content: "Asbawy's personal blog — security research, dev logs, and tools." },
+      {
+        name: "description",
+        content: "Asbawy's personal blog — security research, dev logs, and tools.",
+      },
       { name: "author", content: "Asbawy" },
       { property: "og:title", content: "Asbawy Blog" },
-      { property: "og:description", content: "Asbawy's personal blog — security research, dev logs, and tools." },
+      {
+        property: "og:description",
+        content: "Asbawy's personal blog — security research, dev logs, and tools.",
+      },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
       { property: "og:url", content: "https://asbawy.github.io" },
@@ -104,14 +121,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      {
-        rel: "stylesheet",
-        href: hljsCss,
-      },
       { rel: "icon", type: "image/png", href: "/eye-of-ra.png" },
       { rel: "apple-touch-icon", href: "/eye-of-ra.png" },
       { rel: "canonical", href: "https://asbawy.github.io" },
-      { rel: "alternate", type: "application/rss+xml", title: "Asbawy Blog RSS Feed", href: "https://asbawy.github.io/feed.xml" },
+      {
+        rel: "alternate",
+        type: "application/rss+xml",
+        title: "Asbawy Blog RSS Feed",
+        href: "https://asbawy.github.io/feed.xml",
+      },
     ],
     scripts: [
       {
@@ -148,6 +166,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <BackToTop />
     </QueryClientProvider>
   );
 }

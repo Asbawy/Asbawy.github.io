@@ -17,7 +17,7 @@ for (const file of files) {
 
   ts = ts.replace(
     /export const post: Post = \{\s*\.\.\.meta,?\s*\};?/m,
-    `export const post: Post = {\n  ...meta,\n  content: \`${md}\`\n};`
+    `export const post: Post = {\n  ...meta,\n  content: \`${md}\`\n};`,
   );
 
   fs.writeFileSync(tsFile, ts);

@@ -71,25 +71,37 @@ export function SystemStatus() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="flex items-center gap-2"><Activity className="h-3.5 w-3.5" />uptime</span>
+            <span className="flex items-center gap-2">
+              <Activity className="h-3.5 w-3.5" />
+              uptime
+            </span>
             <span className="text-foreground">{fmtUptime(metrics.uptime)}</span>
           </div>
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="flex items-center gap-2"><Wifi className="h-3.5 w-3.5" />throughput</span>
+            <span className="flex items-center gap-2">
+              <Wifi className="h-3.5 w-3.5" />
+              throughput
+            </span>
             <span className="text-neon-green">{metrics.net.toFixed(0)} kB/s</span>
           </div>
         </div>
         <div className="space-y-3">
           <div>
             <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-              <span className="flex items-center gap-1"><Cpu className="h-3 w-3" />cpu</span>
+              <span className="flex items-center gap-1">
+                <Cpu className="h-3 w-3" />
+                cpu
+              </span>
               <span className="text-foreground">{metrics.cpu.toFixed(0)}%</span>
             </div>
             <Bar value={metrics.cpu} color="bg-neon-green" />
           </div>
           <div>
             <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-              <span className="flex items-center gap-1"><MemoryStick className="h-3 w-3" />mem</span>
+              <span className="flex items-center gap-1">
+                <MemoryStick className="h-3 w-3" />
+                mem
+              </span>
               <span className="text-foreground">{metrics.mem.toFixed(0)}%</span>
             </div>
             <Bar value={metrics.mem} color="bg-neon-green" />
@@ -121,4 +133,3 @@ export function SystemStatus() {
     </Panel>
   );
 }
-

@@ -1,5 +1,3 @@
-
-
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
@@ -8,44 +6,37 @@ import { SystemStatus } from "@/components/cyber/SystemStatus";
 import { postsMeta } from "@/data/posts";
 import { ArrowUpRight, Terminal } from "lucide-react";
 
-export const Route = createFileRoute("/")(
-  {
-
-    head: () => ({
-      meta: [
-        { title: "Asbawy Blog — Dev Logs, Security Research & Tools" },
-        {
-          name: "description",
-          content:
-            "Personal blog by Asbawy — security research, dev logs, automation, and scripting.",
-        },
-        { property: "og:title", content: "Asbawy Blog" },
-        { property: "og:description", content: "Dev logs, security research, and tools by Asbawy." },
-      ],
-    }),
-    component: Index,
-  });
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Asbawy Blog — Dev Logs, Security Research & Tools" },
+      {
+        name: "description",
+        content:
+          "Personal blog by Asbawy — security research, dev logs, automation, and scripting.",
+      },
+      { property: "og:title", content: "Asbawy Blog" },
+      { property: "og:description", content: "Dev logs, security research, and tools by Asbawy." },
+    ],
+  }),
+  component: Index,
+});
 
 function Index() {
-
   const recent = postsMeta.slice(0, 4);
 
   return (
     <CyberLayout>
-
       <section className="relative overflow-hidden border-b border-panel-border">
         <div className="absolute inset-0 grid-bg opacity-30 pointer-events-none" />
         <div className="absolute inset-0 scanlines opacity-40 pointer-events-none" />
         <div className="relative px-6 md:px-10 py-12 md:py-20 max-w-6xl">
-
           <div className="inline-flex items-center gap-2 rounded-full border border-panel-border bg-panel/60 px-3 py-1 font-mono text-[11px] text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-neon-green pulse-dot" />
             session_initialized — welcome
           </div>
 
-
           <h1 className="sr-only">Asbawy — personal blog and dev logs</h1>
-
 
           <div className="mt-6 rounded-lg border border-panel-border bg-panel/80 p-5 md:p-7 max-w-3xl">
             <Typewriter
@@ -57,7 +48,6 @@ function Index() {
               ]}
             />
           </div>
-
 
           <div className="mt-8 flex flex-wrap gap-3 font-mono text-sm">
             <Link
@@ -84,13 +74,11 @@ function Index() {
         </div>
       </section>
 
-
       <section className="px-6 md:px-10 py-10 max-w-6xl">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2">
             <SystemStatus />
           </div>
-
 
           <Panel title="ops summary">
             <ul className="space-y-3 font-mono text-xs">
@@ -100,7 +88,10 @@ function Index() {
                 ["status", "active"],
                 ["version", "v2.0"],
               ].map(([k, v]) => (
-                <li key={k} className="flex items-center justify-between border-b border-panel-border/60 pb-2 last:border-0">
+                <li
+                  key={k}
+                  className="flex items-center justify-between border-b border-panel-border/60 pb-2 last:border-0"
+                >
                   <span className="text-muted-foreground">{k}</span>
                   <span className="text-neon-green text-glow-green">{v}</span>
                 </li>
@@ -108,7 +99,6 @@ function Index() {
             </ul>
           </Panel>
         </div>
-
 
         <div className="mt-8">
           <Panel
@@ -120,7 +110,6 @@ function Index() {
             }
           >
             {recent.length === 0 ? (
-
               <div className="py-8 text-center font-mono text-xs text-muted-foreground">
                 // no posts yet — add your first post in src/data/posts.ts
               </div>
@@ -136,12 +125,17 @@ function Index() {
                   >
                     <div className="flex items-center justify-between font-mono text-[10px] text-muted-foreground">
                       <span>{p.date}</span>
-                      <span className={
-                        p.severity === "Critical" ? "text-threat-high" :
-                          p.severity === "High" ? "text-threat-mid" :
-                            p.severity === "Medium" ? "text-neon-green" :
-                              "text-neon-green"
-                      }>
+                      <span
+                        className={
+                          p.severity === "Critical"
+                            ? "text-threat-high"
+                            : p.severity === "High"
+                              ? "text-threat-mid"
+                              : p.severity === "Medium"
+                                ? "text-neon-green"
+                                : "text-neon-green"
+                        }
+                      >
                         severity: {p.severity.toLowerCase()}
                       </span>
                     </div>
@@ -151,7 +145,9 @@ function Index() {
                     <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{p.excerpt}</p>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       {p.tags.map((t) => (
-                        <Tag key={t} variant={tagVariantFor(t)}>{t}</Tag>
+                        <Tag key={t} variant={tagVariantFor(t)}>
+                          {t}
+                        </Tag>
                       ))}
                     </div>
                   </Link>
@@ -164,5 +160,3 @@ function Index() {
     </CyberLayout>
   );
 }
-
-

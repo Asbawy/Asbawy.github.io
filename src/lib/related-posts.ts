@@ -1,10 +1,6 @@
 import type { PostMeta } from "@/data/posts";
 
-export function getRelatedPosts(
-  current: PostMeta,
-  allPosts: PostMeta[],
-  limit = 3
-): PostMeta[] {
+export function getRelatedPosts(current: PostMeta, allPosts: PostMeta[], limit = 3): PostMeta[] {
   return allPosts
     .filter((p) => p.slug !== current.slug)
     .map((p) => {

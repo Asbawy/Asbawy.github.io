@@ -17,7 +17,7 @@ readTime: "12 min"
 url: "https://asbawy.github.io/logs/badsuccessor"
 ---
 
-import { Callout } from '@/components/Callout'
+import { Callout } from "@/components/Callout";
 
 ![BadSuccessor — dMSA Privilege Escalation in Windows Server 2025](https://i.imgur.com/0rdk8Tf.png)
 
@@ -55,12 +55,12 @@ The "delegated" qualifier refers to administrative scope: a dMSA is managed by a
 
 Migration progress is tracked through the `msDS-DelegatedMSAState` attribute on the dMSA object. The semantics below are derived from behavioral analysis published by Akamai:
 
-| Value | State | Description |
-|-------|-------|-------------|
-| `0` | Unknown | Possibly disabled; behavior unconfirmed by published research |
-| `1` | In Progress | Migration started; legacy account still operational |
-| `2` | Completed | Migration finalized; legacy account disabled |
-| `3` | Standalone | dMSA is in active use without a migration predecessor |
+| Value | State       | Description                                                   |
+| ----- | ----------- | ------------------------------------------------------------- |
+| `0`   | Unknown     | Possibly disabled; behavior unconfirmed by published research |
+| `1`   | In Progress | Migration started; legacy account still operational           |
+| `2`   | Completed   | Migration finalized; legacy account disabled                  |
+| `3`   | Standalone  | dMSA is in active use without a migration predecessor         |
 
 ### Attributes Governing the Migration Relationship
 
@@ -68,16 +68,16 @@ Several LDAP attributes form the bidirectional linkage between the dMSA and the 
 
 **On the dMSA object:**
 
-| Attribute | Role |
-|-----------|------|
-| `msDS-ManagedAccountPrecededByLink` | Distinguished Name of the superseded legacy account |
-| `msDS-GroupMSAMembership` | Security descriptor listing principals authorized to retrieve the dMSA's managed password |
+| Attribute                           | Role                                                                                      |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- |
+| `msDS-ManagedAccountPrecededByLink` | Distinguished Name of the superseded legacy account                                       |
+| `msDS-GroupMSAMembership`           | Security descriptor listing principals authorized to retrieve the dMSA's managed password |
 
 **On the superseded account:**
 
-| Attribute | Role |
-|-----------|------|
-| `msDS-SupersededManagedAccountLink` | DN of the succeeding dMSA |
+| Attribute                            | Role                                                                                      |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `msDS-SupersededManagedAccountLink`  | DN of the succeeding dMSA                                                                 |
 | `msDS-SupersededServiceAccountState` | Migration state from the legacy account's perspective, mirroring `msDS-DelegatedMSAState` |
 
 ### The Migration Handshake in Detail
@@ -85,7 +85,6 @@ Several LDAP attributes form the bidirectional linkage between the dMSA and the 
 Migration is initiated through the PowerShell cmdlet `Start-ADServiceAccountMigration`, which internally calls a privileged LDAP rootDSE operation named **migrateADServiceAccount**. This operation accepts three parameters: the Distinguished Name of the dMSA, the DN of the legacy account, and the `StartMigration` constant.
 
 When `StartMigration` executes, the following changes are applied atomically to Active Directory:
-
 
 **Step 1 — dMSA State Transition**
 `msDS-DelegatedMSAState` on the dMSA is set to `1` (migration in progress).
@@ -102,13 +101,12 @@ The dMSA's `ntSecurityDescriptor` is modified. The superseded account is granted
 **Step 5 — Legacy Account State Update**
 `msDS-SupersededServiceAccountState` on the legacy account is set to `1` (migration in progress).
 
-
 Migration is completed through `Complete-ADServiceAccountMigration`. Upon completion, the dMSA inherits the legacy account's SPNs, delegation settings, and group memberships. The legacy account is disabled, and both state attributes advance to `2`.
 
 ```mermaid
 flowchart TD
     Start([Start-ADServiceAccountMigration]) --> step1
-    
+
     subgraph InProgress [Migration In Progress]
         direction TB
         step1["1. dMSA State = 1"] --> step2["2. Legacy Account Granted Write Access to dMSA"]
@@ -116,15 +114,15 @@ flowchart TD
         step3 --> step4["4. Legacy Successor Link = dMSA DN"]
         step4 --> step5["5. Legacy State = 1"]
     end
-    
+
     step5 --> Complete([Complete-ADServiceAccountMigration])
-    
+
     subgraph Completed [Migration Completed]
         direction TB
         comp1["Both States = 2"] --> comp2["dMSA Inherits SPNs & Delegation"]
         comp2 --> comp3["Legacy Account Disabled"]
     end
-    
+
     Complete --> comp1
 ```
 
@@ -146,6 +144,7 @@ The TGT is not an authorization grant in isolation. It is a proof-of-identity to
 Critically, both the TGT and the TGS embed a **Privilege Attribute Certificate (PAC)** — a Microsoft extension to the Kerberos standard that carries the authenticated principal's group membership SIDs. Every authorization decision at the resource layer is driven by the contents of this PAC. When a file server, domain controller, or any Kerberos-protected service evaluates an incoming request, it reads the PAC to determine what the caller is permitted to do.
 
 BadSuccessor's impact flows from this architecture. By controlling what the KDC embeds in the PAC of a dMSA's TGT — specifically, by pointing `msDS-ManagedAccountPrecededByLink` at a Domain Admin — an attacker causes every downstream authorization decision to treat the dMSA as that privileged account.
+
 </Callout>
 
 ### Pre-Migration Authentication
@@ -200,7 +199,10 @@ The restriction on `migrateADServiceAccount` protects the operation of invoking 
 The KDC does not verify that a `migrateADServiceAccount` operation was ever performed before applying PAC inheritance. At authentication time, it reads these two attributes and treats their current values as authoritative. If they indicate a completed migration, the KDC builds the PAC accordingly — regardless of how those values were set.
 
 <Callout type="danger">
-**The Core Flaw:** The operation that initiates migration is restricted to Domain Admins. The attributes that encode migration state are not. The KDC trusts these attributes unconditionally, with no verification of the process by which they were written. This is the gap BadSuccessor exploits.
+  **The Core Flaw:** The operation that initiates migration is restricted to Domain Admins. The
+  attributes that encode migration state are not. The KDC trusts these attributes unconditionally,
+  with no verification of the process by which they were written. This is the gap BadSuccessor
+  exploits.
 </Callout>
 
 ---
@@ -210,7 +212,6 @@ The KDC does not verify that a `migrateADServiceAccount` operation was ever perf
 ### Conceptual Breakdown: LDAP Attribute Manipulation Step by Step
 
 The following sequence describes how an attacker with write access to a dMSA synthesizes a "completed migration" through direct LDAP attribute manipulation, with no interaction with the target account and no invocation of privileged operations.
-
 
 **Step 1 — Obtain Write Access to a dMSA**
 The attacker needs one of two starting conditions: write access to an existing dMSA object in any OU, or the `CreateChild` right on an OU (the right to create new objects, including `msDS-GroupManagedServiceAccount` objects, which the creator owns by default). The `CreateChild` right on an OU is commonly delegated to IT operations, helpdesk roles, and automation accounts.
@@ -321,6 +322,7 @@ In the first step, `tgtdeleg` materializes a forwardable TGT from the current se
 In the second step, `asktgs` presents that TGT to the KDC and requests a TGS in the dMSA authentication context. The KDC evaluates the dMSA's `msDS-ManagedAccountPrecededByLink` and `msDS-DelegatedMSAState` attributes, resolves the Administrator's SIDs, and embeds them in the resulting ticket's PAC. The attacker now holds a ticket that carries Administrator group memberships.
 
 In the third step, `asktgs` uses the dMSA TGS to request a service-specific ticket. The target service evaluates the incoming PAC and sees Administrator SIDs, granting access accordingly. The service has no mechanism to distinguish this ticket from one legitimately issued to the Administrator account.
+
 </Callout>
 
 ![Screenshot: CIFS Ticket Injected — Domain Controller File System Access as Administrator](https://i.imgur.com/P88Alkh.png)

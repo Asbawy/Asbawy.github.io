@@ -2,6 +2,12 @@
 title: "Shell Upgrade Cheatsheet"
 excerpt: "Complete guide to upgrading dumb shells to fully interactive TTYs during penetration testing"
 url: "https://asbawy.github.io/cheatsheet/linux/Shell_Upgrades"
+date: "2026-06-08"
+updated: "2026-06-20"
+category: "Linux"
+tags: ["shell", "tty", "penelope", "python", "stty", "reverse-shell"]
+difficulty: "Beginner"
+readTime: "5 mins"
 ---
 
 # Shell Upgrade Cheatsheet
@@ -10,35 +16,9 @@ url: "https://asbawy.github.io/cheatsheet/linux/Shell_Upgrades"
 
 ---
 
-## Table of Contents
-
-- [The Modern Way: Penelope (Recommended)](#the-modern-way-penelope-recommended)
-  - [Installation](#installation)
-  - [Basic Usage](#basic-usage)
-  - [Key Features](#key-features)
-  - [Penelope Session Commands](#penelope-session-commands)
-- [🛠️ Manual Upgrade Methods](#manual-upgrade-methods)
-  - [Method 1: Python PTY (Most Common)](#method-1-python-pty-most-common)
-  - [Method 2: Script Command ](#method-2-script-command)
-  - [Method 3: Socat ](#method-3-socat)
-  - [Method 4: Using stty/nc (No Python)](#method-4-using-stty-nc-no-python)
-- [The Full Interactive TTY Upgrade](#the-full-interactive-tty-upgrade)
-  - [Step-by-Step](#step-by-step)
-  - [Quick Version (If You Know Your Terminal Size)](#quick-version-if-you-know-your-terminal-size)
-- [Alternative Languages & Tools](#alternative-languages-tools)
-  - [Perl](#perl)
-  - [Ruby](#ruby)
-  - [Lua](#lua)
-  - [AWK](#awk)
-  - [Using /bin/sh (Minimal)](#using-bin-sh-minimal)
-- [Terminal Size Reference](#terminal-size-reference)
-- [🔗 Resources](#resources)
-
----
-
 ## The Modern Way: Penelope (Recommended)
 
-**Penelope** is a modern shell handler that automates PTY upgrades, session management, file transfers, and logging. It's a game-changer for penetration testers and CTF players. 
+**Penelope** is a modern shell handler that automates PTY upgrades, session management, file transfers, and logging. It's a game-changer for penetration testers and CTF players.
 
 ### Installation
 
@@ -71,14 +51,14 @@ python3 penelope.py -O
 
 ### Key Features
 
-| Feature | Description |
-|---------|-------------|
-| **Auto-upgrade** | Automatically upgrades shells to PTY without manual steps |
-| **Multi-session** | Manage multiple shells simultaneously |
-| **File Transfer** | Built-in `upload` and `download` commands |
-| **Logging** | Automatic session logging with timestamps |
-| **Session Menu** | Press `F12` to access session manager |
-| **OSCP Safe** | Use `-O` flag for exam compliance  |
+| Feature           | Description                                               |
+| ----------------- | --------------------------------------------------------- |
+| **Auto-upgrade**  | Automatically upgrades shells to PTY without manual steps |
+| **Multi-session** | Manage multiple shells simultaneously                     |
+| **File Transfer** | Built-in `upload` and `download` commands                 |
+| **Logging**       | Automatic session logging with timestamps                 |
+| **Session Menu**  | Press `F12` to access session manager                     |
+| **OSCP Safe**     | Use `-O` flag for exam compliance                         |
 
 ### Penelope Session Commands
 
@@ -110,7 +90,7 @@ python3 -c 'import pty; pty.spawn("/bin/bash")'
 /usr/bin/python3 -c 'import pty; pty.spawn("/bin/bash")'
 ```
 
-### Method 2: Script Command 
+### Method 2: Script Command
 
 ```bash
 # Most reliable when python is unavailable
@@ -120,7 +100,7 @@ python3 -c 'import pty; pty.spawn("/bin/bash")'
 /usr/bin/expect -c 'spawn /bin/bash; interact'
 ```
 
-### Method 3: Socat 
+### Method 3: Socat
 
 ```bash
 # On attacker machine (listener)
@@ -189,26 +169,31 @@ stty raw -echo; fg
 ## Alternative Languages & Tools
 
 ### Perl
+
 ```perl
 perl -e 'exec "/bin/bash";'
 ```
 
 ### Ruby
+
 ```ruby
 ruby -e 'exec "/bin/bash"'
 ```
 
 ### Lua
+
 ```lua
 lua -e 'os.execute("/bin/bash")'
 ```
 
 ### AWK
+
 ```awk
 awk 'BEGIN {system("/bin/bash")}'
 ```
 
 ### Using /bin/sh (Minimal)
+
 ```bash
 /bin/sh -i
 ```
@@ -217,12 +202,12 @@ awk 'BEGIN {system("/bin/bash")}'
 
 ## Terminal Size Reference
 
-| Command | Purpose |
-|---------|---------|
-| `stty size` | Quick rows/cols output |
-| `stty -a` | Full terminal settings |
-| `stty rows 50 cols 200` | Set manual size |
-| `resize` | Auto-detect size (if available) |
+| Command                 | Purpose                         |
+| ----------------------- | ------------------------------- |
+| `stty size`             | Quick rows/cols output          |
+| `stty -a`               | Full terminal settings          |
+| `stty rows 50 cols 200` | Set manual size                 |
+| `resize`                | Auto-detect size (if available) |
 
 **Tip:** Before backgrounding your shell, run `stty -a` in your **local** terminal and note the `rows` and `columns` values. Use these exact values in step 5.
 
@@ -230,6 +215,6 @@ awk 'BEGIN {system("/bin/bash")}'
 
 ## 🔗 Resources
 
-- [Penelope GitHub](https://github.com/brightio/penelope) - Modern shell handler 
+- [Penelope GitHub](https://github.com/brightio/penelope) - Modern shell handler
 - [Pentest Monkey Reverse Shell Cheatsheet](http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet)
-- [Upgrading Simple Shells to Fully Interactive TTYs](https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/) 
+- [Upgrading Simple Shells to Fully Interactive TTYs](https://blog.ropnop.com/upgrading-simple-shells-to-fully-interactive-ttys/)

@@ -41,8 +41,9 @@ export function AuthorBio() {
               Red Team Consultant · Penetration Tester · Bug Bounty Hunter
             </p>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed max-w-lg">
-              Offensive security professional with 250+ vulnerabilities reported across 50+ organizations
-              including Atlassian, Vimeo, and AT&T. Sharing research, tools, and field notes.
+              Offensive security professional with 250+ vulnerabilities reported across 50+
+              organizations including Atlassian, Vimeo, and AT&T. Sharing research, tools, and field
+              notes.
             </p>
 
             {/* Social links */}
@@ -81,5 +82,3 @@ export function AuthorBio() {
     </section>
   );
 }
-
-

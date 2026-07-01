@@ -7,9 +7,7 @@ export function useSearchShortcut() {
     function onKeyDown(e: KeyboardEvent) {
       if (
         e.key === "/" &&
-        !["INPUT", "TEXTAREA", "SELECT"].includes(
-          (e.target as HTMLElement).tagName
-        )
+        !["INPUT", "TEXTAREA", "SELECT"].includes((e.target as HTMLElement).tagName)
       ) {
         e.preventDefault();
         ref.current?.focus();

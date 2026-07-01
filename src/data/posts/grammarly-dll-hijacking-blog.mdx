@@ -16,7 +16,6 @@ readTime: "13 min"
 url: "https://asbawy.github.io/logs/grammarly-dll-hijacking-blog"
 ---
 
-
 ![Banner](https://i.imgur.com/UXhIe8a.png)
 
 ## Introduction
@@ -107,7 +106,24 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
 5. Launch the Grammarly Desktop application.
 6. **Result:** A message box appears immediately, and the file `C:\Users\Public\Grammarly_Pwned.txt` is created, proving successful code execution.
 
-<div style={{ position: "relative", width: "100%", height: "0px", paddingBottom: "56.25%" }}><iframe allow="fullscreen" allowFullScreen height="100%" src="https://streamable.com/e/eqp7gw?" width="100%" style={{ border: "none", width: "100%", height: "100%", position: "absolute", left: "0px", top: "0px", overflow: "hidden" }}></iframe></div>
+<div style={{ position: "relative", width: "100%", height: "0px", paddingBottom: "56.25%" }}>
+  <iframe
+    allow="fullscreen"
+    allowFullScreen
+    height="100%"
+    src="https://streamable.com/e/eqp7gw?"
+    width="100%"
+    style={{
+      border: "none",
+      width: "100%",
+      height: "100%",
+      position: "absolute",
+      left: "0px",
+      top: "0px",
+      overflow: "hidden",
+    }}
+  ></iframe>
+</div>
 
 ## Proof of Concept 2: Credential and Session Token Theft
 
@@ -440,10 +456,8 @@ Grammarly can eliminate this vulnerability by changing how the application loads
 
 **Avoid Loading by Name Only.** The application should audit every DLL load operation. Any call to `LoadLibrary` or `LoadLibraryEx` that passes a bare filename without a path should be treated as a potential security risk and rewritten to use a fully qualified path.
 
-
 ## Conclusion and Takeaways
 
 DLL hijacking remains a common and dangerous weakness in Windows applications. The Grammarly Desktop case shows that even modern, widely used software can fall victim to simple search-order flaws. The application's decision to load system libraries from a user-writable folder created a gap that any local attacker or malicious script could exploit.
 
 For defenders, this finding reinforces the importance of monitoring application startup folders and watching for unsigned DLLs inside AppData. For developers, it is a reminder to always load system libraries with absolute paths and to restrict the DLL search path to trusted directories.
-  

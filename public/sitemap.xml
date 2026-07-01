@@ -71,7 +71,7 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet/Active Directory/Active_Directory_Cheatsheet</loc>
+    <loc>https://asbawy.github.io/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -87,6 +87,11 @@
   </url>
   <url>
     <loc>https://asbawy.github.io/cheatsheet/linux/Shell_Upgrades</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://asbawy.github.io/cheatsheet/Tools/MSFvenom</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

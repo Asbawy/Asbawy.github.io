@@ -1,15 +1,15 @@
-
-
 import { createFileRoute } from "@tanstack/react-router";
 import { CyberLayout, Panel, Tag } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
 
 export const Route = createFileRoute("/stats")({
-
   head: () => ({
     meta: [
       { title: "/stats — Asbawy Blog" },
-      { name: "description", content: "Aggregate stats and metrics across all posts on Asbawy's blog." },
+      {
+        name: "description",
+        content: "Aggregate stats and metrics across all posts on Asbawy's blog.",
+      },
       { property: "og:title", content: "/stats — Asbawy Blog" },
       { property: "og:description", content: "Blog telemetry and post analytics." },
     ],
@@ -18,21 +18,17 @@ export const Route = createFileRoute("/stats")({
 });
 
 function StatsPage() {
-
   const total = postsMeta.length;
-
 
   const sevCount = postsMeta.reduce<Record<string, number>>((acc, p) => {
     acc[p.severity] = (acc[p.severity] ?? 0) + 1;
     return acc;
   }, {});
 
-
   const catCount = postsMeta.reduce<Record<string, number>>((acc, p) => {
     acc[p.category] = (acc[p.category] ?? 0) + 1;
     return acc;
   }, {});
-
 
   const sevs: { name: string; color: string }[] = [
     { name: "Critical", color: "bg-threat-high" },
@@ -44,14 +40,13 @@ function StatsPage() {
   return (
     <CyberLayout>
       <section className="px-6 md:px-10 py-10 max-w-6xl">
-
         <div className="font-mono text-[11px] text-muted-foreground">
-          <span className="text-neon-green">asbawy</span>:<span className="text-neon-green">~/stats</span>$ cat telemetry.log
+          <span className="text-neon-green">asbawy</span>:
+          <span className="text-neon-green">~/stats</span>$ cat telemetry.log
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /stats <span className="text-muted-foreground">— telemetry</span>
         </h1>
-
 
         <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
@@ -61,15 +56,15 @@ function StatsPage() {
             ["status", "active"],
           ].map(([k, v]) => (
             <div key={k} className="rounded-md border border-panel-border bg-panel/60 p-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{k}</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                {k}
+              </div>
               <div className="mt-1 font-mono text-2xl text-neon-green text-glow-green">{v}</div>
             </div>
           ))}
         </div>
 
-
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
-
           <Panel title="severity_distribution">
             <ul className="space-y-3 font-mono text-xs">
               {sevs.map((s) => {
@@ -89,7 +84,6 @@ function StatsPage() {
               })}
             </ul>
           </Panel>
-
 
           <Panel title="category_breakdown">
             <ul className="space-y-3 font-mono text-xs">
@@ -114,7 +108,6 @@ function StatsPage() {
           </Panel>
         </div>
 
-
         <Panel title="tag_cloud" className="mt-5">
           <div className="flex flex-wrap gap-2">
             {postsMeta.length === 0 ? (
@@ -132,4 +125,3 @@ function StatsPage() {
     </CyberLayout>
   );
 }
-

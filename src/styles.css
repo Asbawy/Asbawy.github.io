@@ -1,13 +1,12 @@
-@import "tailwindcss" source(none);
-@source "../src";
-@import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "highlight.js/styles/github-dark.css";
+@source "../src";
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant light (&:is(.light *));
-
-
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -57,6 +56,7 @@
   --color-threat-low: var(--threat-low);
   --color-threat-mid: var(--threat-mid);
   --color-threat-high: var(--threat-high);
+  --color-gold: var(--gold);
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
@@ -65,7 +65,7 @@
   --radius: 0.625rem;
   --background: oklch(0.16 0.025 260);
   --foreground: oklch(0.96 0.005 240);
-  --card: oklch(0.20 0.028 260);
+  --card: oklch(0.2 0.028 260);
   --card-foreground: oklch(0.96 0.005 240);
   --popover: oklch(0.18 0.028 260);
   --popover-foreground: oklch(0.96 0.005 240);
@@ -89,6 +89,7 @@
   --threat-low: oklch(0.82 0.22 145);
   --threat-mid: oklch(0.82 0.18 80);
   --threat-high: oklch(0.7 0.25 25);
+  --gold: oklch(0.75 0.14 75);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -124,16 +125,19 @@
   --border: oklch(0.88 0.02 250);
   --input: oklch(0.88 0.02 250);
   --ring: oklch(0.45 0.16 142);
-  
+
   /* Cyber Theme specific */
-  --neon-green: oklch(0.45 0.18 250); /* Blue in light mode */
-  --neon-blue: oklch(0.45 0.18 142);  /* Green in light mode */
+  --neon-green: oklch(0.45 0.18 250);
+  /* Blue in light mode */
+  --neon-blue: oklch(0.45 0.18 142);
+  /* Green in light mode */
   --panel: oklch(0.96 0.01 250);
   --panel-border: oklch(0.85 0.02 250);
   --threat-low: oklch(0.45 0.18 142);
   --threat-mid: oklch(0.55 0.18 80);
   --threat-high: oklch(0.55 0.22 25);
-  
+  --gold: oklch(0.5 0.13 70);
+
   /* Sidebar */
   --sidebar: oklch(0.97 0.01 250);
   --sidebar-foreground: oklch(0.18 0.02 260);
@@ -143,7 +147,7 @@
   --sidebar-accent-foreground: oklch(0.18 0.02 260);
   --sidebar-border: oklch(0.85 0.02 250);
   --sidebar-ring: oklch(0.45 0.16 142);
-  
+
   /* Syntax Highlighting overrides for light mode */
   --code-bg: oklch(0.95 0.01 250);
 }
@@ -193,34 +197,53 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     background-image:
-      radial-gradient(circle at 20% 0%, color-mix(in oklab, var(--neon-blue) 8%, transparent), transparent 50%),
-      radial-gradient(circle at 80% 100%, color-mix(in oklab, var(--neon-green) 6%, transparent), transparent 50%),
+      radial-gradient(
+        circle at 20% 0%,
+        color-mix(in oklab, var(--neon-blue) 8%, transparent),
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 80% 100%,
+        color-mix(in oklab, var(--neon-green) 6%, transparent),
+        transparent 50%
+      ),
       linear-gradient(to bottom, var(--background), var(--background));
     background-attachment: fixed;
   }
 
-  .font-mono, code, pre, kbd {
+  .font-mono,
+  code,
+  pre,
+  kbd {
     font-family: var(--font-mono);
   }
 }
 
 @layer utilities {
   .text-glow-green {
-    text-shadow: 0 0 8px color-mix(in oklab, var(--neon-green) 60%, transparent),
-                 0 0 18px color-mix(in oklab, var(--neon-green) 30%, transparent);
+    text-shadow:
+      0 0 8px color-mix(in oklab, var(--neon-green) 60%, transparent),
+      0 0 18px color-mix(in oklab, var(--neon-green) 30%, transparent);
   }
+
   .text-glow-blue {
-    text-shadow: 0 0 8px color-mix(in oklab, var(--neon-blue) 60%, transparent),
-                 0 0 18px color-mix(in oklab, var(--neon-blue) 30%, transparent);
+    text-shadow:
+      0 0 8px color-mix(in oklab, var(--neon-blue) 60%, transparent),
+      0 0 18px color-mix(in oklab, var(--neon-blue) 30%, transparent);
   }
+
   .border-glow-green {
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--neon-green) 60%, transparent),
-                0 0 18px color-mix(in oklab, var(--neon-green) 25%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--neon-green) 60%, transparent),
+      0 0 18px color-mix(in oklab, var(--neon-green) 25%, transparent);
   }
+
   .border-glow-blue {
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--neon-blue) 50%, transparent),
-                0 0 22px color-mix(in oklab, var(--neon-blue) 20%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--neon-blue) 50%, transparent),
+      0 0 22px color-mix(in oklab, var(--neon-blue) 20%, transparent);
   }
+
   .scanlines {
     background-image: repeating-linear-gradient(
       to bottom,
@@ -230,16 +253,28 @@
       transparent 4px
     );
   }
+
   .grid-bg {
-    background-image: radial-gradient(color-mix(in oklab, var(--neon-green) 15%, transparent) 1.5px, transparent 1.5px);
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--neon-green) 15%, transparent) 1.5px,
+      transparent 1.5px
+    );
     background-size: 32px 32px;
   }
 }
 
 @keyframes blink-caret {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
+
 .caret::after {
   content: "▊";
   margin-left: 2px;
@@ -248,23 +283,41 @@
 }
 
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
 }
-.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+
+.pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
 
 ::selection {
   background: color-mix(in oklab, var(--neon-green) 35%, transparent);
   color: var(--foreground);
 }
 
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--background); }
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
 ::-webkit-scrollbar-thumb {
   background: var(--panel-border);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: color-mix(in oklab, var(--neon-green) 40%, var(--panel-border));
 }
@@ -274,6 +327,7 @@
   color: #24292e !important;
   background: transparent !important;
 }
+
 .light .hljs-doctag,
 .light .hljs-keyword,
 .light .hljs-meta .hljs-keyword,
@@ -283,12 +337,14 @@
 .light .hljs-variable.language_ {
   color: #d73a49 !important;
 }
+
 .light .hljs-title,
 .light .hljs-title.class_,
 .light .hljs-title.class_.inherited__,
 .light .hljs-title.function_ {
   color: #6f42c1 !important;
 }
+
 .light .hljs-attr,
 .light .hljs-attribute,
 .light .hljs-literal,
@@ -301,23 +357,134 @@
 .light .hljs-selector-id {
   color: #005cc5 !important;
 }
+
 .light .hljs-regexp,
 .light .hljs-string,
 .light .hljs-meta .hljs-string {
   color: #032f62 !important;
 }
+
 .light .hljs-built_in,
 .light .hljs-symbol {
   color: #e36209 !important;
 }
+
 .light .hljs-comment,
 .light .hljs-code,
 .light .hljs-formula {
   color: #6a737d !important;
 }
+
 .light .hljs-name,
 .light .hljs-quote,
 .light .hljs-selector-tag,
 .light .hljs-selector-pseudo {
   color: #22863a !important;
+}
+
+@keyframes drift {
+  from {
+    background-position: 0 0;
+  }
+
+  to {
+    background-position: 32px 32px;
+  }
+}
+
+.animate-drift {
+  animation: drift 80s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drift {
+    animation: none !important;
+  }
+}
+
+/* Code block line numbers and highlight styles */
+code.show-line-numbers {
+  counter-reset: line;
+}
+
+code.show-line-numbers .code-line {
+  position: relative;
+  padding-left: 2.8rem;
+}
+
+code.show-line-numbers .code-line::before {
+  counter-increment: line;
+  content: counter(line);
+  position: absolute;
+  left: 0;
+  width: 2rem;
+  text-align: right;
+  color: var(--muted-foreground);
+  opacity: 0.5;
+  user-select: none;
+  font-size: 11px;
+}
+
+.code-line {
+  display: block;
+  min-height: 1.25rem;
+}
+
+/* Print Stylesheet */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+  }
+
+  /* Hide UI chrome */
+  aside,
+  header,
+  footer,
+  nav,
+  button,
+  .top-bar,
+  .share-buttons,
+  .author-bio,
+  .nav-tabs,
+  .toc-container,
+  .related-container,
+  .prev-next-container,
+  .theme-toggle-btn {
+    display: none !important;
+  }
+
+  /* Unset grid and constraints */
+  .grid {
+    display: block !important;
+  }
+
+  main,
+  article,
+  .container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Force print readable code blocks */
+  pre,
+  code {
+    background: #f5f5f5 !important;
+    color: #000000 !important;
+    border: 1px solid #ddd !important;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+    overflow: visible !important;
+  }
+
+  .hljs {
+    background: transparent !important;
+    color: #000000 !important;
+  }
 }
