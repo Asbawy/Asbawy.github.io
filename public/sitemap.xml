@@ -56,6 +56,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://asbawy.github.io/logs/olar-device-forensics</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://asbawy.github.io/logs/practical-wireless-exploitation-for-red-teams</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
