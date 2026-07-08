@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CyberLayout, Panel, Tag } from "@/components/cyber/Layout";
+import { EyeOfRa } from "@/components/cyber/EyeOfRa";
 import {
   Bug,
   Trophy,
@@ -71,7 +72,7 @@ function AnimatedCount({ target, suffix = "" }: { target: number; suffix?: strin
   return (
     <span
       ref={ref}
-      className="text-3xl md:text-4xl font-mono text-neon-green text-glow-green tabular-nums"
+      className="text-3xl md:text-4xl font-mono text-foreground  tabular-nums"
     >
       {count}
       {suffix}
@@ -147,10 +148,10 @@ function SkillBar({
     <div ref={ref} className="group">
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2 font-mono text-xs text-foreground/80">
-          <Icon className="h-3.5 w-3.5 text-neon-green" />
+          <Icon className="h-3.5 w-3.5 text-foreground" />
           {label}
         </div>
-        <span className="font-mono text-[10px] text-neon-green/70">{level}%</span>
+        <span className="font-mono text-[10px] text-foreground/70">{level}%</span>
       </div>
       <div className="h-1.5 w-full rounded-full bg-panel-border/40 overflow-hidden">
         <div
@@ -221,26 +222,24 @@ function AboutPage() {
           {/* Scanlines */}
           <div className="absolute inset-0 scanlines opacity-30 pointer-events-none" />
           {/* Radial glow behind avatar */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-neon-green/[0.03] rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-foreground/[0.03] rounded-full blur-3xl pointer-events-none" />
         </div>
 
         <div className="relative px-6 md:px-10 py-16 md:py-24 max-w-5xl">
           {/* Breadcrumb */}
           <div className="font-mono text-[11px] text-muted-foreground mb-8">
-            <span className="text-neon-green">asbawy</span>:
-            <span className="text-neon-green">~/about</span>$ cat identity.txt
+            <span className="text-foreground">asbawy</span>:
+            <span className="text-foreground">~/about</span>$ cat identity.txt
           </div>
 
           <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-center md:items-start">
             {/* ── Avatar/Logo in circle view ── */}
             <Reveal className="shrink-0">
-              <div className="relative rounded-full overflow-hidden bg-neon-green/5 p-2.5 border border-neon-green/30 shadow-[0_0_25px_rgba(0,255,136,0.15)] hover:border-neon-green/50 hover:shadow-[0_0_30px_rgba(0,255,136,0.3)] transition-all duration-300 backdrop-blur-md">
-                {/* Soft glowing backdrop to illuminate the dark logo */}
-                <div className="absolute inset-1.5 rounded-full bg-neon-green/25 blur-xl pointer-events-none" />
-                <img
-                  src="/eye-of-ra.png"
-                  alt="Eye of Ra"
-                  className="relative z-10 h-36 w-36 md:h-44 md:w-44 object-contain hover:scale-105 transition-transform duration-500"
+              <div className="relative rounded-full overflow-hidden bg-white p-2.5 border border-white/30 shadow-[0_0_25px_rgba(255,255,255,0.15)] hover:border-white hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all duration-300 backdrop-blur-md">
+                {/* Soft glowing backdrop to illuminate the logo */}
+                <div className="absolute inset-1.5 rounded-full bg-white/50 blur-xl pointer-events-none" />
+                <EyeOfRa
+                  className="relative z-10 h-36 w-36 md:h-44 md:w-44 object-contain hover:scale-105 transition-transform duration-500 text-black"
                 />
               </div>
             </Reveal>
@@ -251,11 +250,11 @@ function AboutPage() {
                 Mohammed Al-Kasabi
               </h1>
               <div className="mt-2 flex flex-wrap justify-center md:justify-start gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-neon-green/40 bg-neon-green/5 px-3 py-1 font-mono text-[11px] text-neon-green">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/40 bg-foreground/5 px-3 py-1 font-mono text-[11px] text-foreground">
                   <Crosshair className="h-3 w-3" />
                   Red Team Consultant
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-neon-green/40 bg-neon-green/5 px-3 py-1 font-mono text-[11px] text-neon-green">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-foreground/40 bg-foreground/5 px-3 py-1 font-mono text-[11px] text-foreground">
                   <Shield className="h-3 w-3" />
                   Penetration Tester
                 </span>
@@ -270,13 +269,13 @@ function AboutPage() {
                 <div className="flex items-center gap-1.5 text-muted-foreground/60 mb-3">
                   <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.7_0.25_25)]" />
                   <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.82_0.18_80)]" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-neon-green" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-foreground" />
                   <span className="ml-2 text-[10px] uppercase tracking-widest">identity.txt</span>
                 </div>
                 <div>
-                  <span className="text-neon-green">$</span>{" "}
+                  <span className="text-foreground">$</span>{" "}
                   <span className="text-muted-foreground">alias:</span>{" "}
-                  <span className="text-neon-green text-glow-green font-semibold">Asbawy</span>
+                  <span className="text-foreground  font-semibold">Asbawy</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <MapPin className="h-3 w-3 text-muted-foreground/60 shrink-0" />
@@ -309,7 +308,7 @@ function AboutPage() {
         <Reveal>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {/* Stat 1: Vulnerabilities Found */}
-            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
+            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
               <AnimatedCount target={250} suffix="+" />
               <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 vulns_found
@@ -317,7 +316,7 @@ function AboutPage() {
             </div>
 
             {/* Stat 2: Organizations Recognized */}
-            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
+            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
               <AnimatedCount target={50} suffix="+" />
               <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 orgs_recognized
@@ -329,7 +328,7 @@ function AboutPage() {
               href="https://profile.hackthebox.com/profile/019dc6a8-c662-7226-a4e9-fe02c60c2ccd"
               target="_blank"
               rel="noopener noreferrer"
-              className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] hover:shadow-[0_0_20px_rgba(0,255,136,0.05)] transition-all duration-300 flex flex-col justify-between min-h-[135px] focus:outline-none focus-visible:ring-1 focus-visible:ring-neon-green"
+              className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-foreground/30 hover:bg-foreground/[0.02] hover:shadow-[0_0_20px_rgba(0,255,136,0.05)] transition-all duration-300 flex flex-col justify-between min-h-[135px] focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
             >
               <div className="flex-1 flex flex-col items-center justify-center">
                 <AnimatedCount target={320} />
@@ -337,14 +336,14 @@ function AboutPage() {
                   htb_global_rank
                 </div>
               </div>
-              <div className="mt-3 pt-2 w-full border-t border-panel-border/30 font-mono text-[10px] text-muted-foreground/80 group-hover:text-neon-green/80 transition-colors flex items-center justify-center gap-1.5">
+              <div className="mt-3 pt-2 w-full border-t border-panel-border/30 font-mono text-[10px] text-muted-foreground/80 group-hover:text-foreground/80 transition-colors flex items-center justify-center gap-1.5">
                 <span>Asbawy</span>
-                <span className="text-neon-green font-semibold">(Pro Hacker)</span>
+                <span className="text-foreground font-semibold">(Pro Hacker)</span>
               </div>
             </a>
 
             {/* Stat 4: Years of Experience */}
-            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-neon-green/30 hover:bg-neon-green/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
+            <div className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-foreground/30 hover:bg-foreground/[0.02] transition-all duration-300 flex flex-col items-center justify-center min-h-[135px]">
               <AnimatedCount target={5} suffix="y" />
               <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 experience
@@ -392,14 +391,14 @@ function AboutPage() {
               {hallOfFame.map((org) => (
                 <span
                   key={org}
-                  className="group inline-flex items-center gap-2 rounded-lg border border-neon-green/20 bg-neon-green/[0.03] px-4 py-2 font-mono text-[12px] text-neon-green hover:bg-neon-green/10 hover:border-neon-green/40 hover:shadow-[0_0_15px_rgba(0,255,136,0.08)] transition-all duration-300"
+                  className="group inline-flex items-center gap-2 rounded-lg border border-foreground/20 bg-foreground/[0.03] px-4 py-2 font-mono text-[12px] text-foreground hover:bg-foreground/10 hover:border-foreground/40 hover:shadow-[0_0_15px_rgba(0,255,136,0.08)] transition-all duration-300"
                 >
                   <Bug className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity" />
                   {org}
                 </span>
               ))}
               <span className="inline-flex items-center gap-1.5 rounded-lg border border-panel-border px-4 py-2 font-mono text-[12px] text-muted-foreground">
-                <span className="text-neon-green/50">+</span>42 more
+                <span className="text-foreground/50">+</span>42 more
               </span>
             </div>
           </Panel>
@@ -412,7 +411,7 @@ function AboutPage() {
               {certs.map((c) => (
                 <div
                   key={c.name}
-                  className="group flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-neon-green/[0.03] transition-colors"
+                  className="group flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-foreground/[0.03] transition-colors"
                 >
                   <div className="shrink-0 rounded-md bg-threat-mid/10 border border-threat-mid/20 p-1.5">
                     <Award className="h-3.5 w-3.5 text-threat-mid" />
@@ -437,7 +436,7 @@ function AboutPage() {
                   href={s.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative flex items-center gap-3 rounded-lg border border-panel-border bg-background/30 px-5 py-4 font-mono text-xs text-muted-foreground hover:border-neon-green/40 hover:text-neon-green hover:bg-neon-green/[0.03] transition-all duration-300 overflow-hidden"
+                  className="group relative flex items-center gap-3 rounded-lg border border-panel-border bg-background/30 px-5 py-4 font-mono text-xs text-muted-foreground hover:border-foreground/40 hover:text-foreground hover:bg-foreground/[0.03] transition-all duration-300 overflow-hidden"
                 >
                   {/* Hover glow */}
                   <div className="absolute inset-0 bg-gradient-to-r from-neon-green/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -456,22 +455,22 @@ function AboutPage() {
             <div className="flex items-center gap-1.5 mb-3">
               <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.7_0.25_25)]" />
               <div className="h-2.5 w-2.5 rounded-full bg-[oklch(0.82_0.18_80)]" />
-              <div className="h-2.5 w-2.5 rounded-full bg-neon-green" />
+              <div className="h-2.5 w-2.5 rounded-full bg-foreground" />
               <span className="ml-2 text-[10px] uppercase tracking-widest text-muted-foreground/60">
                 terminal
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <Terminal className="h-3.5 w-3.5 text-neon-green" />
+              <Terminal className="h-3.5 w-3.5 text-foreground" />
               <span>
-                <span className="text-neon-green">asbawy</span>@kali:~$ echo &quot;Always learning,
+                <span className="text-foreground">asbawy</span>@kali:~$ echo &quot;Always learning,
                 always breaking.&quot;
               </span>
             </div>
             <div className="mt-1.5 text-foreground text-sm">Always learning, always breaking.</div>
             <div className="mt-2 flex items-center gap-1.5">
-              <span className="text-neon-green">asbawy</span>@kali:~$
-              <span className="inline-block w-2 h-4 bg-neon-green/80 animate-pulse rounded-sm" />
+              <span className="text-foreground">asbawy</span>@kali:~$
+              <span className="inline-block w-2 h-4 bg-foreground/80 animate-pulse rounded-sm" />
             </div>
           </div>
         </Reveal>

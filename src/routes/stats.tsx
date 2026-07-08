@@ -33,16 +33,16 @@ function StatsPage() {
   const sevs: { name: string; color: string }[] = [
     { name: "Critical", color: "bg-threat-high" },
     { name: "High", color: "bg-threat-mid" },
-    { name: "Medium", color: "bg-neon-green" },
-    { name: "Low", color: "bg-neon-green" },
+    { name: "Medium", color: "bg-foreground" },
+    { name: "Low", color: "bg-foreground" },
   ];
 
   return (
     <CyberLayout>
       <section className="px-6 md:px-10 py-10 max-w-6xl">
         <div className="font-mono text-[11px] text-muted-foreground">
-          <span className="text-neon-green">asbawy</span>:
-          <span className="text-neon-green">~/stats</span>$ cat telemetry.log
+          <span className="text-foreground">asbawy</span>:
+          <span className="text-foreground">~/stats</span>$ cat telemetry.log
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /stats <span className="text-muted-foreground">— telemetry</span>
@@ -59,7 +59,7 @@ function StatsPage() {
               <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 {k}
               </div>
-              <div className="mt-1 font-mono text-2xl text-neon-green text-glow-green">{v}</div>
+              <div className="mt-1 font-mono text-2xl text-foreground ">{v}</div>
             </div>
           ))}
         </div>
@@ -96,7 +96,7 @@ function StatsPage() {
                       <span className="text-foreground">{v}</span>
                     </div>
                     <div className="mt-1 h-1.5 w-full rounded-sm bg-secondary/60 overflow-hidden">
-                      <div className="h-full bg-neon-green" style={{ width: `${pct}%` }} />
+                      <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
                     </div>
                   </li>
                 );

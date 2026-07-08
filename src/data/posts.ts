@@ -18,14 +18,14 @@ export type Post = PostMeta;
 
 // Eager: load the modules to get their frontmatter export.
 // remark-mdx-frontmatter automatically exports YAML frontmatter as `frontmatter`.
-const mdxModules = import.meta.glob<{ frontmatter: PostMeta }>("./posts/*.mdx", { eager: true });
+const mdxModules = import.meta.glob<PostMeta>("./posts/*.mdx", { eager: true, import: "frontmatter" });
 
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: PostMeta }>(
   "./posts/*.mdx",
 );
 
 export const postsMeta: PostMeta[] = Object.values(mdxModules)
-  .map((mod) => mod.frontmatter)
+  .map((mod) => mod)
   .filter((p) => p && p.slug)
   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

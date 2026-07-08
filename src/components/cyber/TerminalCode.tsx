@@ -45,7 +45,7 @@ function highlightShellCommands(html: string): string {
     if (tag) return tag;
     if (command) return `<span class="text-cyan-400 font-semibold font-mono">${command}</span>`;
     if (option) return `<span class="text-amber-400 font-mono">${option}</span>`;
-    if (pipe) return `<span class="text-neon-green font-bold font-mono">${pipe}</span>`;
+    if (pipe) return `<span class="text-foreground font-bold font-mono">${pipe}</span>`;
     return match;
   });
 
@@ -89,7 +89,7 @@ export function TerminalCode({
           const lineNum = idx + 1;
           const isHighlighted = highlightedLines.has(lineNum);
           const highlightClass = isHighlighted
-            ? "bg-neon-green/10 border-l-2 border-neon-green/80 -mx-4 px-4"
+            ? "bg-foreground/10 border-l-2 border-foreground/40 -mx-4 px-4"
             : "";
           const processedLine = isShell ? highlightShellCommands(line) : line;
           return `<span class="code-line ${highlightClass}">${processedLine || " "}</span>`;
@@ -109,24 +109,24 @@ export function TerminalCode({
   };
 
   return (
-    <div className="my-5 rounded-md border border-panel-border bg-panel/40 overflow-hidden shadow-lg group">
-      <div className="flex items-center justify-between border-b border-panel-border bg-panel/80 px-3 py-2 select-none">
+    <div className="my-5 rounded-md border border-[#222222] bg-[#0A0A0A] overflow-hidden shadow-lg group text-[#E8E8E8] light:border-white/60 light:bg-white/40 light:backdrop-blur-md light:text-[#333333] light:shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+      <div className="flex items-center justify-between border-b border-[#222222] bg-[#0D0D0D] px-3 py-2 select-none light:border-white/60 light:bg-white/50">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="h-3 w-3 rounded-full bg-[oklch(0.7_0.25_25)]" />
           <span className="h-3 w-3 rounded-full bg-[oklch(0.82_0.18_80)]" />
-          <span className="h-3 w-3 rounded-full bg-neon-green" />
+          <span className="h-3 w-3 rounded-full bg-white/20 light:bg-black/20" />
         </div>
-        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground ml-4 truncate">
+        <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#999999] ml-4 truncate light:text-[#666666]">
           ~ / {title}
         </span>
         <div className="flex items-center gap-2">
           {/* Line Numbers Toggle */}
           <button
             onClick={() => setShowLineNumbers(!showLineNumbers)}
-            className={`p-1 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/60 ${
+            className={`p-1 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30 ${
               showLineNumbers
-                ? "text-neon-green bg-neon-green/5"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-foreground bg-foreground/10"
+                : "text-[#999999] hover:text-[#E8E8E8] hover:bg-[#1A1A1A] light:text-[#666666] light:hover:text-[#222222] light:hover:bg-black/5"
             }`}
             title="Toggle line numbers"
           >
@@ -136,10 +136,10 @@ export function TerminalCode({
           {/* Wrap Toggle */}
           <button
             onClick={() => setIsWrapped(!isWrapped)}
-            className={`p-1 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/60 ${
+            className={`p-1 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30 ${
               isWrapped
-                ? "text-neon-green bg-neon-green/5"
-                : "text-muted-foreground hover:text-foreground"
+                ? "text-foreground bg-foreground/10"
+                : "text-[#999999] hover:text-[#E8E8E8] hover:bg-[#1A1A1A] light:text-[#666666] light:hover:text-[#222222] light:hover:bg-black/5"
             }`}
             title="Toggle line wrapping"
           >
@@ -149,11 +149,11 @@ export function TerminalCode({
           {/* Copy Button */}
           <button
             onClick={handleCopy}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/60"
+            className="text-[#999999] hover:text-[#E8E8E8] hover:bg-[#1A1A1A] light:text-[#666666] light:hover:text-[#222222] light:hover:bg-black/5 transition-colors p-1 rounded cursor-pointer focus-visible:outline-none"
             title="Copy code"
           >
             {copied ? (
-              <Check className="h-3.5 w-3.5 text-neon-green" />
+              <Check className="h-3.5 w-3.5 text-foreground" />
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
@@ -161,7 +161,7 @@ export function TerminalCode({
         </div>
       </div>
       <pre
-        className={`px-4 py-3 text-[12.5px] leading-relaxed text-foreground/90 font-mono ${
+        className={`px-4 py-3 text-[12.5px] leading-relaxed text-[#E8E8E8] light:text-[#24292e] font-mono ${
           isWrapped ? "whitespace-pre-wrap break-all" : "whitespace-pre overflow-x-auto"
         }`}
       >

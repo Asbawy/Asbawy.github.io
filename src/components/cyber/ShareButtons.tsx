@@ -36,7 +36,7 @@ export function ShareButtons({ title, slug }: { title: string; slug: string }) {
         href={twitterUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 rounded-md border border-panel-border bg-background/40 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-neon-green/40 hover:text-neon-green hover:bg-neon-green/5 transition-all"
+        className="inline-flex items-center gap-1.5 rounded-md border border-panel-border bg-background/40 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-foreground/40 hover:text-foreground hover:bg-foreground/5 transition-all"
         title="Share on X (Twitter)"
       >
         <XIcon className="h-3 w-3" />
@@ -46,7 +46,7 @@ export function ShareButtons({ title, slug }: { title: string; slug: string }) {
         href={linkedinUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 rounded-md border border-panel-border bg-background/40 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-neon-green/40 hover:text-neon-green hover:bg-neon-green/5 transition-all"
+        className="inline-flex items-center gap-1.5 rounded-md border border-panel-border bg-background/40 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:border-foreground/40 hover:text-foreground hover:bg-foreground/5 transition-all"
         title="Share on LinkedIn"
       >
         <LinkedInIcon className="h-3 w-3" />

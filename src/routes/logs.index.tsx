@@ -5,7 +5,7 @@ import { postsMeta } from "@/data/posts";
 import { Search } from "lucide-react";
 import { RssSubscribe } from "@/components/cyber/RssSubscribe";
 
-export const Route = createFileRoute("/logs/")({
+export const Route = createFileRoute("/logs/")(  {
   head: () => ({
     meta: [
       { title: "/logs — Asbawy Blog" },
@@ -41,8 +41,8 @@ function LogsPage() {
     <CyberLayout>
       <section className="px-6 md:px-10 py-10 max-w-6xl">
         <div className="font-mono text-[11px] text-muted-foreground">
-          <span className="text-neon-green">asbawy</span>:
-          <span className="text-neon-green">~/logs</span>$ ls -la --sort=date
+          <span className="text-foreground">asbawy</span>:
+          <span className="text-foreground">~/logs</span>$ ls -la --sort=date
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /logs <span className="text-muted-foreground">— blog posts</span>
@@ -56,8 +56,8 @@ function LogsPage() {
                 onClick={() => setCat(c)}
                 className={`rounded-md border px-3 py-1.5 font-mono text-xs transition-all ${
                   cat === c
-                    ? "border-neon-green/50 bg-neon-green/10 text-neon-green text-glow-green"
-                    : "border-panel-border text-muted-foreground hover:border-neon-green/30 hover:text-foreground"
+                    ? "border-foreground/30 bg-foreground/10 text-foreground"
+                    : "border-panel-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
                 }`}
               >
                 {c === "All" ? "*" : c.toLowerCase().replace(" ", "_")}
@@ -70,7 +70,7 @@ function LogsPage() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="grep title|tag"
-              className="w-full md:w-72 rounded-md border border-panel-border bg-panel/60 pl-9 pr-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-neon-green/50"
+              className="w-full md:w-72 rounded-md border border-panel-border bg-panel/60 pl-9 pr-3 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-foreground/30"
             />
           </div>
         </div>
@@ -83,18 +83,18 @@ function LogsPage() {
                   to="/logs/$slug"
                   params={{ slug: p.slug }}
                   preload="intent"
-                  className="group block py-4 px-1 transition-colors hover:bg-neon-green/5"
+                  className="group block py-4 px-1 transition-colors hover:bg-foreground/5"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div className="min-w-0 flex-1 pr-4">
-                      <div className="flex items-center gap-3 font-mono text-[10px] text-muted-foreground">
-                        <span>{p.date}</span>
-                        <span>·</span>
-                        <span className="text-neon-green">{p.category.toLowerCase()}</span>
-                        <span>·</span>
-                        <span>{p.readTime}</span>
+                      <div className="flex items-center gap-3 font-mono text-[10px]">
+                        <span className="text-muted-foreground">{p.date}</span>
+                        <span className="text-foreground/20">·</span>
+                        <span className="text-accent-primary">{p.category.toLowerCase()}</span>
+                        <span className="text-foreground/20">·</span>
+                        <span className="text-accent-link">{p.readTime}</span>
                       </div>
-                      <h2 className="mt-1 text-foreground group-hover:text-neon-green transition-colors">
+                      <h2 className="mt-1 text-foreground group-hover:text-foreground transition-colors">
                         {p.title}
                       </h2>
                       <p className="mt-1 text-xs text-muted-foreground line-clamp-1">{p.excerpt}</p>

@@ -87,9 +87,9 @@ function getIconForNode(name: string, isFile: boolean, isOpen: boolean) {
       return <FolderKey className="h-4 w-4 shrink-0 text-sky-400" />;
     }
     return isOpen ? (
-      <FolderOpen className="h-4 w-4 shrink-0 text-neon-green" />
+      <FolderOpen className="h-4 w-4 shrink-0 text-foreground" />
     ) : (
-      <Folder className="h-4 w-4 shrink-0 text-neon-green" />
+      <Folder className="h-4 w-4 shrink-0 text-foreground" />
     );
   }
 
@@ -189,9 +189,9 @@ function TreeItem({
             transition-colors duration-150 focus-visible:outline-none focus-visible:bg-white/[0.04]
             ${
               isActive
-                ? "bg-neon-green/10 text-neon-green border-r-2 border-neon-green"
+                ? "bg-foreground/10 text-foreground border-r-2 border-foreground"
                 : isFocused
-                  ? "bg-white/[0.05] text-foreground border-r border-neon-green/30"
+                  ? "bg-white/[0.05] text-foreground border-r border-foreground/30"
                   : "text-[#8b949e] hover:text-foreground hover:bg-white/[0.04]"
             }
           `}
@@ -208,7 +208,7 @@ function TreeItem({
             group flex items-center gap-2 py-[5px] pr-3 w-full text-left
             font-mono text-[13px] leading-tight whitespace-nowrap focus-visible:outline-none
             text-foreground/90 hover:bg-white/[0.04] transition-colors duration-150 cursor-pointer
-            ${isFocused ? "bg-white/[0.05] ring-1 ring-neon-green/20" : ""}
+            ${isFocused ? "bg-white/[0.05] ring-1 ring-foreground/20" : ""}
           `}
           style={{ paddingLeft: indent }}
           onClick={() => toggleFolder(nodePath)}
@@ -261,7 +261,7 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
   return (
     <span>
       {text.slice(0, idx)}
-      <span className="bg-neon-green/20 text-neon-green rounded px-0.5">
+      <span className="bg-foreground/20 text-foreground rounded px-0.5">
         {text.slice(idx, idx + query.length)}
       </span>
       {text.slice(idx + query.length)}
@@ -417,21 +417,21 @@ function CheatsheetLayout() {
   const renderTree = (onSelectFile?: () => void) => (
     <div className="h-full flex flex-col min-h-0 font-mono">
       {/* Search / Filter */}
-      <div className="shrink-0 px-2.5 py-2 border-b border-panel-border/30">
+      <div className="shrink-0 px-2.5 py-2 border-b border-white/[0.06]/30">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="filter files…"
-            className="w-full rounded border border-panel-border/50 bg-background/60 pl-7 pr-2 py-1.5 font-mono text-[11px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-neon-green/40 transition-colors focus-visible:ring-1 focus-visible:ring-neon-green/30"
+            className="w-full rounded border border-white/[0.06]/50 bg-background/60 pl-7 pr-2 py-1.5 font-mono text-[11px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground/40 transition-colors focus-visible:ring-1 focus-visible:ring-foreground/30"
           />
         </div>
       </div>
 
       {/* Recently Viewed */}
       {recentlyViewed.length > 0 && (
-        <div className="shrink-0 px-3 py-2 border-b border-panel-border/30 bg-muted/10">
+        <div className="shrink-0 px-3 py-2 border-b border-white/[0.06]/30 bg-muted/10">
           <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground block mb-2">
             Recently Viewed
           </span>
@@ -442,7 +442,7 @@ function CheatsheetLayout() {
                 to="/cheatsheet/$"
                 params={{ _splat: item.path }}
                 onClick={onSelectFile}
-                className="flex items-center gap-2 py-1 px-1.5 rounded font-mono text-[11.5px] text-muted-foreground hover:text-neon-green hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/30"
+                className="flex items-center gap-2 py-1 px-1.5 rounded font-mono text-[11.5px] text-muted-foreground hover:text-foreground hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30"
               >
                 <FileText className="h-3 w-3 shrink-0 text-muted-foreground/60" />
                 <span className="truncate">{item.title || item.path.split("/").pop()}</span>
@@ -482,8 +482,8 @@ function CheatsheetLayout() {
         {/* ── Header ───────────────────────────────── */}
         <div className="shrink-0 px-6 md:px-10 pt-8 pb-6">
           <div className="font-mono text-[11px] text-muted-foreground">
-            <span className="text-neon-green">asbawy</span>:
-            <span className="text-neon-green">~/cheatsheet</span>$ explorer .
+            <span className="text-foreground">asbawy</span>:
+            <span className="text-foreground">~/cheatsheet</span>$ explorer .
           </div>
           <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
             /cheatsheet <span className="text-muted-foreground">— quick_ref</span>
@@ -497,20 +497,18 @@ function CheatsheetLayout() {
         <div className="flex-1 min-h-0 px-4 md:px-8 pb-8">
           <div
             className="
-              h-full rounded-lg border border-panel-border
-              bg-background overflow-hidden flex flex-col
-              shadow-[0_0_40px_rgba(0,255,170,0.03),inset_0_1px_0_rgba(255,255,255,0.03)]
+              h-full rounded-lg glass-panel overflow-hidden flex flex-col
             "
           >
             {/* Top Mac-style title bar */}
-            <div className="shrink-0 flex items-center justify-between border-b border-panel-border bg-muted/30 px-4 py-3">
+            <div className="shrink-0 flex items-center justify-between border-b border-white/[0.06] bg-muted/30 px-4 py-3">
               <div className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground uppercase tracking-wider">
-                <Terminal className="h-3.5 w-3.5 text-neon-green shrink-0" />
+                <Terminal className="h-3.5 w-3.5 text-foreground shrink-0" />
                 <span>cheatsheet_explorer</span>
                 {currentPath.replace("/cheatsheet", "") && (
                   <>
                     <span className="text-muted-foreground/40 font-normal">/</span>
-                    <span className="text-neon-green/95 font-semibold lowercase tracking-normal">
+                    <span className="text-foreground/95 font-semibold lowercase tracking-normal">
                       {decodeURIComponent(currentPath.replace("/cheatsheet/", ""))}
                     </span>
                   </>
@@ -521,14 +519,14 @@ function CheatsheetLayout() {
                 <div className="md:hidden">
                   <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                     <SheetTrigger asChild>
-                      <button className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-panel-border bg-panel text-xs text-muted-foreground hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/60">
-                        <Menu className="h-3.5 w-3.5 text-neon-green" />
+                      <button className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-white/[0.06] bg-panel text-xs text-muted-foreground hover:text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/60">
+                        <Menu className="h-3.5 w-3.5 text-foreground" />
                         <span>Explorer</span>
                       </button>
                     </SheetTrigger>
                     <SheetContent
                       side="left"
-                      className="w-[280px] p-0 pt-10 bg-background border-r border-panel-border text-foreground font-mono"
+                      className="w-[280px] p-0 pt-10 bg-background border-r border-white/[0.06] text-foreground font-mono"
                     >
                       {renderTree(() => setMobileOpen(false))}
                     </SheetContent>
@@ -544,24 +542,24 @@ function CheatsheetLayout() {
             <div
               tabIndex={0}
               onKeyDown={handleKeyDown}
-              className="flex-1 min-h-0 flex focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/20"
+              className="flex-1 min-h-0 flex focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/20"
             >
               {/* Sidebar tree (hidden on mobile, visible on desktop) */}
               <div
                 className={`
-                  hidden md:flex shrink-0 border-r border-panel-border bg-sidebar
+                  hidden md:flex shrink-0 border-r border-white/[0.06] bg-white/[0.02]
                   flex-col transition-all duration-200 overflow-hidden
                   ${sidebarOpen ? "w-[240px] md:w-[280px]" : "w-0 border-r-0"}
                 `}
               >
                 {/* Sidebar header */}
-                <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-panel-border/50 bg-panel/50">
+                <div className="shrink-0 flex items-center justify-between px-3 py-2 border-b border-white/[0.06]/50 bg-white/[0.03]">
                   <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                     Explorer
                   </span>
                   <button
                     onClick={() => setSidebarOpen(false)}
-                    className="text-muted-foreground hover:text-foreground text-xs font-mono cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/30 rounded px-1"
+                    className="text-muted-foreground hover:text-foreground text-xs font-mono cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30 rounded px-1"
                     title="Hide sidebar"
                   >
                     ✕
@@ -576,9 +574,9 @@ function CheatsheetLayout() {
                   onClick={() => setSidebarOpen(true)}
                   className="
                     hidden md:flex shrink-0 w-8 items-center justify-center
-                    border-r border-panel-border bg-panel/50
-                    text-muted-foreground hover:text-neon-green hover:bg-neon-green/5
-                    transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neon-green/60
+                    border-r border-white/[0.06] bg-white/[0.03]
+                    text-muted-foreground hover:text-foreground hover:bg-foreground/5
+                    transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/60
                   "
                   title="Show sidebar"
                 >

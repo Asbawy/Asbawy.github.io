@@ -51,7 +51,7 @@ export function JwtDecoder() {
         value={input}
         onChange={(e) => setInput(e.target.value.trim())}
         rows={4}
-        className="w-full resize-none rounded-md border border-panel-border bg-background/80 p-3 font-mono text-[12px] text-neon-green focus:outline-none focus:border-neon-green/50 break-all"
+        className="w-full resize-none rounded-md border border-panel-border bg-background/80 p-3 font-mono text-[12px] text-foreground focus:outline-none focus:border-primary/50 break-all"
       />
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
@@ -64,8 +64,8 @@ export function JwtDecoder() {
         <div
           className={`mt-4 rounded-md border px-3 py-2 font-mono text-[11px] ${
             alg === "none"
-              ? "border-threat-high/50 bg-threat-high/10 text-threat-high"
-              : "border-neon-green/40 bg-neon-green/5 text-neon-green"
+              ? "border-destructive/50 bg-destructive/10 text-destructive"
+              : "border-accent-primary/40 bg-accent-primary/5 text-accent-primary"
           }`}
         >
           {alg === "none"
@@ -88,9 +88,9 @@ function Slot({
 }) {
   const color =
     tone === "green"
-      ? "text-neon-green"
+      ? "text-accent-primary"
       : tone === "blue"
-        ? "text-neon-green"
+        ? "text-accent-link"
         : "text-muted-foreground";
   return (
     <div className="rounded-md border border-panel-border bg-background/60">
@@ -173,7 +173,7 @@ export function PayloadEncoder() {
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={3}
-        className="w-full resize-none rounded-md border border-panel-border bg-background/80 p-3 font-mono text-[12px] text-foreground focus:outline-none focus:border-neon-green/50"
+        className="w-full resize-none rounded-md border border-panel-border bg-background/80 p-3 font-mono text-[12px] text-foreground focus:outline-none focus:border-primary/50"
       />
 
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
@@ -184,8 +184,8 @@ export function PayloadEncoder() {
       </div>
 
       {decoded.length > 0 && (
-        <div className="mt-4 rounded-md border border-neon-green/30 bg-neon-green/5 p-3 font-mono text-[11px]">
-          <div className="text-neon-green mb-1">// auto-detected decodings</div>
+        <div className="mt-4 rounded-md border border-accent-primary/30 bg-accent-primary/5 p-3 font-mono text-[11px]">
+          <div className="text-accent-primary mb-1">// auto-detected decodings</div>
           {decoded.map((d) => (
             <div key={d.label} className="text-foreground/80 break-all">
               <span className="text-muted-foreground">{d.label}:</span> {d.out}

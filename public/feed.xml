@@ -4,8 +4,16 @@
     <title>Asbawy Blog</title>
     <description>Security cheatsheets, quick references, and field notes by Asbawy.</description>
     <link>https://asbawy.github.io</link>
-    <lastBuildDate>Thu, 02 Jul 2026 07:53:41 GMT</lastBuildDate>
+    <lastBuildDate>Wed, 08 Jul 2026 14:17:26 GMT</lastBuildDate>
     
+    <item>
+      <title><![CDATA[Source Code Review: Unearthing Critical Flaws in PHP]]></title>
+      <description><![CDATA[A direct, no-fluff guide to auditing PHP codebases. Learn to spot critical vulnerabilities, map attack surfaces, and weaponize findings with functional exploits.]]></description>
+      <link>https://asbawy.github.io/logs/php-code-review</link>
+      <guid>https://asbawy.github.io/logs/php-code-review</guid>
+      <pubDate>Wed, 08 Jul 2026 00:00:00 GMT</pubDate>
+    </item>
+  
     <item>
       <title><![CDATA[Battlefield Forensics: Anatomy of the IDF's Captured \"Olar\" Secure Smartphone in Syria]]></title>
       <description><![CDATA[An analysis of the IDF's captured \"Olar\" secure smartphone in Syria, detailing its hardware, MDM-enforced kiosk hardening, ORION C4I payload, and the incident's OPSEC implications.]]></description>

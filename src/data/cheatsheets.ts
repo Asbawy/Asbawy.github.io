@@ -23,8 +23,9 @@ export type FileNode = {
 };
 
 // Eager glob to get frontmatter
-const mdxModules = import.meta.glob<{ frontmatter: CheatsheetMeta }>("./cheatsheets/**/*.mdx", {
+const mdxModules = import.meta.glob<CheatsheetMeta>("./cheatsheets/**/*.mdx", {
   eager: true,
+  import: "frontmatter",
 });
 
 // Lazy glob for actual React components
@@ -37,7 +38,7 @@ export const cheatsheetFiles = Object.entries(mdxModules).map(([path, mod]) => {
   const cleanPath = path.replace("./cheatsheets/", "").replace(".mdx", "");
   return {
     path: cleanPath,
-    meta: mod.frontmatter || {},
+    meta: mod || {},
   };
 });
 

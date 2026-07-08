@@ -88,7 +88,7 @@ function CheatsheetViewer() {
   const breadcrumbs = slug.split("/");
 
   // TOC Heading scroll extraction
-  const { headings, activeId, progress } = useArticleToc("#cheatsheet-article", [2, 3]);
+  const { headings, activeId, progress } = useArticleToc("#cheatsheet-article", [2, 3], slug);
 
   // Save to recently viewed list on mount / change
   useEffect(() => {
@@ -146,10 +146,10 @@ function CheatsheetViewer() {
         return (
           <h2
             id={props.id || generatedId}
-            className="scroll-mt-24 mt-10 mb-4 font-mono text-lg text-foreground border-l-2 border-neon-green pl-3"
+            className="scroll-mt-24 mt-10 mb-4 font-mono text-lg text-foreground border-l-2 border-foreground pl-3"
             {...props}
           >
-            <span className="text-neon-green mr-2">▸</span>
+            <span className="text-foreground mr-2">▸</span>
             {props.children}
           </h2>
         );
@@ -183,12 +183,12 @@ function CheatsheetViewer() {
           {...props}
         />
       ),
-      li: (props: any) => <li className="marker:text-neon-green" {...props} />,
+      li: (props: any) => <li className="marker:text-foreground" {...props} />,
       a: (props: any) => {
         const isExternal = typeof props.href === "string" && props.href.startsWith("http");
         return (
           <a
-            className="text-neon-green hover:brightness-125 underline underline-offset-2 transition-all"
+            className="text-foreground hover:brightness-125 underline underline-offset-2 transition-all"
             target={isExternal ? "_blank" : undefined}
             rel={isExternal ? "noopener noreferrer" : undefined}
             {...props}
@@ -201,14 +201,14 @@ function CheatsheetViewer() {
           return <TerminalCode title={language}>{props.children as string}</TerminalCode>;
         }
         return (
-          <code className="rounded bg-muted/50 border border-panel-border px-1.5 py-0.5 text-[12px] text-neon-green font-mono">
+          <code className="rounded bg-muted/50 border border-white/[0.06] px-1.5 py-0.5 text-[12px] text-foreground font-mono">
             {props.children}
           </code>
         );
       },
       pre: (props: any) => <>{props.children}</>,
       table: (props: any) => (
-        <div className="my-6 overflow-x-auto rounded border border-panel-border">
+        <div className="my-6 overflow-x-auto rounded border border-white/[0.06]">
           <table
             className="w-full min-w-[320px] border-collapse font-mono text-[13px]"
             {...props}
@@ -217,18 +217,18 @@ function CheatsheetViewer() {
       ),
       thead: (props: any) => <thead {...props} />,
       tr: (props: any) => (
-        <tr className="border-b border-panel-border/50 last:border-0" {...props} />
+        <tr className="border-b border-white/[0.06]/50 last:border-0" {...props} />
       ),
       th: (props: any) => (
         <th
-          className="px-3 py-2 text-left font-semibold text-neon-green border-b border-panel-border bg-panel/50"
+          className="px-3 py-2 text-left font-semibold text-foreground border-b border-white/[0.06] bg-white/[0.03]"
           {...props}
         />
       ),
       td: (props: any) => <td className="px-3 py-2 align-top text-foreground/85" {...props} />,
       blockquote: (props: any) => (
         <blockquote
-          className="border-l-4 border-neon-green pl-4 italic my-4 text-foreground/70 bg-panel/60 py-3 px-1 rounded-r"
+          className="border-l-4 border-foreground pl-4 italic my-4 text-foreground/70 bg-white/[0.03] py-3 px-1 rounded-r"
           {...props}
         />
       ),
@@ -236,7 +236,7 @@ function CheatsheetViewer() {
         const isDanger = type === "danger" || type === "warning";
         return (
           <div
-            className={`my-4 border-l-4 p-4 rounded-r text-[14px] ${isDanger ? "border-threat-high bg-threat-high/10 text-foreground" : "border-neon-green bg-neon-green/5 text-foreground"}`}
+            className={`my-4 border-l-4 p-4 rounded-r text-[14px] ${isDanger ? "border-threat-high bg-threat-high/10 text-foreground" : "border-foreground bg-foreground/5 text-foreground"}`}
           >
             {children}
           </div>
@@ -246,7 +246,7 @@ function CheatsheetViewer() {
         return (
           <div className="my-6">
             {title && (
-              <div className="text-neon-green font-mono text-xs mb-1 uppercase opacity-80">
+              <div className="text-foreground font-mono text-xs mb-1 uppercase opacity-80">
                 {title}
               </div>
             )}
@@ -256,7 +256,7 @@ function CheatsheetViewer() {
       },
       Tabs: ({ children }: any) => {
         return (
-          <div className="my-6 border border-panel-border bg-panel/30 rounded-md p-4 space-y-6">
+          <div className="my-6 border border-white/[0.06] bg-white/[0.03] rounded-md p-4 space-y-6">
             {children}
           </div>
         );
@@ -264,7 +264,7 @@ function CheatsheetViewer() {
       Tab: ({ label, children }: any) => {
         return (
           <div>
-            <div className="text-neon-green font-mono text-xs uppercase mb-3 pb-1 border-b border-panel-border/50 inline-block">
+            <div className="text-foreground font-mono text-xs uppercase mb-3 pb-1 border-b border-white/[0.06]/50 inline-block">
               {label}
             </div>
             {children}
@@ -278,10 +278,10 @@ function CheatsheetViewer() {
   return (
     <div className="h-full flex flex-col">
       {/* File tab bar */}
-      <div className="shrink-0 border-b border-panel-border bg-panel/50">
+      <div className="shrink-0 border-b border-white/[0.06] bg-white/[0.03]">
         {/* Breadcrumb path */}
         <div className="flex items-center gap-1 px-4 py-2 font-mono text-[11px] text-muted-foreground">
-          <span className="text-neon-green">~</span>
+          <span className="text-foreground">~</span>
           {breadcrumbs.map((segment, i) => (
             <span key={i} className="flex items-center gap-1">
               <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
@@ -298,10 +298,10 @@ function CheatsheetViewer() {
         <div className="w-full max-w-7xl mx-auto px-4 md:px-10 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8">
             {/* Main content pane */}
-            <div className="min-w-0 bg-background/95 rounded-xl border border-panel-border/30 p-6 md:p-8">
+            <div className="min-w-0 bg-background/95 rounded-xl border border-white/[0.06]/30 p-6 md:p-8">
               {/* Title and metadata */}
               {meta.title && (
-                <div className="mb-6 pb-4 border-b border-panel-border/30">
+                <div className="mb-6 pb-4 border-b border-white/[0.06]/30">
                   <h1 className="font-mono text-2xl md:text-3xl font-bold text-foreground mb-3">
                     {meta.title}
                   </h1>
@@ -311,11 +311,11 @@ function CheatsheetViewer() {
                     {meta.date && <span>created: {meta.date}</span>}
                     {meta.date && meta.updated && <span>·</span>}
                     {meta.updated && (
-                      <span className="text-neon-green">verified: {meta.updated}</span>
+                      <span className="text-foreground">verified: {meta.updated}</span>
                     )}
                     {(meta.date || meta.updated) && meta.category && <span>·</span>}
                     {meta.category && (
-                      <span className="text-neon-green">{meta.category.toLowerCase()}</span>
+                      <span className="text-foreground">{meta.category.toLowerCase()}</span>
                     )}
                     {meta.category && meta.readTime && <span>·</span>}
                     {meta.readTime && <span>{meta.readTime}</span>}
@@ -327,7 +327,7 @@ function CheatsheetViewer() {
                             ? "text-threat-high"
                             : meta.difficulty === "Intermediate"
                               ? "text-threat-mid"
-                              : "text-neon-green"
+                              : "text-foreground"
                         }
                       >
                         diff: {meta.difficulty.toLowerCase()}
@@ -358,8 +358,8 @@ function CheatsheetViewer() {
               <div id="cheatsheet-article" className="prose prose-invert max-w-none">
                 <Suspense
                   fallback={
-                    <div className="flex items-center gap-2 animate-pulse text-neon-green font-mono text-sm py-8">
-                      <span className="inline-block w-2 h-4 bg-neon-green/80 animate-pulse" />
+                    <div className="flex items-center gap-2 animate-pulse text-foreground font-mono text-sm py-8">
+                      <span className="inline-block w-2 h-4 bg-foreground/80 animate-pulse" />
                       Reading sector...
                     </div>
                   }
@@ -370,17 +370,17 @@ function CheatsheetViewer() {
 
               {/* Sequential Prev/Next Navigation */}
               {(prevItem || nextItem) && (
-                <div className="mt-12 pt-6 border-t border-panel-border/30 flex items-center justify-between font-mono text-xs gap-4 prev-next-container">
+                <div className="mt-12 pt-6 border-t border-white/[0.06]/30 flex items-center justify-between font-mono text-xs gap-4 prev-next-container">
                   {prevItem ? (
                     <Link
                       to="/cheatsheet/$"
                       params={{ _splat: prevItem.path }}
-                      className="group flex flex-col items-start gap-1 p-3 rounded-md border border-panel-border bg-panel/30 hover:border-neon-green/30 hover:bg-neon-green/5 transition-all text-muted-foreground hover:text-neon-green max-w-[45%]"
+                      className="group flex flex-col items-start gap-1 p-3 rounded-md glass-panel glass-panel-hover transition-all text-muted-foreground hover:text-foreground max-w-[45%]"
                     >
                       <span className="text-[10px] text-muted-foreground/60 uppercase">
                         ← previous
                       </span>
-                      <span className="truncate font-semibold text-foreground group-hover:text-neon-green">
+                      <span className="truncate font-semibold text-foreground group-hover:text-foreground">
                         {prevItem.meta.title || prevItem.path.split("/").pop()}
                       </span>
                     </Link>
@@ -391,10 +391,10 @@ function CheatsheetViewer() {
                     <Link
                       to="/cheatsheet/$"
                       params={{ _splat: nextItem.path }}
-                      className="group flex flex-col items-end gap-1 p-3 rounded-md border border-panel-border bg-panel/30 hover:border-neon-green/30 hover:bg-neon-green/5 transition-all text-muted-foreground hover:text-neon-green max-w-[45%] text-right"
+                      className="group flex flex-col items-end gap-1 p-3 rounded-md glass-panel glass-panel-hover transition-all text-muted-foreground hover:text-foreground max-w-[45%] text-right"
                     >
                       <span className="text-[10px] text-muted-foreground/60 uppercase">next →</span>
-                      <span className="truncate font-semibold text-foreground group-hover:text-neon-green">
+                      <span className="truncate font-semibold text-foreground group-hover:text-foreground">
                         {nextItem.meta.title || nextItem.path.split("/").pop()}
                       </span>
                     </Link>
@@ -412,7 +412,7 @@ function CheatsheetViewer() {
                 <Panel title="table of contents">
                   <div className="mb-4 h-1 w-full overflow-hidden rounded-sm bg-secondary/60">
                     <div
-                      className="h-full bg-neon-green"
+                      className="h-full bg-foreground"
                       style={{ width: `${progress}%`, boxShadow: "0 0 10px currentColor" }}
                     />
                   </div>
@@ -428,7 +428,7 @@ function CheatsheetViewer() {
                               href={`#${s.id}`}
                               className={`flex items-center gap-1.5 rounded px-2 py-1 transition-colors ${
                                 isActive
-                                  ? "text-neon-green text-glow-green bg-neon-green/5 font-semibold"
+                                  ? "text-foreground  bg-foreground/5 font-semibold"
                                   : "text-muted-foreground hover:text-foreground"
                               }`}
                             >
@@ -455,7 +455,7 @@ function CheatsheetViewer() {
                           <Link
                             to="/cheatsheet/$"
                             params={{ _splat: p.path }}
-                            className="block text-muted-foreground hover:text-neon-green truncate"
+                            className="block text-muted-foreground hover:text-foreground truncate"
                           >
                             → {p.meta.title || p.path.split("/").pop()}
                           </Link>

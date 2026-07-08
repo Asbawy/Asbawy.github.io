@@ -64,7 +64,7 @@ export function CommandPalette() {
       >
         {/* Input */}
         <div className="flex items-center gap-3 border-b border-panel-border px-4">
-          <Search className="h-4 w-4 shrink-0 text-neon-green" />
+          <Search className="h-4 w-4 shrink-0 text-foreground" />
           <Command.Input
             placeholder="Type to search posts, cheatsheets, or pages…"
             className="flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
@@ -94,11 +94,11 @@ export function CommandPalette() {
                 key={p.to}
                 value={p.label}
                 onSelect={() => go(p.to)}
-                className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-neon-green/10 data-[selected=true]:text-neon-green transition-colors"
+                className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground transition-colors"
               >
                 <p.icon className="h-4 w-4 shrink-0" />
                 <span className="flex-1">{p.label}</span>
-                <CornerDownLeft className="h-3 w-3 opacity-0 data-[selected=true]:opacity-100 shrink-0 text-neon-green/60" />
+                <CornerDownLeft className="h-3 w-3 opacity-0 data-[selected=true]:opacity-100 shrink-0 text-foreground/60" />
               </Command.Item>
             ))}
           </Command.Group>
@@ -117,7 +117,7 @@ export function CommandPalette() {
                   key={p.slug}
                   value={`${p.title} ${p.tags.join(" ")} ${p.category}`}
                   onSelect={() => go(`/logs/${p.slug}`)}
-                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-neon-green/10 data-[selected=true]:text-neon-green transition-colors"
+                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground transition-colors"
                 >
                   <FileTerminal className="h-4 w-4 shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -145,7 +145,7 @@ export function CommandPalette() {
                   key={c.path}
                   value={`${c.meta.title || c.path} ${c.path}`}
                   onSelect={() => go(`/cheatsheet/${c.path}`)}
-                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-neon-green/10 data-[selected=true]:text-neon-green transition-colors"
+                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground transition-colors"
                 >
                   <BookOpen className="h-4 w-4 shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -172,7 +172,7 @@ export function CommandPalette() {
             </kbd>{" "}
             select
           </span>
-          <span className="text-neon-green/40">cmd_palette v1</span>
+          <span className="text-foreground/40">cmd_palette v1</span>
         </div>
       </Command>
     </div>

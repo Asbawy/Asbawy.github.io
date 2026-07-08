@@ -73,7 +73,7 @@ export const Route = createFileRoute("/logs/$slug")({
     <CyberLayout>
       <div className="p-10 font-mono text-sm text-muted-foreground">
         // post not found —{" "}
-        <Link to="/logs" className="text-neon-green">
+        <Link to="/logs" className="text-foreground hover:text-foreground/80 transition-colors">
           return to feed
         </Link>
       </div>
@@ -91,7 +91,7 @@ export const Route = createFileRoute("/logs/$slug")({
 function PostPage() {
   const { post } = Route.useLoaderData();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const { headings, activeId: activeHeading, progress } = useArticleToc("article", [2]);
+  const { headings, activeId: activeHeading, progress } = useArticleToc("article", [2], post.slug);
 
   const components = useMemo(
     () => ({
@@ -100,17 +100,17 @@ function PostPage() {
       ),
       h2: (props: any) => (
         <h2
-          className="scroll-mt-24 mt-10 mb-4 font-mono text-lg text-foreground border-l-2 border-neon-green pl-3"
+          className="scroll-mt-24 mt-10 mb-4 font-mono text-lg text-foreground border-l-2 border-foreground/30 pl-3"
           {...props}
         >
-          <span className="text-neon-green mr-2">▸</span>
+          <span className="text-foreground/50 mr-2">▸</span>
           {props.children}
         </h2>
       ),
       h3: (props: any) => (
         <h3 className="mt-8 mb-3 font-mono text-base text-foreground/90" {...props} />
       ),
-      h4: (props: any) => <h4 className="mt-6 mb-2 font-mono text-sm text-neon-green" {...props} />,
+      h4: (props: any) => <h4 className="mt-6 mb-2 font-mono text-sm text-foreground/80" {...props} />,
       p: (props: any) => <p className="my-4 text-[15px] leading-7 text-foreground/85" {...props} />,
       ul: (props: any) => (
         <ul
@@ -124,11 +124,11 @@ function PostPage() {
           {...props}
         />
       ),
-      li: (props: any) => <li className="marker:text-neon-green" {...props} />,
+      li: (props: any) => <li className="marker:text-foreground/40" {...props} />,
       hr: (props: any) => <hr className="my-8 border-panel-border" {...props} />,
       a: (props: any) => (
         <a
-          className="text-neon-green hover:text-glow-green underline underline-offset-2 transition-colors"
+          className="text-foreground underline underline-offset-2 decoration-foreground/30 hover:decoration-foreground transition-colors"
           target="_blank"
           rel="noopener noreferrer"
           {...props}
@@ -144,7 +144,7 @@ function PostPage() {
           return <TerminalCode title={language}>{props.children as string}</TerminalCode>;
         }
         return (
-          <code className="rounded bg-panel/80 border border-panel-border px-1.5 py-0.5 text-[12px] text-neon-green font-mono">
+          <code className="rounded bg-white/[0.06] border border-white/[0.08] px-1.5 py-0.5 text-[12px] text-foreground/90 font-mono">
             {props.children}
           </code>
         );
@@ -179,14 +179,14 @@ function PostPage() {
       ),
       th: (props: any) => (
         <th
-          className="px-3 py-2 text-left font-semibold text-neon-green border-b border-panel-border bg-panel/50"
+          className="px-3 py-2 text-left font-semibold text-foreground border-b border-white/[0.06] bg-white/[0.03]"
           {...props}
         />
       ),
       td: (props: any) => <td className="px-3 py-2 align-top text-foreground/85" {...props} />,
       blockquote: (props: any) => (
         <blockquote
-          className="border-l-4 border-neon-green pl-4 italic my-4 text-foreground/70 bg-panel/30 py-2 rounded-r"
+          className="border-l-4 border-foreground/20 pl-4 italic my-4 text-foreground/70 bg-white/[0.03] py-2 rounded-r"
           {...props}
         />
       ),
@@ -198,36 +198,37 @@ function PostPage() {
 
   return (
     <CyberLayout>
-      <article className="px-6 md:px-10 py-10 max-w-6xl bg-background/95 rounded-xl mx-4 my-6 border border-panel-border/30">
+      <article className="px-6 md:px-10 py-10 max-w-6xl glass-panel rounded-xl mx-4 my-6">
         <Link
           to="/logs"
-          className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-neon-green"
+          className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> cd ../logs
         </Link>
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10">
           <div className="min-w-0">
-            <div className="font-mono text-[11px] text-muted-foreground flex flex-wrap items-center gap-3">
-              <span>{post.date}</span>
-              <span>·</span>
-              <span className="text-neon-green">{post.category?.toLowerCase()}</span>
-              <span>·</span>
-              <span>{post.readTime}</span>
-              <span>·</span>
-              <span
-                className={
-                  post.severity === "Critical"
-                    ? "text-threat-high"
-                    : post.severity === "High"
-                      ? "text-threat-mid"
-                      : post.severity === "Medium"
-                        ? "text-neon-green"
-                        : "text-neon-green"
-                }
-              >
-                severity: {post.severity?.toLowerCase()}
-              </span>
+            <div className="font-mono text-[11px] flex flex-wrap items-center gap-3">
+              <span className="text-muted-foreground">{post.date}</span>
+              <span className="text-foreground/20">·</span>
+              <span className="text-accent-primary">{post.category?.toLowerCase()}</span>
+              <span className="text-foreground/20">·</span>
+              <span className="text-accent-link">{post.readTime}</span>
+              {post.severity && (
+                <>
+                  <span className="text-foreground/20">·</span>
+                  <span
+                    className={
+                      post.severity?.toLowerCase() === 'critical' ? 'text-[#FF5252]' :
+                      post.severity?.toLowerCase() === 'high' ? 'text-[#FF7043]' :
+                      post.severity?.toLowerCase() === 'medium' ? 'text-[#FFD43B]' :
+                      'text-[#00D4AA]'
+                    }
+                  >
+                    severity: {post.severity?.toLowerCase()}
+                  </span>
+                </>
+              )}
             </div>
 
             <h1 className="mt-3 text-2xl md:text-4xl font-semibold leading-tight text-foreground">
@@ -251,7 +252,7 @@ function PostPage() {
             <div className="mt-6">
               <Suspense
                 fallback={
-                  <div className="animate-pulse text-neon-green font-mono">
+                  <div className="animate-pulse text-foreground/60 font-mono">
                     Loading core modules...
                   </div>
                 }
@@ -270,7 +271,7 @@ function PostPage() {
 
             <div className="mt-10 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
               // end of post —{" "}
-              <Link to="/logs" className="text-neon-green">
+              <Link to="/logs" className="text-foreground hover:text-foreground/80 transition-colors">
                 return /logs
               </Link>
             </div>
@@ -282,7 +283,7 @@ function PostPage() {
               <Panel title="table of contents">
                 <div className="mb-4 h-1 w-full overflow-hidden rounded-sm bg-secondary/60">
                   <div
-                    className="h-full bg-neon-green"
+                    className="h-full bg-foreground/60"
                     style={{ width: `${progress}%`, boxShadow: "0 0 10px currentColor" }}
                   />
                 </div>
@@ -297,7 +298,7 @@ function PostPage() {
                             href={`#${s.id}`}
                             className={`flex items-center gap-2 rounded px-2 py-1.5 transition-colors ${
                               isActive
-                                ? "text-neon-green text-glow-green bg-neon-green/5"
+                                ? "text-foreground bg-white/[0.05]"
                                 : "text-muted-foreground hover:text-foreground"
                             }`}
                           >
@@ -319,7 +320,7 @@ function PostPage() {
                         <Link
                           to="/logs/$slug"
                           params={{ slug: p.slug }}
-                          className="block text-muted-foreground hover:text-neon-green"
+                          className="block text-muted-foreground hover:text-foreground transition-colors"
                         >
                           → {p.title}
                         </Link>

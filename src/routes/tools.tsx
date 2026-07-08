@@ -33,8 +33,8 @@ function ToolsPage() {
     <CyberLayout>
       <section className="px-6 md:px-10 py-10 max-w-5xl">
         <div className="font-mono text-[11px] text-muted-foreground">
-          <span className="text-neon-green">asbawy</span>:
-          <span className="text-neon-green">~/tools</span>$ ./run
+          <span className="text-foreground">asbawy</span>:
+          <span className="text-foreground">~/tools</span>$ ./run
         </div>
         <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
           /tools <span className="text-muted-foreground">— offline_utils</span>
@@ -50,7 +50,7 @@ function ToolsPage() {
               onClick={() => setTab(t.id)}
               className={`relative -mb-px border-b-2 px-4 py-2 font-mono text-xs transition-colors ${
                 tab === t.id
-                  ? "border-neon-green text-neon-green text-glow-green"
+                  ? "border-foreground text-foreground "
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >

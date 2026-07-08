@@ -6,9 +6,9 @@ export function RssSubscribe() {
       <div className="p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         {/* Icon + glow */}
         <div className="relative shrink-0">
-          <div className="absolute inset-0 rounded-full bg-neon-green/10 blur-xl scale-150" />
-          <div className="relative rounded-md border border-neon-green/30 bg-neon-green/5 p-2.5">
-            <Rss className="h-5 w-5 text-neon-green" />
+          <div className="absolute inset-0 rounded-full bg-foreground/10 blur-xl scale-150" />
+          <div className="relative rounded-md border border-foreground/30 bg-foreground/5 p-2.5">
+            <Rss className="h-5 w-5 text-foreground" />
           </div>
         </div>
 
@@ -26,7 +26,7 @@ export function RssSubscribe() {
           href="/feed.xml"
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 inline-flex items-center gap-2 rounded-md border border-neon-green/40 bg-neon-green/5 px-4 py-2 font-mono text-xs text-neon-green text-glow-green hover:border-neon-green/70 hover:bg-neon-green/10 transition-all"
+          className="shrink-0 inline-flex items-center gap-2 rounded-md border border-foreground/40 bg-foreground/5 px-4 py-2 font-mono text-xs text-foreground  hover:border-foreground/70 hover:bg-foreground/10 transition-all"
         >
           <Rss className="h-3.5 w-3.5" />
           subscribe via rss
