@@ -20,6 +20,11 @@ import {
   FolderKey,
   KeyRound,
   Menu,
+  Wrench,
+  FileDown,
+  Cpu,
+  Wifi,
+  Radio,
 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { getCheatsheetTree, type FileNode } from "@/data/cheatsheets";
@@ -86,6 +91,9 @@ function getIconForNode(name: string, isFile: boolean, isOpen: boolean) {
     if (n.includes("active directory") || n.includes("active_directory") || n === "ad") {
       return <FolderKey className="h-4 w-4 shrink-0 text-sky-400" />;
     }
+    if (n.includes("tool")) return <Wrench className="h-4 w-4 shrink-0 text-orange-400" />;
+    if (n.includes("wireless") || n.includes("wifi")) return <Wifi className="h-4 w-4 shrink-0 text-green-400" />;
+    if (n.includes("hardware") || n.includes("device")) return <Cpu className="h-4 w-4 shrink-0 text-stone-400" />;
     return isOpen ? (
       <FolderOpen className="h-4 w-4 shrink-0 text-foreground" />
     ) : (
@@ -101,6 +109,10 @@ function getIconForNode(name: string, isFile: boolean, isOpen: boolean) {
     return <Database className="h-4 w-4 shrink-0 text-orange-400" />;
   if (n.includes("script") || n.includes("code"))
     return <FileCode className="h-4 w-4 shrink-0 text-green-400" />;
+  if (n.includes("transfer") || n.includes("download") || n.includes("upload") || n.includes("exfil"))
+    return <FileDown className="h-4 w-4 shrink-0 text-emerald-400" />;
+  if (n.includes("wireless") || n.includes("wifi") || n.includes("radio"))
+    return <Radio className="h-4 w-4 shrink-0 text-green-400" />;
   if (
     n.includes("exploit") ||
     n.includes("cve") ||
@@ -116,7 +128,9 @@ function getIconForNode(name: string, isFile: boolean, isOpen: boolean) {
     n.includes("active_directory") ||
     n.includes("ad_") ||
     n.includes("_ad") ||
-    n === "ad"
+    n === "ad" ||
+    n.includes("password") ||
+    n.includes("hash")
   ) {
     return <KeyRound className="h-4 w-4 shrink-0 text-sky-400" />;
   }

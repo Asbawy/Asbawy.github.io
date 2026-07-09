@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import tailwindcss from "@tailwindcss/vite";
+import tsConfigPaths from "vite-tsconfig-paths";
+import react from "@vitejs/plugin-react";
 import mdx from "@mdx-js/rollup";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
@@ -48,19 +52,27 @@ function getPrerenderPages() {
 export default defineConfig({
   base: "/",
   plugins: [
+    tanstackStart({
+      prerender: {
+        enabled: true,
+        autoStaticPathsDiscovery: true,
+        crawlLinks: true,
+        autoSubfolderIndex: false,
+      },
+      pages: getPrerenderPages(),
+    }),
+    tailwindcss(),
+    tsConfigPaths({ projects: ["./tsconfig.json"] }),
+    react(),
     mdx({
       remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter, remarkGfm],
       rehypePlugins: [rehypeSlug, rehypeHighlight],
       providerImportSource: "@mdx-js/react",
     }),
   ],
-  tanstackStart: {
-    prerender: {
-      enabled: true,
-      autoStaticPathsDiscovery: true,
-      crawlLinks: true,
-      autoSubfolderIndex: false,
+  resolve: {
+    alias: {
+      "@": join(process.cwd(), "src"),
     },
-    pages: getPrerenderPages(),
   },
 });
