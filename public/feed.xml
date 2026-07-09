@@ -4,8 +4,16 @@
     <title>Asbawy Blog</title>
     <description>Security cheatsheets, quick references, and field notes by Asbawy.</description>
     <link>https://asbawy.github.io</link>
-    <lastBuildDate>Wed, 08 Jul 2026 14:17:26 GMT</lastBuildDate>
+    <lastBuildDate>Thu, 09 Jul 2026 04:09:16 GMT</lastBuildDate>
     
+    <item>
+      <title><![CDATA[File Transfer Techniques]]></title>
+      <description><![CDATA[Cheatsheet for moving files across Linux, Windows, restricted shells, and inspected networks. Built for CTF players, bug bounty hunters, and internal pentesters.]]></description>
+      <link>https://asbawy.github.io/cheatsheet/Tools/file-transfer-techniques</link>
+      <guid>https://asbawy.github.io/cheatsheet/Tools/file-transfer-techniques</guid>
+      <pubDate>Thu, 09 Jul 2026 00:00:00 GMT</pubDate>
+    </item>
+  
     <item>
       <title><![CDATA[Source Code Review: Unearthing Critical Flaws in PHP]]></title>
       <description><![CDATA[A direct, no-fluff guide to auditing PHP codebases. Learn to spot critical vulnerabilities, map attack surfaces, and weaponize findings with functional exploits.]]></description>

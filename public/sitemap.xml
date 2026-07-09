@@ -101,6 +101,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://asbawy.github.io/cheatsheet/Tools/file-transfer-techniques</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://asbawy.github.io/cheatsheet/Tools/MSFvenom</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

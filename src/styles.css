@@ -2,7 +2,7 @@
 
 @import "tailwindcss" source(none);
 @import "tw-animate-css";
-@import "highlight.js/styles/github-dark.css";
+@import "highlight.js/styles/tokyo-night-dark.css";
 @source "../src";
 
 @custom-variant dark (&:is(.dark *));
@@ -149,6 +149,21 @@
   --threat-mid: var(--accent-secondary);
   --threat-high: #c0392b;
   --gold: #d4c9a8;
+  --code-command: #73daca;
+  --code-option: #bb9af7;
+  --code-pipe: #c0caf5;
+  --code-string: #9ece6a;
+  --code-comment: #565f89;
+  --code-number: #ff9e64;
+  --code-keyword: #bb9af7;
+  --code-builtin: #7dcfff;
+  --code-variable: #c0caf5;
+  --code-url: #7dcfff;
+  --code-path: #e0af68;
+  --code-ip: #ff9e64;
+  --code-redirect: #f7768e;
+  --code-cmdlet: #7aa2f7;
+  --code-psvar: #ff9e64;
 
   --chart-1: var(--accent-primary);
   --chart-2: var(--accent-secondary);
@@ -239,6 +254,21 @@
   --sidebar-ring: var(--accent-primary);
   
   --code-bg: #ece8df;
+  --code-command: #0891b2;
+  --code-option: #7c3aed;
+  --code-pipe: #3b3c37;
+  --code-string: #b45309;
+  --code-comment: #6a737d;
+  --code-number: #d946ef;
+  --code-keyword: #7c3aed;
+  --code-builtin: #2563eb;
+  --code-variable: #3b3c37;
+  --code-url: #2980B9;
+  --code-path: #6a6a64;
+  --code-ip: #d97706;
+  --code-redirect: #c0392b;
+  --code-cmdlet: #2563eb;
+  --code-psvar: #d97706;
 }
 
 /* ── Dark Mode Class override ───────────────────────────────────── */
@@ -307,6 +337,21 @@
   --threat-mid: var(--accent-secondary);
   --threat-high: #c0392b;
   --gold: #d4c9a8;
+  --code-command: #73daca;
+  --code-option: #bb9af7;
+  --code-pipe: #c0caf5;
+  --code-string: #9ece6a;
+  --code-comment: #565f89;
+  --code-number: #ff9e64;
+  --code-keyword: #bb9af7;
+  --code-builtin: #7dcfff;
+  --code-variable: #c0caf5;
+  --code-url: #7dcfff;
+  --code-path: #e0af68;
+  --code-ip: #ff9e64;
+  --code-redirect: #f7768e;
+  --code-cmdlet: #7aa2f7;
+  --code-psvar: #ff9e64;
 
   --chart-1: var(--accent-primary);
   --chart-2: var(--accent-secondary);
@@ -488,7 +533,18 @@
   background: rgba(255, 250, 240, 0.25);
 }
 
-/* Light mode overrides for highlight.js (github-dark is loaded by default) */
+/* ── Dark-mode highlight.js tweaks (Tokyo Night is the base) ── */
+.dark .hljs,
+:root .hljs {
+  background: transparent !important;
+}
+
+.dark .hljs-comment,
+:root .hljs-comment {
+  font-style: italic;
+}
+
+/* ── Light mode overrides for highlight.js ── */
 .light .hljs {
   color: #24292e !important;
   background: transparent !important;
@@ -538,7 +594,8 @@
 .light .hljs-comment,
 .light .hljs-code,
 .light .hljs-formula {
-  color: #6a737d !important;
+  color: var(--code-comment) !important;
+  font-style: italic;
 }
 
 .light .hljs-name,
