@@ -331,14 +331,14 @@ function AboutPage() {
               className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-foreground/30 hover:bg-foreground/[0.02] hover:shadow-[0_0_20px_rgba(0,255,136,0.05)] transition-all duration-300 flex flex-col justify-between min-h-[135px] focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
             >
               <div className="flex-1 flex flex-col items-center justify-center">
-                <AnimatedCount target={320} />
+                <AnimatedCount target={150} />
                 <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                   htb_global_rank
                 </div>
               </div>
               <div className="mt-3 pt-2 w-full border-t border-panel-border/30 font-mono text-[10px] text-muted-foreground/80 group-hover:text-foreground/80 transition-colors flex items-center justify-center gap-1.5">
                 <span>Asbawy</span>
-                <span className="text-foreground font-semibold">(Pro Hacker)</span>
+                <span className="text-foreground font-semibold">(Elite Hacker)</span>
               </div>
             </a>
 
