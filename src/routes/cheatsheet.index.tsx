@@ -1,14 +1,38 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, getRouteApi } from "@tanstack/react-router";
 import { Lock, Zap, Terminal, FolderOpen, ChevronRight, BookOpen } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { cheatsheetFiles } from "@/data/cheatsheets";
-import { Tag, tagVariantFor } from "@/components/cyber/Layout";
+import { Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
+
+const cheatsheetRoute = getRouteApi("/cheatsheet");
 
 export const Route = createFileRoute("/cheatsheet/")({
   component: CheatsheetIndex,
 });
 
 function CheatsheetIndex() {
+  const navigate = useNavigate();
+  const search = cheatsheetRoute.useSearch();
+  const q = (search.q || "").toLowerCase().trim();
+
+  // Filter cheatsheet files based on search
+  const displayedFiles = useMemo(() => {
+    if (!q) return cheatsheetFiles;
+    return cheatsheetFiles.filter(file => 
+      file.path.toLowerCase().includes(q) ||
+      file.meta.title?.toLowerCase().includes(q) ||
+      file.meta.category?.toLowerCase().includes(q) ||
+      file.meta.tags?.some(t => t.toLowerCase().includes(q))
+    );
+  }, [q]);
+
+  // Auto-navigate if exactly 1 match
+  useEffect(() => {
+    if (q && displayedFiles.length === 1) {
+      navigate({ to: "/cheatsheet/$", params: { _splat: displayedFiles[0].path }, search: { q }, replace: true });
+    }
+  }, [q, displayedFiles, navigate]);
+
   // Group cheatsheets by category
   const categories = useMemo(() => {
     const cats: Record<string, { count: number; firstPath: string }> = {};
@@ -75,12 +99,13 @@ function CheatsheetIndex() {
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="mb-10">
-          <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
-            <span className="text-foreground">▸</span> select_by_category
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {/* Categories Grid - hide when searching */}
+        {!q && (
+          <div className="mb-10">
+            <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
+              <span className="text-foreground">▸</span> select_by_category
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {categories.map((c) => (
               <Link
                 key={c.name}
@@ -109,16 +134,18 @@ function CheatsheetIndex() {
                 </div>
               </Link>
             ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Available Cheatsheets Feed */}
         <div className="text-left">
           <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
-            <span className="text-foreground">▸</span> all_available_cheatsheets
+            <span className="text-foreground">▸</span> {q ? "search_results" : "all_available_cheatsheets"}
           </h3>
           <div className="grid grid-cols-1 gap-4">
-            {cheatsheetFiles.map((file) => (
+            {displayedFiles.length > 0 ? (
+              displayedFiles.map((file) => (
               <Link
                 key={file.path}
                 to="/cheatsheet/$"
@@ -155,14 +182,27 @@ function CheatsheetIndex() {
                   </div>
                   <div className="flex flex-wrap gap-1 mt-2 sm:mt-0 sm:justify-end shrink-0 max-w-[280px]">
                     {file.meta.tags?.slice(0, 3).map((tag) => (
-                      <Tag key={tag} variant={tagVariantFor(tag)}>
+                      <Tag
+                        key={tag}
+                        variant={tagVariantFor(tag)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleTagClick(tag, navigate);
+                        }}
+                      >
                         {tag}
                       </Tag>
                     ))}
                   </div>
                 </div>
               </Link>
-            ))}
+            ))
+            ) : (
+              <div className="p-8 text-center glass-panel glass-panel-hover rounded-lg border-dashed">
+                <span className="font-mono text-sm text-muted-foreground">No cheatsheets match your search.</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

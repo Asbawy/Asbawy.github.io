@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { createFileRoute, notFound, Link, useNavigate } from "@tanstack/react-router";
 import { Suspense, useMemo, useEffect } from "react";
 import { FileText, ChevronRight } from "lucide-react";
 import { cheatsheetFiles, CheatsheetMdxComponents } from "@/data/cheatsheets";
 import { TerminalCode } from "@/components/cyber/TerminalCode";
 import { useArticleToc } from "@/hooks/use-article-toc";
 import { getRelatedCheatsheets } from "@/lib/related-cheatsheets";
-import { Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
+import { Panel, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
 
 export const Route = createFileRoute("/cheatsheet/$")({
   loader: async ({ params }) => {
@@ -82,6 +82,7 @@ export const Route = createFileRoute("/cheatsheet/$")({
 });
 
 function CheatsheetViewer() {
+  const navigate = useNavigate();
   const { slug, meta } = Route.useLoaderData();
   const MDXContent = CheatsheetMdxComponents[slug] || (() => <div>Component not found</div>);
 
@@ -339,7 +340,15 @@ function CheatsheetViewer() {
                   {meta.tags && meta.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {meta.tags.map((tag: string) => (
-                        <Tag key={tag} variant={tagVariantFor(tag)}>
+                        <Tag 
+                          key={tag} 
+                          variant={tagVariantFor(tag)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleTagClick(tag, navigate);
+                          }}
+                        >
                           {tag}
                         </Tag>
                       ))}

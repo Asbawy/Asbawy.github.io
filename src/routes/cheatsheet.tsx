@@ -38,7 +38,11 @@ function filterTree(nodes: FileNode[], query: string): FileNode[] {
 
   return nodes.reduce<FileNode[]>((acc, node) => {
     if (node.type === "file") {
-      if (node.name.toLowerCase().includes(q) || node.meta?.title?.toLowerCase().includes(q)) {
+      if (
+        node.name.toLowerCase().includes(q) ||
+        node.meta?.title?.toLowerCase().includes(q) ||
+        node.meta?.tags?.some((t) => t.toLowerCase().includes(q))
+      ) {
         acc.push(node);
       }
     } else {
@@ -63,7 +67,16 @@ function getFileCount(node: FileNode): number {
   return node.children.reduce((acc, child) => acc + getFileCount(child), 0);
 }
 
+type CheatsheetSearch = {
+  q?: string;
+};
+
 export const Route = createFileRoute("/cheatsheet")({
+  validateSearch: (search: Record<string, unknown>): CheatsheetSearch => {
+    return {
+      q: typeof search.q === "string" ? search.q : undefined,
+    };
+  },
   head: () => ({
     meta: [
       { title: "/cheatsheet — Asbawy Blog" },
@@ -316,12 +329,25 @@ function getFlatNodes(
 /* ── Main layout ─────────────────────────────────────── */
 
 function CheatsheetLayout() {
+  const search = Route.useSearch();
   const tree = getCheatsheetTree();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setSearchQuery(search.q || "");
+  }, [search.q]);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    navigate({
+      search: (old) => ({ ...old, q: val || undefined }),
+      replace: true,
+    });
+  };
   const router = useRouterState();
   const currentPath = router.location.pathname;
 
@@ -436,7 +462,7 @@ function CheatsheetLayout() {
           <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/70" />
           <input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="filter files…"
             className="w-full rounded border border-white/[0.06]/50 bg-background/60 pl-7 pr-2 py-1.5 font-mono text-[11px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground/40 transition-colors focus-visible:ring-1 focus-visible:ring-foreground/30"
           />

@@ -1,5 +1,25 @@
 import { SideNav, TopBar } from "./SideNav";
 import { CommandPalette } from "./CommandPalette";
+import { postsMeta } from "@/data/posts";
+import { cheatsheetFiles } from "@/data/cheatsheets";
+
+export function handleTagClick(tag: string, navigate: any) {
+  const normalizedTag = tag.toLowerCase().trim();
+  const hasPosts = postsMeta.some((p) =>
+    p.tags.some((t) => t.toLowerCase().trim() === normalizedTag)
+  );
+  const hasCheatsheets = cheatsheetFiles.some((c) =>
+    c.meta.tags?.some((t) => t.toLowerCase().trim() === normalizedTag)
+  );
+
+  if (hasPosts && !hasCheatsheets) {
+    navigate({ to: "/logs", search: { tag } });
+  } else if (!hasPosts && hasCheatsheets) {
+    navigate({ to: "/cheatsheet", search: { q: tag } });
+  } else {
+    navigate({ to: "/logs", search: { tag } });
+  }
+}
 
 export function CyberLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -138,9 +158,11 @@ function getTagColor(tag: string): string {
 export function Tag({
   children,
   variant = "default",
+  onClick,
 }: {
   children: React.ReactNode;
   variant?: "default" | "green" | "blue" | "red" | "amber";
+  onClick?: (e: React.MouseEvent) => void;
 }) {
   const tagText = typeof children === "string" ? children : "";
   const tagColor = getTagColor(tagText);
@@ -154,7 +176,15 @@ export function Tag({
   };
 
   return (
-    <span className="custom-tag" style={style}>
+    <span
+      className={`custom-tag ${
+        onClick
+          ? "cursor-pointer hover:brightness-125 hover:-translate-y-[1px] transition-all duration-150"
+          : ""
+      }`}
+      style={style}
+      onClick={onClick}
+    >
       {children}
     </span>
   );

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { CyberLayout, Panel, Tag, tagVariantFor } from "@/components/cyber/Layout";
+import { CyberLayout, Panel, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
 import { TerminalCode } from "@/components/cyber/TerminalCode";
 import { Mermaid } from "@/components/cyber/Mermaid";
 import { getPostMeta, getPostContent, postsMeta, MdxComponents } from "@/data/posts";
@@ -89,6 +89,7 @@ export const Route = createFileRoute("/logs/$slug")({
 });
 
 function PostPage() {
+  const navigate = useNavigate();
   const { post } = Route.useLoaderData();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const { headings, activeId: activeHeading, progress } = useArticleToc("article", [2], post.slug);
@@ -237,7 +238,15 @@ function PostPage() {
 
             <div className="mt-3 flex flex-wrap gap-1.5">
               {post.tags?.map((t) => (
-                <Tag key={t} variant={tagVariantFor(t)}>
+                <Tag
+                  key={t}
+                  variant={tagVariantFor(t)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleTagClick(t, navigate);
+                  }}
+                >
                   {t}
                 </Tag>
               ))}
