@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && npx tsx scripts/generate-sitemap.ts && npx tsx scripts/generate-rss.ts",
+    "build": "vite build && npx --yes tsx scripts/generate-sitemap.ts && npx --yes tsx scripts/generate-rss.ts",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -88,6 +88,7 @@
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "remark-mdx-frontmatter": "^5.2.0",
+    "tsx": "^4.23.1",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
