@@ -24,23 +24,13 @@ url: "https://asbawy.github.io/writeups/htb-headless"
 ---
 
 import { Callout } from "@/components/Callout";
-import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupComponents";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
 
 <KillChain steps={[
   { phase: "Reconnaissance", title: "Port Scanning & Web Enumeration", desc: "Nmap scan revealed SSH (22) and a Werkzeug Python web app on port 5000. Directory fuzzing uncovered /dashboard (401) and /support (contact form).", tools: ["Nmap", "Gobuster", "curl"] },
   { phase: "Foothold", title: "Blind XSS — Admin Cookie Exfiltration", desc: "Triggered hacking detection by injecting XSS in the message body, while the real XSS payload in the User-Agent header stole the admin's is_admin cookie when the admin reviewed the flagged request.", technique: "Blind XSS via Header Injection", tools: ["curl", "Python HTTP Server"] },
   { phase: "Remote Execution", title: "Command Injection in Dashboard", desc: "Used the stolen admin cookie to access /dashboard. The date parameter in the report generator was passed directly to a system command, allowing arbitrary command execution as dvir.", technique: "OS Command Injection", tools: ["curl", "bash"] },
   { phase: "PrivEsc", title: "Sudo Script — PAM Backdoor Injection", desc: "dvir could run /usr/bin/syscheck as root via sudo. The script called ./initdb.sh using a relative path. Created a malicious initdb.sh that injects pam_permit.so into /etc/pam.d/su, then used su to escalate to root with any password.", technique: "PAM Authentication Backdoor via Relative Path Hijack", tools: ["sudo", "bash", "sed"] }
-]} />
-
-### Skill Matrix
-
-<SkillMatrix skills={[
-  { name: "Enumeration", level: 6 },
-  { name: "Real-Life", level: 8 },
-  { name: "CVE", level: 2 },
-  { name: "Custom Exploitation", level: 7 },
-  { name: "Privilege Escalation", level: 5 }
 ]} />
 
 ---

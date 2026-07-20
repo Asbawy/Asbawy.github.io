@@ -35,11 +35,11 @@ export function CommandPalette() {
   const pages = useMemo(
     () => [
       { label: "/home", to: "/", icon: Home },
+      { label: "/writeups", to: "/writeups", icon: Swords },
+      { label: "/cheatsheet", to: "/cheatsheet", icon: BookOpen },
       { label: "/logs", to: "/logs", icon: FileTerminal },
       { label: "/tools", to: "/tools", icon: Wrench },
       { label: "/stats", to: "/stats", icon: Activity },
-      { label: "/cheatsheet", to: "/cheatsheet", icon: BookOpen },
-      { label: "/writeups", to: "/writeups", icon: Swords },
       { label: "/about", to: "/about", icon: User },
     ],
     [],

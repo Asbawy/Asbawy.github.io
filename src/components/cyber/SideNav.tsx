@@ -5,11 +5,11 @@ import { ThemeToggle } from "./ThemeToggle";
 
 const items = [
   { to: "/", label: "/home", icon: Home },
+  { to: "/writeups", label: "/writeups", icon: Swords },
+  { to: "/cheatsheet", label: "/cheatsheet", icon: BookOpen },
   { to: "/logs", label: "/logs", icon: FileTerminal },
   { to: "/tools", label: "/tools", icon: Wrench },
   { to: "/stats", label: "/stats", icon: Activity },
-  { to: "/cheatsheet", label: "/cheatsheet", icon: BookOpen },
-  { to: "/writeups", label: "/writeups", icon: Swords },
   { to: "/about", label: "/about", icon: User },
 ];
 
@@ -96,6 +96,12 @@ export function TopBar() {
         <Link to="/" className="hover:text-foreground transition-colors">
           /home
         </Link>
+        <Link to="/writeups" className="hover:text-foreground transition-colors">
+          /pwned
+        </Link>
+        <Link to="/cheatsheet" className="hover:text-foreground transition-colors">
+          /cheat
+        </Link>
         <Link to="/logs" className="hover:text-foreground transition-colors">
           /logs
         </Link>
@@ -104,12 +110,6 @@ export function TopBar() {
         </Link>
         <Link to="/stats" className="hover:text-foreground transition-colors">
           /stats
-        </Link>
-        <Link to="/cheatsheet" className="hover:text-foreground transition-colors">
-          /cheat
-        </Link>
-        <Link to="/writeups" className="hover:text-foreground transition-colors">
-          /pwned
         </Link>
         <Link to="/about" className="hover:text-foreground transition-colors">
           /about

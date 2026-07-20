@@ -18,21 +18,12 @@ url: "https://asbawy.github.io/writeups/thm-hammer"
 ---
 
 import { Callout } from "@/components/Callout";
-import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupComponents";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
 
 <KillChain steps={[
   { phase: "Reconnaissance", title: "Scanning & Fuzzing", desc: "Nmap exposes SSH and a custom web app on port 1337. Fuzzing with the hmr_ prefix leaks an open log that dumps a valid username.", tools: ["Nmap", "ffuf"] },
   { phase: "Foothold", title: "OTP Brute Force & Account Takeover", desc: "Bypassed the password reset rate-limit with X-Forwarded-For spoofing, brute-forced the 4-digit recovery code, and reset the password to grab the user flag.", technique: "OTP Brute Force", tools: ["Python", "Caido"] },
   { phase: "PrivEsc", title: "JWT Forgery to RCE", desc: "Forged an admin HS256 token using an exposed key, then abused execute_command.php for command execution to retrieve the root flag.", technique: "JWT Forgery", tools: ["Caido", "curl"] }
-]} />
-
-### Skill Matrix
-
-<SkillMatrix skills={[
-  { name: "Web Fuzzing", level: 7 },
-  { name: "Authentication Bypass", level: 8 },
-  { name: "JWT Attacks", level: 9 },
-  { name: "OS Command Injection", level: 6 }
 ]} />
 
 ---

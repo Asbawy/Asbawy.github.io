@@ -1,5 +1,8 @@
 import React, { useState } from "react";
-import { Copy, Check, Eye, EyeOff, ShieldAlert, Target, Terminal, Lock, Key, Zap, CheckCircle2, Search, Skull, ArrowRight } from "lucide-react";
+import {
+  Copy, Check, Eye, EyeOff, ShieldAlert, Target, Terminal,
+  Key, Zap, Search, Skull, ArrowRight, ChevronRight, Activity
+} from "lucide-react";
 
 /* ── Platform Logos (SVG) ────────────────────────────── */
 
@@ -37,13 +40,7 @@ export function PlatformIcon({ platform, className = "h-4 w-4" }: { platform: st
 
 /* ── Spoiler Flag Component ──────────────────────────── */
 
-export function SpoilerFlag({
-  flag,
-  label = "Flag",
-}: {
-  flag: string;
-  label?: string;
-}) {
+export function SpoilerFlag({ flag, label = "Flag" }: { flag: string; label?: string }) {
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -55,8 +52,8 @@ export function SpoilerFlag({
   };
 
   return (
-    <div className="my-4 rounded-lg border border-border bg-card/80 p-3.5 font-mono backdrop-blur-sm shadow-sm">
-      <div className="flex items-center justify-between gap-3 text-xs mb-2">
+    <div className="my-3 rounded-lg border border-border bg-card/80 p-3 font-mono backdrop-blur-sm shadow-sm">
+      <div className="flex items-center justify-between gap-3 text-xs mb-1.5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Key className="h-3.5 w-3.5 text-accent-primary" />
           <span className="font-semibold uppercase tracking-wider text-[11px] text-foreground">{label}</span>
@@ -64,7 +61,7 @@ export function SpoilerFlag({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setRevealed(!revealed)}
-            className="flex items-center gap-1 rounded border border-border bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="flex items-center gap-1 rounded border border-border bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             title={revealed ? "Hide flag" : "Reveal flag"}
           >
             {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -72,7 +69,7 @@ export function SpoilerFlag({
           </button>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 rounded border border-border bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="flex items-center gap-1 rounded border border-border bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             title="Copy flag"
           >
             {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
@@ -82,9 +79,8 @@ export function SpoilerFlag({
       </div>
       <div
         onClick={() => !revealed && setRevealed(true)}
-        className={`relative select-none rounded bg-muted/80 px-3 py-2 text-xs font-mono transition-all duration-300 ${
-          revealed ? "text-accent-primary font-bold select-text" : "cursor-pointer blur-sm hover:blur-[2px] text-muted-foreground"
-        }`}
+        className={`relative select-none rounded bg-muted/80 px-2.5 py-1.5 text-xs font-mono transition-all duration-300 ${revealed ? "text-accent-primary font-bold select-text" : "cursor-pointer blur-sm hover:blur-[2px] text-muted-foreground"
+          }`}
       >
         <span className={revealed ? "" : "opacity-30"}>
           {revealed ? flag : flag.replace(/./g, "•")}
@@ -110,90 +106,160 @@ export interface KillChainStep {
   icon?: React.ReactNode;
 }
 
-function getPhaseIcon(phase: string) {
+type PhaseConfig = {
+  icon: React.ReactNode;
+  accent: string;
+  badge: string;
+  nodeBg: string;
+  nodeBorder: string;
+  nodeText: string;
+  barColor: string;
+};
+
+function getPhaseConfig(phase: string): PhaseConfig {
   const p = phase.toLowerCase();
-  if (p.includes("recon")) return <Search className="h-3 w-3" />;
-  if (p.includes("foothold") || p.includes("initial")) return <Target className="h-3 w-3" />;
-  if (p.includes("exec") || p.includes("shell")) return <Terminal className="h-3 w-3" />;
-  if (p.includes("priv")) return <ShieldAlert className="h-3 w-3" />;
-  if (p.includes("loot") || p.includes("flag")) return <Key className="h-3 w-3" />;
-  if (p.includes("root") || p.includes("pwn")) return <Skull className="h-3 w-3" />;
-  return <Zap className="h-3 w-3" />;
+  if (p.includes("recon")) return {
+    icon: <Search className="h-3 w-3" />,
+    accent: "blue",
+    badge: "bg-blue-500/10 border-blue-400/30 text-blue-600 dark:text-blue-300",
+    nodeBg: "bg-blue-500/10",
+    nodeBorder: "border-blue-400/40",
+    nodeText: "text-blue-600 dark:text-blue-300",
+    barColor: "#3b82f6",
+  };
+  if (p.includes("foothold") || p.includes("initial") || p.includes("exploitation")) return {
+    icon: <Target className="h-3 w-3" />,
+    accent: "amber",
+    badge: "bg-amber-500/10 border-amber-400/30 text-amber-600 dark:text-amber-300",
+    nodeBg: "bg-amber-500/10",
+    nodeBorder: "border-amber-400/40",
+    nodeText: "text-amber-600 dark:text-amber-300",
+    barColor: "#f59e0b",
+  };
+  if (p.includes("exec") || p.includes("shell") || p.includes("rce") || p.includes("remote")) return {
+    icon: <Terminal className="h-3 w-3" />,
+    accent: "cyan",
+    badge: "bg-cyan-500/10 border-cyan-400/30 text-cyan-600 dark:text-cyan-300",
+    nodeBg: "bg-cyan-500/10",
+    nodeBorder: "border-cyan-400/40",
+    nodeText: "text-cyan-600 dark:text-cyan-300",
+    barColor: "#06b6d4",
+  };
+  if (p.includes("priv") || p.includes("escalat") || p.includes("root") || p.includes("pwn")) return {
+    icon: <ShieldAlert className="h-3 w-3" />,
+    accent: "rose",
+    badge: "bg-rose-500/10 border-rose-400/30 text-rose-600 dark:text-rose-300",
+    nodeBg: "bg-rose-500/10",
+    nodeBorder: "border-rose-400/40",
+    nodeText: "text-rose-600 dark:text-rose-300",
+    barColor: "#f43f5e",
+  };
+  return {
+    icon: <Zap className="h-3 w-3" />,
+    accent: "violet",
+    badge: "bg-violet-500/10 border-violet-400/30 text-violet-600 dark:text-violet-300",
+    nodeBg: "bg-violet-500/10",
+    nodeBorder: "border-violet-400/40",
+    nodeText: "text-violet-600 dark:text-violet-300",
+    barColor: "#8b5cf6",
+  };
 }
 
 export function KillChain({ steps }: { steps: KillChainStep[] }) {
   return (
-    <div className="my-8 rounded-xl border border-border bg-card/60 p-1 md:p-6 font-mono backdrop-blur-md relative overflow-hidden shadow-sm">
-      {/* Background ambient glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/5 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-threat-high/5 rounded-full blur-[80px] pointer-events-none" />
-
-      <div className="relative z-10">
-        <div className="flex items-center gap-3 border-b border-border pb-4 mb-6 px-4 md:px-0">
-          <div className="rounded bg-accent-primary/10 p-1.5 border border-accent-primary/20">
-            <Zap className="h-4 w-4 text-accent-primary" />
+    <div className="my-5 rounded-xl border border-border bg-card/80 overflow-hidden shadow-md font-mono">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/40">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-foreground text-background">
+            <Zap className="h-3.5 w-3.5" />
           </div>
-          <span className="text-sm uppercase tracking-[0.2em] font-semibold text-foreground">
-            Exploit_Kill_Chain
-          </span>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">Exploit_Kill_Chain</span>
         </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-medium">
+            {steps.length} Phases
+          </span>
+          {/* Decorative scanline dots */}
+          <div className="flex gap-1">
+            {["bg-blue-400", "bg-amber-400", "bg-rose-400"].map((c, i) => (
+              <span key={i} className={`h-1.5 w-1.5 rounded-full ${c} opacity-70`} />
+            ))}
+          </div>
+        </div>
+      </div>
 
-        <div className="relative space-y-6 before:absolute before:left-[27px] md:before:left-[35px] before:top-4 before:bottom-4 before:w-0.5 before:bg-gradient-to-b before:from-accent-primary before:via-border before:to-threat-high px-2 md:px-0">
-          {steps.map((s, idx) => {
-            const isLast = idx === steps.length - 1;
-            const nodeColor = isLast ? "text-threat-high border-threat-high/50 shadow-threat-high/20" : "text-accent-primary border-accent-primary/50 shadow-accent-primary/20";
-            const bgColor = isLast ? "bg-threat-high/10" : "bg-accent-primary/10";
+      {/* Steps */}
+      <div className="relative px-4 py-3 space-y-2">
+        {/* Vertical connector line */}
+        <div
+          className="absolute left-[30px] top-5 bottom-5 w-px"
+          style={{ background: "linear-gradient(to bottom, #3b82f6, #f59e0b, #f43f5e)" }}
+        />
 
-            return (
-              <div key={idx} className="group relative flex items-start gap-4 md:gap-6 pl-14 md:pl-20">
-                {/* Step Node */}
-                <div className={`absolute left-[28px] md:left-[36px] top-1.5 flex h-7 w-7 md:h-8 md:w-8 -translate-x-1/2 items-center justify-center rounded-full border ${nodeColor} ${bgColor} bg-background backdrop-blur-sm shadow-[0_0_15px_var(--tw-shadow-color)] transition-transform duration-300 group-hover:scale-110 group-hover:shadow-[0_0_25px_var(--tw-shadow-color)] z-10`}>
-                  {s.icon || getPhaseIcon(s.phase)}
+        {steps.map((s, idx) => {
+          const cfg = getPhaseConfig(s.phase);
+          const isLast = idx === steps.length - 1;
+
+          return (
+            <div key={idx} className="relative flex items-start gap-3 pl-9 group">
+              {/* Node */}
+              <div
+                className={`absolute left-[14px] top-1.5 z-10 flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full border-2 transition-transform duration-200 group-hover:scale-110 ${cfg.nodeBg} ${cfg.nodeBorder} ${cfg.nodeText} bg-card`}
+              >
+                {s.icon ?? cfg.icon}
+              </div>
+
+              {/* Card */}
+              <div className="flex-1 min-w-0 rounded-lg border border-border/70 bg-background/60 overflow-hidden transition-all duration-200 hover:border-border hover:shadow-sm">
+                {/* Card header */}
+                <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-border/40 bg-muted/20">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[9px] font-mono text-muted-foreground/50 shrink-0">
+                      {String(idx + 1).padStart(2, "0")}
+                    </span>
+                    <ChevronRight className="h-3 w-3 text-muted-foreground/30 shrink-0" />
+                    <span className="text-[11px] font-semibold text-foreground truncate">{s.title}</span>
+                  </div>
+                  <span className={`shrink-0 inline-flex items-center rounded border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${cfg.badge}`}>
+                    {s.phase}
+                  </span>
                 </div>
 
-                {/* Content Card */}
-                <div className="flex-1 min-w-0 rounded-lg border border-border bg-background/50 p-4 md:p-5 transition-all duration-300 hover:border-accent-primary/30 hover:bg-background/80 hover:-translate-y-0.5 hover:shadow-md">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs mb-3">
-                    <span className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      {s.title}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted border border-border px-2.5 py-1 text-[10px] text-muted-foreground uppercase tracking-wider whitespace-nowrap self-start sm:self-auto font-medium">
-                      <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${isLast ? "bg-threat-high" : "bg-accent-primary"}`} />
-                      {s.phase}
-                    </span>
-                  </div>
-
+                {/* Card body */}
+                <div className="px-3 py-2 space-y-1.5">
                   {s.desc && (
-                    <p className="mt-2 text-[13px] text-muted-foreground leading-relaxed font-sans border-l-2 border-border pl-3">
+                    <p className="text-[11px] text-muted-foreground leading-relaxed font-sans">
                       {s.desc}
                     </p>
                   )}
-
-                  <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-muted-foreground bg-muted/60 rounded p-2 border border-border/50">
-                    {s.technique && (
-                      <span className="flex items-center gap-1.5 text-foreground/80">
-                        <ArrowRight className="h-3 w-3 opacity-50" />
-                        <span className="opacity-50 font-semibold uppercase tracking-wider">tech:</span> 
-                        <span className="text-accent-link font-medium">{s.technique}</span>
-                      </span>
-                    )}
-                    {s.tools && s.tools.length > 0 && (
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <Terminal className="h-3 w-3 opacity-50" />
-                        <span className="opacity-50 font-semibold uppercase tracking-wider">tools:</span>
-                        {s.tools.map((t) => (
-                          <span key={t} className="rounded bg-background px-1.5 py-0.5 border border-border text-foreground font-medium transition-colors hover:bg-muted cursor-default">
-                            {t}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  {(s.technique || (s.tools && s.tools.length > 0)) && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[10px] text-muted-foreground">
+                      {s.technique && (
+                        <span className="flex items-center gap-1">
+                          <ArrowRight className="h-2.5 w-2.5 opacity-40" />
+                          <span className="opacity-50 uppercase tracking-wider text-[9px] font-bold">Tech:</span>
+                          <span className={`font-semibold ${cfg.nodeText}`}>{s.technique}</span>
+                        </span>
+                      )}
+                      {s.tools && s.tools.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <Terminal className="h-2.5 w-2.5 opacity-40" />
+                          <span className="opacity-50 uppercase tracking-wider text-[9px] font-bold">Tools:</span>
+                          {s.tools.map((t) => (
+                            <span key={t} className="rounded border border-border/50 bg-muted/50 px-1.5 text-[9px] font-medium text-foreground/80">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -206,30 +272,76 @@ export interface SkillRating {
   level: number; // 1 to 10
 }
 
-export function SkillMatrix({ skills, max = 10 }: { skills: SkillRating[], max?: number }) {
+const SKILL_COLORS = [
+  { bar: "from-blue-500 to-blue-400", text: "text-blue-500 dark:text-blue-300", dot: "bg-blue-400" },
+  { bar: "from-violet-500 to-violet-400", text: "text-violet-500 dark:text-violet-300", dot: "bg-violet-400" },
+  { bar: "from-cyan-500 to-cyan-400", text: "text-cyan-500 dark:text-cyan-300", dot: "bg-cyan-400" },
+  { bar: "from-amber-500 to-amber-400", text: "text-amber-500 dark:text-amber-300", dot: "bg-amber-400" },
+  { bar: "from-rose-500 to-rose-400", text: "text-rose-500 dark:text-rose-300", dot: "bg-rose-400" },
+  { bar: "from-emerald-500 to-emerald-400", text: "text-emerald-500 dark:text-emerald-300", dot: "bg-emerald-400" },
+];
+
+export function SkillMatrix({ skills, max = 10 }: { skills: SkillRating[]; max?: number }) {
   return (
-    <div className="my-6 rounded-xl border border-border bg-card/60 p-5 font-mono backdrop-blur-md shadow-sm">
-      <div className="flex items-center gap-2 border-b border-border pb-3 mb-5">
-        <Target className="h-4 w-4 text-accent-primary" />
-        <span className="text-xs uppercase tracking-[0.2em] font-semibold text-foreground">
-          Machine_Matrix
+    <div className="my-4 rounded-xl border border-border bg-card/80 overflow-hidden shadow-md font-mono">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/40">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-6 w-6 items-center justify-center rounded bg-foreground text-background">
+            <Activity className="h-3.5 w-3.5" />
+          </div>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">Machine_Matrix</span>
+        </div>
+        <span className="text-[9px] text-muted-foreground uppercase tracking-widest font-medium">
+          Skill Rating
         </span>
       </div>
-      <div className="space-y-4 font-mono text-xs">
-        {skills.map((s, idx) => (
-          <div key={s.name} className="group">
-            <div className="flex justify-between text-[11px] text-muted-foreground mb-1.5 transition-colors group-hover:text-foreground">
-              <span className="uppercase tracking-wider font-medium">{s.name}</span>
-              <span className="text-accent-primary font-semibold">{s.level}/{max}</span>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border p-px">
+        {skills.map((s, idx) => {
+          const col = SKILL_COLORS[idx % SKILL_COLORS.length];
+          const pct = Math.round((s.level / max) * 100);
+
+          return (
+            <div
+              key={s.name}
+              className="group bg-background/80 px-3 py-2.5 transition-colors hover:bg-muted/30"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className={`h-1.5 w-1.5 rounded-full ${col.dot}`} />
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-foreground/80">
+                    {s.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[11px] font-bold tabular-nums ${col.text}`}>{s.level}</span>
+                  <span className="text-[9px] text-muted-foreground/60 font-medium">/{max}</span>
+                </div>
+              </div>
+
+              {/* Segmented bar */}
+              <div className="flex gap-0.5">
+                {Array.from({ length: max }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`h-1 flex-1 rounded-full transition-all duration-500 ${i < s.level
+                      ? `bg-gradient-to-r ${col.bar} opacity-100`
+                      : "bg-muted/60 opacity-50"
+                      }`}
+                    style={{ transitionDelay: `${i * 40}ms` }}
+                  />
+                ))}
+              </div>
+
+              {/* Percentage label */}
+              <div className="mt-1 flex justify-end">
+                <span className="text-[9px] text-muted-foreground/50 tabular-nums">{pct}%</span>
+              </div>
             </div>
-            <div className="h-2 w-full rounded-full bg-muted overflow-hidden border border-border/50">
-              <div
-                className={`h-full rounded-full bg-gradient-to-r from-accent-primary via-accent-primary to-[#00ffcc] shadow-sm transition-all duration-1000 ease-out delay-${idx * 100}`}
-                style={{ width: `${(s.level / max) * 100}%` }}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
