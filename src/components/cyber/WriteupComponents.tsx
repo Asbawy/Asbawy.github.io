@@ -55,7 +55,7 @@ export function SpoilerFlag({
   };
 
   return (
-    <div className="my-4 rounded-lg border border-white/[0.08] bg-black/40 p-3.5 font-mono backdrop-blur-sm">
+    <div className="my-4 rounded-lg border border-border bg-card/80 p-3.5 font-mono backdrop-blur-sm shadow-sm">
       <div className="flex items-center justify-between gap-3 text-xs mb-2">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Key className="h-3.5 w-3.5 text-accent-primary" />
@@ -64,7 +64,7 @@ export function SpoilerFlag({
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setRevealed(!revealed)}
-            className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-white/[0.08] transition-colors"
+            className="flex items-center gap-1 rounded border border-border bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             title={revealed ? "Hide flag" : "Reveal flag"}
           >
             {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -72,25 +72,25 @@ export function SpoilerFlag({
           </button>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 rounded border border-white/10 bg-white/[0.04] px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-white/[0.08] transition-colors"
+            className="flex items-center gap-1 rounded border border-border bg-muted/60 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
             title="Copy flag"
           >
-            {copied ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
+            {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
             <span>{copied ? "Copied!" : "Copy"}</span>
           </button>
         </div>
       </div>
       <div
         onClick={() => !revealed && setRevealed(true)}
-        className={`relative select-none rounded bg-black/60 px-3 py-2 text-xs font-mono transition-all duration-300 ${
-          revealed ? "text-accent-primary select-text" : "cursor-pointer blur-sm hover:blur-[2px] text-muted-foreground"
+        className={`relative select-none rounded bg-muted/80 px-3 py-2 text-xs font-mono transition-all duration-300 ${
+          revealed ? "text-accent-primary font-bold select-text" : "cursor-pointer blur-sm hover:blur-[2px] text-muted-foreground"
         }`}
       >
         <span className={revealed ? "" : "opacity-30"}>
           {revealed ? flag : flag.replace(/./g, "•")}
         </span>
         {!revealed && (
-          <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-foreground/80 tracking-wider uppercase bg-black/40 backdrop-blur-[2px] rounded">
+          <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-foreground/80 tracking-wider uppercase bg-background/60 backdrop-blur-[2px] rounded">
             [ Click to reveal flag ]
           </span>
         )}
@@ -123,22 +123,22 @@ function getPhaseIcon(phase: string) {
 
 export function KillChain({ steps }: { steps: KillChainStep[] }) {
   return (
-    <div className="my-8 rounded-xl border border-white/[0.08] bg-black/40 p-1 md:p-6 font-mono backdrop-blur-md relative overflow-hidden">
+    <div className="my-8 rounded-xl border border-border bg-card/60 p-1 md:p-6 font-mono backdrop-blur-md relative overflow-hidden shadow-sm">
       {/* Background ambient glow */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-accent-primary/5 rounded-full blur-[80px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-64 h-64 bg-threat-high/5 rounded-full blur-[80px] pointer-events-none" />
 
       <div className="relative z-10">
-        <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4 mb-6 px-4 md:px-0">
-          <div className="rounded bg-accent-primary/20 p-1.5 border border-accent-primary/30">
+        <div className="flex items-center gap-3 border-b border-border pb-4 mb-6 px-4 md:px-0">
+          <div className="rounded bg-accent-primary/10 p-1.5 border border-accent-primary/20">
             <Zap className="h-4 w-4 text-accent-primary" />
           </div>
-          <span className="text-sm uppercase tracking-[0.2em] font-semibold text-foreground text-shadow-glow">
+          <span className="text-sm uppercase tracking-[0.2em] font-semibold text-foreground">
             Exploit_Kill_Chain
           </span>
         </div>
 
-        <div className="relative space-y-6 before:absolute before:left-[27px] md:before:left-[35px] before:top-4 before:bottom-4 before:w-0.5 before:bg-gradient-to-b before:from-accent-primary before:via-white/10 before:to-threat-high px-2 md:px-0">
+        <div className="relative space-y-6 before:absolute before:left-[27px] md:before:left-[35px] before:top-4 before:bottom-4 before:w-0.5 before:bg-gradient-to-b before:from-accent-primary before:via-border before:to-threat-high px-2 md:px-0">
           {steps.map((s, idx) => {
             const isLast = idx === steps.length - 1;
             const nodeColor = isLast ? "text-threat-high border-threat-high/50 shadow-threat-high/20" : "text-accent-primary border-accent-primary/50 shadow-accent-primary/20";
@@ -152,24 +152,24 @@ export function KillChain({ steps }: { steps: KillChainStep[] }) {
                 </div>
 
                 {/* Content Card */}
-                <div className="flex-1 min-w-0 rounded-lg border border-white/[0.08] bg-white/[0.02] p-4 md:p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04] hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(0,0,0,0.2)]">
+                <div className="flex-1 min-w-0 rounded-lg border border-border bg-background/50 p-4 md:p-5 transition-all duration-300 hover:border-accent-primary/30 hover:bg-background/80 hover:-translate-y-0.5 hover:shadow-md">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs mb-3">
                     <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                       {s.title}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/50 border border-white/10 px-2.5 py-1 text-[10px] text-muted-foreground uppercase tracking-wider whitespace-nowrap self-start sm:self-auto">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted border border-border px-2.5 py-1 text-[10px] text-muted-foreground uppercase tracking-wider whitespace-nowrap self-start sm:self-auto font-medium">
                       <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${isLast ? "bg-threat-high" : "bg-accent-primary"}`} />
                       {s.phase}
                     </span>
                   </div>
 
                   {s.desc && (
-                    <p className="mt-2 text-[13px] text-muted-foreground/90 leading-relaxed font-sans border-l-2 border-white/10 pl-3">
+                    <p className="mt-2 text-[13px] text-muted-foreground leading-relaxed font-sans border-l-2 border-border pl-3">
                       {s.desc}
                     </p>
                   )}
 
-                  <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-muted-foreground bg-black/30 rounded p-2 border border-white/[0.04]">
+                  <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-muted-foreground bg-muted/60 rounded p-2 border border-border/50">
                     {s.technique && (
                       <span className="flex items-center gap-1.5 text-foreground/80">
                         <ArrowRight className="h-3 w-3 opacity-50" />
@@ -182,7 +182,7 @@ export function KillChain({ steps }: { steps: KillChainStep[] }) {
                         <Terminal className="h-3 w-3 opacity-50" />
                         <span className="opacity-50 font-semibold uppercase tracking-wider">tools:</span>
                         {s.tools.map((t) => (
-                          <span key={t} className="rounded bg-white/5 px-1.5 py-0.5 border border-white/10 text-foreground/90 transition-colors hover:bg-white/10 cursor-default">
+                          <span key={t} className="rounded bg-background px-1.5 py-0.5 border border-border text-foreground font-medium transition-colors hover:bg-muted cursor-default">
                             {t}
                           </span>
                         ))}
@@ -208,8 +208,8 @@ export interface SkillRating {
 
 export function SkillMatrix({ skills, max = 10 }: { skills: SkillRating[], max?: number }) {
   return (
-    <div className="my-6 rounded-xl border border-white/[0.08] bg-panel/80 p-5 font-mono backdrop-blur-md">
-      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-3 mb-5">
+    <div className="my-6 rounded-xl border border-border bg-card/60 p-5 font-mono backdrop-blur-md shadow-sm">
+      <div className="flex items-center gap-2 border-b border-border pb-3 mb-5">
         <Target className="h-4 w-4 text-accent-primary" />
         <span className="text-xs uppercase tracking-[0.2em] font-semibold text-foreground">
           Machine_Matrix
@@ -219,12 +219,12 @@ export function SkillMatrix({ skills, max = 10 }: { skills: SkillRating[], max?:
         {skills.map((s, idx) => (
           <div key={s.name} className="group">
             <div className="flex justify-between text-[11px] text-muted-foreground mb-1.5 transition-colors group-hover:text-foreground">
-              <span className="uppercase tracking-wider">{s.name}</span>
-              <span className="text-accent-primary opacity-80">{s.level}/{max}</span>
+              <span className="uppercase tracking-wider font-medium">{s.name}</span>
+              <span className="text-accent-primary font-semibold">{s.level}/{max}</span>
             </div>
-            <div className="h-2 w-full rounded-full bg-white/[0.04] overflow-hidden border border-white/[0.04]">
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden border border-border/50">
               <div
-                className={`h-full rounded-full bg-gradient-to-r from-accent-primary via-accent-primary to-[#00ffcc] shadow-[0_0_10px_var(--tw-shadow-color)] shadow-accent-primary transition-all duration-1000 ease-out delay-${idx * 100}`}
+                className={`h-full rounded-full bg-gradient-to-r from-accent-primary via-accent-primary to-[#00ffcc] shadow-sm transition-all duration-1000 ease-out delay-${idx * 100}`}
                 style={{ width: `${(s.level / max) * 100}%` }}
               />
             </div>
