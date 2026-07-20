@@ -10,9 +10,11 @@ import {
   User,
   Search,
   CornerDownLeft,
+  Swords,
 } from "lucide-react";
 import { postsMeta } from "@/data/posts";
 import { cheatsheetFiles } from "@/data/cheatsheets";
+import { writeupsMeta } from "@/data/writeups";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -37,6 +39,7 @@ export function CommandPalette() {
       { label: "/tools", to: "/tools", icon: Wrench },
       { label: "/stats", to: "/stats", icon: Activity },
       { label: "/cheatsheet", to: "/cheatsheet", icon: BookOpen },
+      { label: "/writeups", to: "/writeups", icon: Swords },
       { label: "/about", to: "/about", icon: User },
     ],
     [],
@@ -152,6 +155,34 @@ export function CommandPalette() {
                     <div className="truncate">{c.meta.title || c.path}</div>
                     <div className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
                       ~/{c.path}.mdx
+                    </div>
+                  </div>
+                </Command.Item>
+              ))}
+            </Command.Group>
+          )}
+
+          {/* Writeups */}
+          {writeupsMeta.length > 0 && (
+            <Command.Group
+              heading={
+                <span className="px-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
+                  Writeups
+                </span>
+              }
+            >
+              {writeupsMeta.map((w) => (
+                <Command.Item
+                  key={w.slug}
+                  value={`${w.title} ${w.tags.join(" ")} ${w.platform} ${w.difficulty}`}
+                  onSelect={() => go(`/writeups/${w.slug}`)}
+                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground transition-colors"
+                >
+                  <Swords className="h-4 w-4 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{w.title}</div>
+                    <div className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
+                      {w.platform} · {w.difficulty.toLowerCase()} · {w.os || w.type}
                     </div>
                   </div>
                 </Command.Item>

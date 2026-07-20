@@ -46,6 +46,20 @@ function getPrerenderPages() {
       });
   } catch (e) {}
 
+  // Writeups
+  const writeupDir = join(process.cwd(), "src/data/writeups");
+  try {
+    const writeupFiles = readdirSync(writeupDir);
+    writeupFiles
+      .filter((f) => f.endsWith(".mdx"))
+      .forEach((file) => {
+        pages.push({
+          path: `/writeups/${file.replace(/\.mdx$/, "")}`,
+          prerender: { enabled: true },
+        });
+      });
+  } catch (e) {}
+
   return pages;
 }
 
