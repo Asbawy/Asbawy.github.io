@@ -25,9 +25,7 @@ export function Starfield() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const prefersReducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let animId: number;
     let stars: Star[] = [];
@@ -39,9 +37,7 @@ export function Starfield() {
     }
 
     function initStars() {
-      const count = Math.floor(
-        (canvas!.width * canvas!.height) / 12000,
-      );
+      const count = Math.floor((canvas!.width * canvas!.height) / 12000);
       stars = Array.from({ length: Math.min(count, 150) }, () => ({
         x: Math.random() * canvas!.width,
         y: Math.random() * canvas!.height,
@@ -62,8 +58,7 @@ export function Starfield() {
           star.opacity = star.baseOpacity;
         } else {
           star.opacity =
-            star.baseOpacity *
-            (0.6 + 0.4 * Math.sin(time * star.twinkleSpeed + star.twinklePhase));
+            star.baseOpacity * (0.6 + 0.4 * Math.sin(time * star.twinkleSpeed + star.twinklePhase));
         }
 
         ctx!.beginPath();
@@ -86,10 +81,6 @@ export function Starfield() {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 z-0 pointer-events-none"
-      aria-hidden="true"
-    />
+    <canvas ref={canvasRef} className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true" />
   );
 }

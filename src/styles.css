@@ -65,7 +65,7 @@
   --color-accent-link: var(--accent-link);
   --color-glass-bg: var(--glass-bg);
   --color-glass-border: var(--glass-border);
-  
+
   --color-neon-green: var(--neon-green);
   --color-neon-blue: var(--neon-blue);
   --color-panel: var(--panel);
@@ -83,27 +83,27 @@
   --radius: 0.625rem;
 
   /* 🎨 User Base Theme Colors */
-  --bg-primary: #0A0A0A;
+  --bg-primary: #0a0a0a;
   --bg-secondary: #111111;
   --bg-card: #161616;
-  --bg-card-hover: #1A1A1A;
-  --bg-navbar: #0D0D0D;
+  --bg-card-hover: #1a1a1a;
+  --bg-navbar: #0d0d0d;
   --border: #222222;
-  --border-subtle: #1A1A1A;
+  --border-subtle: #1a1a1a;
 
   /* Glassmorphism Variables */
   --glass-bg: rgba(22, 22, 22, 0.45);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: rgba(0, 0, 0, 0.5);
 
-  --text-primary: #E8E8E8;
+  --text-primary: #e8e8e8;
   --text-secondary: #999999;
   --text-muted: #666666;
-  --text-heading: #F5F5F5;
+  --text-heading: #f5f5f5;
 
-  --accent-primary: #FFFFFF;
-  --accent-secondary: #BB86FC;
-  --accent-link: #4FC3F7;
+  --accent-primary: #ffffff;
+  --accent-secondary: #bb86fc;
+  --accent-link: #4fc3f7;
 
   /* Custom Tag Styling Variables */
   --tag-bg-opacity: 0.12;
@@ -122,24 +122,24 @@
   --card-foreground: var(--text-primary);
   --popover: var(--bg-card);
   --popover-foreground: var(--text-primary);
-  
+
   --primary: var(--accent-primary);
   --primary-foreground: var(--bg-primary);
   --secondary: var(--bg-secondary);
   --secondary-foreground: var(--text-secondary);
   --muted: var(--bg-secondary);
   --muted-foreground: var(--text-muted);
-  
+
   --accent: var(--accent-secondary);
   --accent-foreground: var(--bg-primary);
-  
+
   --destructive: #c0392b;
   --destructive-foreground: var(--text-primary);
-  
+
   --border-var: var(--border);
   --input: var(--bg-secondary);
   --ring: var(--accent-primary);
-  
+
   /* Backward compatibility variables */
   --neon-green: var(--accent-primary);
   --neon-blue: var(--accent-secondary);
@@ -186,7 +186,7 @@
   --radius: 0.625rem;
   --bg-primary: #f5f2eb;
   --bg-secondary: #ece8df;
-  --bg-card: #FFFAF0;
+  --bg-card: #fffaf0;
   --bg-card-hover: #fcf9f2;
   --bg-navbar: #f0ede5;
   --border: #d4c9a8;
@@ -197,14 +197,14 @@
   --glass-border: rgba(59, 60, 55, 0.12);
   --glass-shadow: rgba(59, 60, 55, 0.05);
 
-  --text-primary: #3B3C37;
+  --text-primary: #3b3c37;
   --text-secondary: #6a6a64;
   --text-muted: rgba(59, 60, 55, 0.55);
   --text-heading: #2d2e29;
 
   --accent-primary: #000000;
-  --accent-secondary: #8E44AD;
-  --accent-link: #2980B9;
+  --accent-secondary: #8e44ad;
+  --accent-link: #2980b9;
 
   --tag-bg-opacity: 0.12;
   --tag-border-opacity: 0.25;
@@ -252,7 +252,7 @@
   --sidebar-accent-foreground: var(--text-primary);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--accent-primary);
-  
+
   --code-bg: #ece8df;
   --code-command: #0891b2;
   --code-option: #7c3aed;
@@ -263,7 +263,7 @@
   --code-keyword: #7c3aed;
   --code-builtin: #2563eb;
   --code-variable: #3b3c37;
-  --code-url: #2980B9;
+  --code-url: #2980b9;
   --code-path: #6a6a64;
   --code-ip: #d97706;
   --code-redirect: #c0392b;
@@ -274,27 +274,27 @@
 /* ── Dark Mode Class override ───────────────────────────────────── */
 .dark {
   --radius: 0.625rem;
-  --bg-primary: #0A0A0A;
+  --bg-primary: #0a0a0a;
   --bg-secondary: #111111;
   --bg-card: #161616;
-  --bg-card-hover: #1A1A1A;
-  --bg-navbar: #0D0D0D;
+  --bg-card-hover: #1a1a1a;
+  --bg-navbar: #0d0d0d;
   --border: #222222;
-  --border-subtle: #1A1A1A;
+  --border-subtle: #1a1a1a;
 
   /* Glassmorphism Variables */
   --glass-bg: rgba(22, 22, 22, 0.45);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-shadow: rgba(0, 0, 0, 0.5);
 
-  --text-primary: #E8E8E8;
+  --text-primary: #e8e8e8;
   --text-secondary: #999999;
   --text-muted: #666666;
-  --text-heading: #F5F5F5;
+  --text-heading: #f5f5f5;
 
-  --accent-primary: #00D4AA;
-  --accent-secondary: #BB86FC;
-  --accent-link: #4FC3F7;
+  --accent-primary: #00d4aa;
+  --accent-secondary: #bb86fc;
+  --accent-link: #4fc3f7;
 
   --tag-bg-opacity: 0.12;
   --tag-border-opacity: 0.25;
@@ -311,24 +311,24 @@
   --card-foreground: var(--text-primary);
   --popover: var(--bg-card);
   --popover-foreground: var(--text-primary);
-  
+
   --primary: var(--accent-primary);
   --primary-foreground: var(--bg-primary);
   --secondary: var(--bg-secondary);
   --secondary-foreground: var(--text-secondary);
   --muted: var(--bg-secondary);
   --muted-foreground: var(--text-muted);
-  
+
   --accent: var(--accent-secondary);
   --accent-foreground: var(--bg-primary);
-  
+
   --destructive: #c0392b;
   --destructive-foreground: var(--text-primary);
-  
+
   --border-var: var(--border);
   --input: var(--bg-secondary);
   --ring: var(--accent-primary);
-  
+
   --neon-green: var(--accent-primary);
   --neon-blue: var(--accent-secondary);
   --panel: var(--bg-card);
@@ -409,7 +409,11 @@
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--glass-border);
     box-shadow: 0 8px 32px 0 var(--glass-shadow);
-    transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+      background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .glass-panel-hover:hover {

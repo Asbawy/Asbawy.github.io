@@ -77,7 +77,7 @@ export function useArticleToc(rootSelector: string, levels: number[] = [2], depe
           },
           {
             rootMargin: "-100px 0px -75% 0px", // Observe elements crossing the top-quarter active band
-          }
+          },
         );
 
         headingElements.forEach((el) => intersectionObserver?.observe(el));
@@ -104,7 +104,7 @@ export function useArticleToc(rootSelector: string, levels: number[] = [2], depe
         if (found) {
           extractHeadings();
           observer?.disconnect();
-          
+
           observer = new MutationObserver(() => extractHeadings());
           observer.observe(found, { childList: true, subtree: true });
         }

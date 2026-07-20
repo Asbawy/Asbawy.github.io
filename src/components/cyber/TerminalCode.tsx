@@ -64,7 +64,7 @@ function highlightShellCommands(html: string): string {
       // 7: Pipe
       `(\\|)`,
     ].join("|"),
-    "g"
+    "g",
   );
 
   const walk = (node: Node) => {

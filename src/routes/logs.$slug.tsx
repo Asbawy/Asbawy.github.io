@@ -111,7 +111,9 @@ function PostPage() {
       h3: (props: any) => (
         <h3 className="mt-8 mb-3 font-mono text-base text-foreground/90" {...props} />
       ),
-      h4: (props: any) => <h4 className="mt-6 mb-2 font-mono text-sm text-foreground/80" {...props} />,
+      h4: (props: any) => (
+        <h4 className="mt-6 mb-2 font-mono text-sm text-foreground/80" {...props} />
+      ),
       p: (props: any) => <p className="my-4 text-[15px] leading-7 text-foreground/85" {...props} />,
       ul: (props: any) => (
         <ul
@@ -138,7 +140,10 @@ function PostPage() {
       strong: (props: any) => <strong className="font-semibold text-foreground" {...props} />,
       code: (props: any) => {
         if (props.className) {
-          const language = props.className.replace(/language-/, "").replace("hljs", "").trim();
+          const language = props.className
+            .replace(/language-/, "")
+            .replace("hljs", "")
+            .trim();
           if (language === "mermaid") {
             return <Mermaid chart={props.children as string} />;
           }
@@ -220,10 +225,13 @@ function PostPage() {
                   <span className="text-foreground/20">·</span>
                   <span
                     className={
-                      post.severity?.toLowerCase() === 'critical' ? 'text-[#FF5252]' :
-                      post.severity?.toLowerCase() === 'high' ? 'text-[#FF7043]' :
-                      post.severity?.toLowerCase() === 'medium' ? 'text-[#FFD43B]' :
-                      'text-[#00D4AA]'
+                      post.severity?.toLowerCase() === "critical"
+                        ? "text-[#FF5252]"
+                        : post.severity?.toLowerCase() === "high"
+                          ? "text-[#FF7043]"
+                          : post.severity?.toLowerCase() === "medium"
+                            ? "text-[#FFD43B]"
+                            : "text-[#00D4AA]"
                     }
                   >
                     severity: {post.severity?.toLowerCase()}
@@ -280,7 +288,10 @@ function PostPage() {
 
             <div className="mt-10 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
               // end of post —{" "}
-              <Link to="/logs" className="text-foreground hover:text-foreground/80 transition-colors">
+              <Link
+                to="/logs"
+                className="text-foreground hover:text-foreground/80 transition-colors"
+              >
                 return /logs
               </Link>
             </div>

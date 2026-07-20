@@ -24,27 +24,31 @@ import { CyberLayout, Tag, tagVariantFor, handleTagClick } from "@/components/cy
 import { writeupsMeta, getPlatformStats, type WriteupMeta } from "@/data/writeups";
 import { PlatformIcon } from "@/components/cyber/WriteupComponents";
 
-export const Route = createFileRoute("/writeups/")(
-  {
-    head: () => ({
-      meta: [
-        { title: "/writeups — Asbawy Blog" },
-        {
-          name: "description",
-          content:
-            "CTF writeups, HackTheBox walkthroughs, TryHackMe challenges, and more by Asbawy.",
-        },
-      ],
-    }),
-    component: WriteupsIndex,
-  },
-);
+export const Route = createFileRoute("/writeups/")({
+  head: () => ({
+    meta: [
+      { title: "/writeups — Asbawy Blog" },
+      {
+        name: "description",
+        content: "CTF writeups, HackTheBox walkthroughs, TryHackMe challenges, and more by Asbawy.",
+      },
+    ],
+  }),
+  component: WriteupsIndex,
+});
 
 /* ── Platform branding ────────────────────────────────── */
 
 const platformConfig: Record<
   string,
-  { color: string; icon: typeof Swords; gradient: string; border: string; bg: string; accentHex: string }
+  {
+    color: string;
+    icon: typeof Swords;
+    gradient: string;
+    border: string;
+    bg: string;
+    accentHex: string;
+  }
 > = {
   HackTheBox: {
     color: "text-[#9FEF00]",
@@ -92,40 +96,59 @@ const platformConfig: Record<
 
 function difficultyColor(d: string) {
   switch (d) {
-    case "Easy": return "text-[#9FEF00]";
-    case "Medium": return "text-[#FFD43B]";
-    case "Hard": return "text-[#FF7043]";
-    case "Insane": return "text-[#FF3E3E]";
-    default: return "text-foreground";
+    case "Easy":
+      return "text-[#9FEF00]";
+    case "Medium":
+      return "text-[#FFD43B]";
+    case "Hard":
+      return "text-[#FF7043]";
+    case "Insane":
+      return "text-[#FF3E3E]";
+    default:
+      return "text-foreground";
   }
 }
 
 function difficultyBg(d: string) {
   switch (d) {
-    case "Easy": return "bg-[#9FEF00]/10 border-[#9FEF00]/30";
-    case "Medium": return "bg-[#FFD43B]/10 border-[#FFD43B]/30";
-    case "Hard": return "bg-[#FF7043]/10 border-[#FF7043]/30";
-    case "Insane": return "bg-[#FF3E3E]/10 border-[#FF3E3E]/30";
-    default: return "bg-foreground/10 border-border";
+    case "Easy":
+      return "bg-[#9FEF00]/10 border-[#9FEF00]/30";
+    case "Medium":
+      return "bg-[#FFD43B]/10 border-[#FFD43B]/30";
+    case "Hard":
+      return "bg-[#FF7043]/10 border-[#FF7043]/30";
+    case "Insane":
+      return "bg-[#FF3E3E]/10 border-[#FF3E3E]/30";
+    default:
+      return "bg-foreground/10 border-border";
   }
 }
 
 function difficultyDot(d: string) {
   switch (d) {
-    case "Easy": return "bg-[#9FEF00]";
-    case "Medium": return "bg-[#FFD43B]";
-    case "Hard": return "bg-[#FF7043]";
-    case "Insane": return "bg-[#FF3E3E]";
-    default: return "bg-foreground";
+    case "Easy":
+      return "bg-[#9FEF00]";
+    case "Medium":
+      return "bg-[#FFD43B]";
+    case "Hard":
+      return "bg-[#FF7043]";
+    case "Insane":
+      return "bg-[#FF3E3E]";
+    default:
+      return "bg-foreground";
   }
 }
 
 function osIcon(os?: string) {
   switch (os) {
-    case "Linux": return <Terminal className="h-3.5 w-3.5" />;
-    case "Windows": return <Cpu className="h-3.5 w-3.5" />;
-    case "Web": return <Globe className="h-3.5 w-3.5" />;
-    default: return <Shield className="h-3.5 w-3.5" />;
+    case "Linux":
+      return <Terminal className="h-3.5 w-3.5" />;
+    case "Windows":
+      return <Cpu className="h-3.5 w-3.5" />;
+    case "Web":
+      return <Globe className="h-3.5 w-3.5" />;
+    default:
+      return <Shield className="h-3.5 w-3.5" />;
   }
 }
 
@@ -148,7 +171,7 @@ function WriteupsIndex() {
         (w) =>
           w.title.toLowerCase().includes(q) ||
           w.excerpt.toLowerCase().includes(q) ||
-          w.tags.some((t) => t.toLowerCase().includes(q))
+          w.tags.some((t) => t.toLowerCase().includes(q)),
       );
     }
     return result;
@@ -159,7 +182,6 @@ function WriteupsIndex() {
   return (
     <CyberLayout>
       <section className="px-4 md:px-10 py-8 max-w-6xl">
-
         {/* ── Hero Header ───────────────────────────── */}
         <div className="mb-8">
           <div className="font-mono text-[11px] text-muted-foreground mb-2 flex items-center gap-1.5">
@@ -177,8 +199,8 @@ function WriteupsIndex() {
                 <span className="text-muted-foreground/40 font-normal text-2xl ml-2">_</span>
               </h1>
               <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">
-                Detailed walkthroughs covering the full kill chain — from recon to root.
-                Each write-up documents the exact tools, techniques, and thought process used.
+                Detailed walkthroughs covering the full kill chain — from recon to root. Each
+                write-up documents the exact tools, techniques, and thought process used.
               </p>
             </div>
 
@@ -209,7 +231,9 @@ function WriteupsIndex() {
           >
             <div className="flex items-start justify-between mb-2">
               <Crosshair className="h-4 w-4 text-muted-foreground/60 group-hover:text-foreground/80 transition-colors" />
-              {!platformFilter && <span className="h-1.5 w-1.5 rounded-full bg-foreground animate-pulse" />}
+              {!platformFilter && (
+                <span className="h-1.5 w-1.5 rounded-full bg-foreground animate-pulse" />
+              )}
             </div>
             <div className="font-mono text-2xl font-bold text-foreground">{stats.total}</div>
             <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">
@@ -235,15 +259,26 @@ function WriteupsIndex() {
                 {isActive && (
                   <div
                     className="absolute inset-0 opacity-10 pointer-events-none"
-                    style={{ background: `radial-gradient(ellipse at top left, ${cfg.accentHex}, transparent 70%)` }}
+                    style={{
+                      background: `radial-gradient(ellipse at top left, ${cfg.accentHex}, transparent 70%)`,
+                    }}
                   />
                 )}
                 <div className="relative z-10">
                   <div className="flex items-start justify-between mb-2">
-                    <cfg.icon className={`h-4 w-4 ${isActive ? cfg.color : "text-muted-foreground/50 group-hover:text-muted-foreground"} transition-colors`} />
-                    {isActive && <span className={`h-1.5 w-1.5 rounded-full animate-pulse`} style={{ background: cfg.accentHex }} />}
+                    <cfg.icon
+                      className={`h-4 w-4 ${isActive ? cfg.color : "text-muted-foreground/50 group-hover:text-muted-foreground"} transition-colors`}
+                    />
+                    {isActive && (
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full animate-pulse`}
+                        style={{ background: cfg.accentHex }}
+                      />
+                    )}
                   </div>
-                  <div className={`font-mono text-2xl font-bold ${isActive ? cfg.color : "text-foreground"} transition-colors`}>
+                  <div
+                    className={`font-mono text-2xl font-bold ${isActive ? cfg.color : "text-foreground"} transition-colors`}
+                  >
                     {count}
                   </div>
                   <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground mt-0.5">
@@ -296,7 +331,11 @@ function WriteupsIndex() {
             ))}
             {hasActiveFilter && (
               <button
-                onClick={() => { setPlatformFilter(null); setDifficultyFilter(null); setSearchQuery(""); }}
+                onClick={() => {
+                  setPlatformFilter(null);
+                  setDifficultyFilter(null);
+                  setSearchQuery("");
+                }}
                 className="font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-muted/40"
               >
                 <X className="h-3 w-3" />
@@ -373,7 +412,9 @@ function WriteupCard({
       {/* Hover glow */}
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse at top left, ${config.accentHex}0A, transparent 60%)` }}
+        style={{
+          background: `radial-gradient(ellipse at top left, ${config.accentHex}0A, transparent 60%)`,
+        }}
       />
 
       <div className="relative z-10 p-4">

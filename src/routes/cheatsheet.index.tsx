@@ -18,18 +18,24 @@ function CheatsheetIndex() {
   // Filter cheatsheet files based on search
   const displayedFiles = useMemo(() => {
     if (!q) return cheatsheetFiles;
-    return cheatsheetFiles.filter(file => 
-      file.path.toLowerCase().includes(q) ||
-      file.meta.title?.toLowerCase().includes(q) ||
-      file.meta.category?.toLowerCase().includes(q) ||
-      file.meta.tags?.some(t => t.toLowerCase().includes(q))
+    return cheatsheetFiles.filter(
+      (file) =>
+        file.path.toLowerCase().includes(q) ||
+        file.meta.title?.toLowerCase().includes(q) ||
+        file.meta.category?.toLowerCase().includes(q) ||
+        file.meta.tags?.some((t) => t.toLowerCase().includes(q)),
     );
   }, [q]);
 
   // Auto-navigate if exactly 1 match
   useEffect(() => {
     if (q && displayedFiles.length === 1) {
-      navigate({ to: "/cheatsheet/$", params: { _splat: displayedFiles[0].path }, search: { q }, replace: true });
+      navigate({
+        to: "/cheatsheet/$",
+        params: { _splat: displayedFiles[0].path },
+        search: { q },
+        replace: true,
+      });
     }
   }, [q, displayedFiles, navigate]);
 
@@ -106,34 +112,34 @@ function CheatsheetIndex() {
               <span className="text-foreground">▸</span> select_by_category
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {categories.map((c) => (
-              <Link
-                key={c.name}
-                to="/cheatsheet/$"
-                params={{ _splat: c.firstPath }}
-                className="group flex flex-col justify-between p-4 rounded-lg glass-panel glass-panel-hover transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/50 cursor-pointer"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
-                      {c.name.toLowerCase()}
-                    </span>
-                    <BookOpen className="h-4 w-4 text-foreground/40 group-hover:text-foreground transition-colors" />
+              {categories.map((c) => (
+                <Link
+                  key={c.name}
+                  to="/cheatsheet/$"
+                  params={{ _splat: c.firstPath }}
+                  className="group flex flex-col justify-between p-4 rounded-lg glass-panel glass-panel-hover transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/50 cursor-pointer"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
+                        {c.name.toLowerCase()}
+                      </span>
+                      <BookOpen className="h-4 w-4 text-foreground/40 group-hover:text-foreground transition-colors" />
+                    </div>
+                    <h4 className="font-mono text-base font-semibold text-foreground group-hover: transition-all">
+                      {c.name}
+                    </h4>
                   </div>
-                  <h4 className="font-mono text-base font-semibold text-foreground group-hover: transition-all">
-                    {c.name}
-                  </h4>
-                </div>
-                <div className="mt-4 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-                  <span>
-                    {c.count} {c.count === 1 ? "file" : "files"}
-                  </span>
-                  <span className="flex items-center text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                    load <ChevronRight className="h-3 w-3" />
-                  </span>
-                </div>
-              </Link>
-            ))}
+                  <div className="mt-4 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
+                    <span>
+                      {c.count} {c.count === 1 ? "file" : "files"}
+                    </span>
+                    <span className="flex items-center text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                      load <ChevronRight className="h-3 w-3" />
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         )}
@@ -141,66 +147,69 @@ function CheatsheetIndex() {
         {/* Available Cheatsheets Feed */}
         <div className="text-left">
           <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
-            <span className="text-foreground">▸</span> {q ? "search_results" : "all_available_cheatsheets"}
+            <span className="text-foreground">▸</span>{" "}
+            {q ? "search_results" : "all_available_cheatsheets"}
           </h3>
           <div className="grid grid-cols-1 gap-4">
             {displayedFiles.length > 0 ? (
               displayedFiles.map((file) => (
-              <Link
-                key={file.path}
-                to="/cheatsheet/$"
-                params={{ _splat: file.path }}
-                className="group block rounded-lg glass-panel glass-panel-hover p-4 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/50"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2.5 font-mono text-[10px] text-muted-foreground">
-                      <span className="text-foreground">{file.meta.category}</span>
-                      <span>·</span>
-                      <span>{file.meta.readTime || "5 mins"}</span>
-                      <span>·</span>
-                      <span
-                        className={
-                          file.meta.difficulty === "Advanced"
-                            ? "text-threat-high"
-                            : file.meta.difficulty === "Intermediate"
-                              ? "text-threat-mid"
-                              : "text-foreground"
-                        }
-                      >
-                        {file.meta.difficulty?.toLowerCase()}
-                      </span>
+                <Link
+                  key={file.path}
+                  to="/cheatsheet/$"
+                  params={{ _splat: file.path }}
+                  className="group block rounded-lg glass-panel glass-panel-hover p-4 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/50"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2.5 font-mono text-[10px] text-muted-foreground">
+                        <span className="text-foreground">{file.meta.category}</span>
+                        <span>·</span>
+                        <span>{file.meta.readTime || "5 mins"}</span>
+                        <span>·</span>
+                        <span
+                          className={
+                            file.meta.difficulty === "Advanced"
+                              ? "text-threat-high"
+                              : file.meta.difficulty === "Intermediate"
+                                ? "text-threat-mid"
+                                : "text-foreground"
+                          }
+                        >
+                          {file.meta.difficulty?.toLowerCase()}
+                        </span>
+                      </div>
+                      <h4 className="mt-1 font-mono text-sm font-semibold text-foreground group-hover:text-foreground transition-colors">
+                        {file.meta.title || file.path.split("/").pop()}
+                      </h4>
+                      {file.meta.excerpt && (
+                        <p className="mt-1 text-xs text-muted-foreground/80 line-clamp-1">
+                          {file.meta.excerpt}
+                        </p>
+                      )}
                     </div>
-                    <h4 className="mt-1 font-mono text-sm font-semibold text-foreground group-hover:text-foreground transition-colors">
-                      {file.meta.title || file.path.split("/").pop()}
-                    </h4>
-                    {file.meta.excerpt && (
-                      <p className="mt-1 text-xs text-muted-foreground/80 line-clamp-1">
-                        {file.meta.excerpt}
-                      </p>
-                    )}
+                    <div className="flex flex-wrap gap-1 mt-2 sm:mt-0 sm:justify-end shrink-0 max-w-[280px]">
+                      {file.meta.tags?.slice(0, 3).map((tag) => (
+                        <Tag
+                          key={tag}
+                          variant={tagVariantFor(tag)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleTagClick(tag, navigate);
+                          }}
+                        >
+                          {tag}
+                        </Tag>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1 mt-2 sm:mt-0 sm:justify-end shrink-0 max-w-[280px]">
-                    {file.meta.tags?.slice(0, 3).map((tag) => (
-                      <Tag
-                        key={tag}
-                        variant={tagVariantFor(tag)}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleTagClick(tag, navigate);
-                        }}
-                      >
-                        {tag}
-                      </Tag>
-                    ))}
-                  </div>
-                </div>
-              </Link>
-            ))
+                </Link>
+              ))
             ) : (
               <div className="p-8 text-center glass-panel glass-panel-hover rounded-lg border-dashed">
-                <span className="font-mono text-sm text-muted-foreground">No cheatsheets match your search.</span>
+                <span className="font-mono text-sm text-muted-foreground">
+                  No cheatsheets match your search.
+                </span>
               </div>
             )}
           </div>

@@ -45,10 +45,11 @@ export function SideNav() {
             <Link
               key={to}
               to={to}
-              className={`group flex items-center gap-3 rounded-md px-3 py-2 border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30 ${active
-                ? "border-foreground/20 bg-foreground/5 text-foreground"
-                : "border-transparent text-muted-foreground hover:border-panel-border hover:bg-panel hover:text-foreground"
-                }`}
+              className={`group flex items-center gap-3 rounded-md px-3 py-2 border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30 ${
+                active
+                  ? "border-foreground/20 bg-foreground/5 text-foreground"
+                  : "border-transparent text-muted-foreground hover:border-panel-border hover:bg-panel hover:text-foreground"
+              }`}
             >
               <span className={`text-xs ${active ? "text-foreground" : "text-muted-foreground"}`}>
                 {active ? "▸" : "·"}

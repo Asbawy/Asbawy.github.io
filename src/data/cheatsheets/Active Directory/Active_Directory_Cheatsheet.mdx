@@ -5,7 +5,21 @@ url: "https://asbawy.github.io/cheatsheet/Active%20Directory/Active_Directory_Ch
 date: "2026-06-15"
 updated: "2026-07-20"
 category: "Active Directory"
-tags: ["active-directory", "ad", "kerberos", "acl", "delegation", "domain-dominance", "enumeration", "lateral-movement", "password-spraying", "llmnr", "adcs", "trust-abuse"]
+tags:
+  [
+    "active-directory",
+    "ad",
+    "kerberos",
+    "acl",
+    "delegation",
+    "domain-dominance",
+    "enumeration",
+    "lateral-movement",
+    "password-spraying",
+    "llmnr",
+    "adcs",
+    "trust-abuse",
+  ]
 difficulty: "Advanced"
 readTime: "45 mins"
 ---
@@ -1252,9 +1266,9 @@ Passive intelligence gathering before touching the target network. No direct int
 
 ## 7.1 Passive Domain & Infrastructure Discovery
 
-*   **ASN/IP Registrars:** IANA, ARIN, RIPE, BGP Toolkit
-*   **DNS Utilities:** Domaintools, PTRArchive, viewdns.info, ICANN
-*   **Breach Data & Credentials:** HaveIBeenPwned, Dehashed, Greyhat Warfare, Trufflehog
+- **ASN/IP Registrars:** IANA, ARIN, RIPE, BGP Toolkit
+- **DNS Utilities:** Domaintools, PTRArchive, viewdns.info, ICANN
+- **Breach Data & Credentials:** HaveIBeenPwned, Dehashed, Greyhat Warfare, Trufflehog
 
 ## 7.2 Actionable Commands
 
@@ -1383,8 +1397,8 @@ ldapsearch -h <DC_IP> -x -b "DC=domain,DC=local" -s sub "*" | grep -m 1 -B 10 pw
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Kerberos enumeration (Kerbrute) generates Event 4768 but avoids lockout. SMB NULL session
-  attempts generate Event 4625. Check password policy first to avoid lockouts.
+  **OpSec:** Kerberos enumeration (Kerbrute) generates Event 4768 but avoids lockout. SMB NULL
+  session attempts generate Event 4625. Check password policy first to avoid lockouts.
 </Callout>
 
 ---
@@ -1587,7 +1601,7 @@ zip -r domain_bh.zip *.json
 
 ## 11.5 Windows Native & PowerView
 
-*Bypass EDR trigger: Use `net1` instead of `net`.*
+_Bypass EDR trigger: Use `net1` instead of `net`._
 
 <Tabs>
 <Tab label="Native Commands">
@@ -1679,7 +1693,8 @@ SQL> xp_cmdshell whoami /priv
 
 <Callout type="warning">
   **OpSec:** PSExec creates a service (Event 7045) and writes a binary to `ADMIN$`. WMIExec is
-  stealthier but still generates Event 4688 (process creation). Evil-WinRM uses WinRM (Event 91/168).
+  stealthier but still generates Event 4688 (process creation). Evil-WinRM uses WinRM (Event
+  91/168).
 </Callout>
 
 ---
@@ -1779,7 +1794,7 @@ netdom query /domain:domain.local trust
 
 ## 14.2 ExtraSids Attack (Child → Parent Domain Compromise)
 
-*Requires full compromise of the child domain (KRBTGT hash).*
+_Requires full compromise of the child domain (KRBTGT hash)._
 
 <Tabs>
 <Tab label="Linux">

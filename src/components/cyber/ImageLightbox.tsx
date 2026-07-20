@@ -37,7 +37,7 @@ export function ImageLightbox({
   if (!src || !mounted) return null;
 
   return createPortal(
-    <div 
+    <div
       className="fixed inset-0 z-50 flex flex-col bg-background/95 backdrop-blur-md select-none animate-in fade-in duration-200"
       onClick={(e) => {
         // Close if clicked on the background overlay
@@ -76,7 +76,7 @@ export function ImageLightbox({
               <span className="font-mono text-xs text-muted-foreground truncate max-w-[50vw]">
                 {alt || "Image Preview"}
               </span>
-              
+
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 bg-foreground/5 border border-panel-border rounded-lg p-1 pointer-events-auto">
                   <button
@@ -115,7 +115,7 @@ export function ImageLightbox({
             </div>
 
             {/* Viewport Area */}
-            <div 
+            <div
               className="flex-1 relative overflow-hidden pointer-events-auto w-full h-full"
               onClick={(e) => {
                 // Close if clicked on empty background viewport space
@@ -139,7 +139,7 @@ export function ImageLightbox({
                   Must be flex centered to align the image when zoom is 1x.
                   We stop propagation on click so clicking the image doesn't close the modal.
                 */}
-                <div 
+                <div
                   className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing p-4"
                   onClick={(e) => {
                     if (e.target === e.currentTarget) {

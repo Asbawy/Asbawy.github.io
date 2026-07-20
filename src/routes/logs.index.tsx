@@ -57,7 +57,7 @@ function LogsPage() {
   const filtered = useMemo(() => {
     return postsMeta.filter((p) => {
       const okCat = cat === "All" || p.category === cat;
-      
+
       let okQ = true;
       if (search.tag) {
         okQ = p.tags.some((t) => t.toLowerCase() === search.tag!.toLowerCase());

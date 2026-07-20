@@ -70,10 +70,7 @@ function AnimatedCount({ target, suffix = "" }: { target: number; suffix?: strin
   }, [target]);
 
   return (
-    <span
-      ref={ref}
-      className="text-3xl md:text-4xl font-mono text-foreground  tabular-nums"
-    >
+    <span ref={ref} className="text-3xl md:text-4xl font-mono text-foreground  tabular-nums">
       {count}
       {suffix}
     </span>
@@ -238,9 +235,7 @@ function AboutPage() {
               <div className="relative rounded-full overflow-hidden bg-white p-2.5 border border-white/30 shadow-[0_0_25px_rgba(255,255,255,0.15)] hover:border-white hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] transition-all duration-300 backdrop-blur-md">
                 {/* Soft glowing backdrop to illuminate the logo */}
                 <div className="absolute inset-1.5 rounded-full bg-white/50 blur-xl pointer-events-none" />
-                <EyeOfRa
-                  className="relative z-10 h-36 w-36 md:h-44 md:w-44 object-contain hover:scale-105 transition-transform duration-500 text-black"
-                />
+                <EyeOfRa className="relative z-10 h-36 w-36 md:h-44 md:w-44 object-contain hover:scale-105 transition-transform duration-500 text-black" />
               </div>
             </Reveal>
 

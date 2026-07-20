@@ -11,17 +11,8 @@ import {
   WriteupMdxComponents,
 } from "@/data/writeups";
 import { Suspense } from "react";
-import {
-  ArrowLeft,
-  Swords,
-  Flag,
-  Server,
-  Globe,
-  Terminal,
-  Cpu,
-  Shield,
-} from "lucide-react";
-import { PlatformIcon, SpoilerFlag, KillChain, SkillMatrix } from "@/components/cyber/WriteupComponents";
+import { ArrowLeft, Swords, Flag, Server, Globe, Terminal, Cpu, Shield } from "lucide-react";
+import { PlatformIcon, SpoilerFlag, KillChain } from "@/components/cyber/WriteupComponents";
 import { ImageLightbox } from "@/components/cyber/ImageLightbox";
 import { ShareButtons } from "@/components/cyber/ShareButtons";
 import { AuthorBio } from "@/components/cyber/AuthorBio";
@@ -87,10 +78,7 @@ export const Route = createFileRoute("/writeups/$slug")({
     <CyberLayout>
       <div className="p-10 font-mono text-sm text-muted-foreground">
         // writeup not found —{" "}
-        <Link
-          to="/writeups"
-          className="text-foreground hover:text-foreground/80 transition-colors"
-        >
+        <Link to="/writeups" className="text-foreground hover:text-foreground/80 transition-colors">
           return to feed
         </Link>
       </div>
@@ -99,9 +87,7 @@ export const Route = createFileRoute("/writeups/$slug")({
 
   errorComponent: ({ error }) => (
     <CyberLayout>
-      <div className="p-10 font-mono text-sm text-threat-high">
-        // {error.message}
-      </div>
+      <div className="p-10 font-mono text-sm text-threat-high">// {error.message}</div>
     </CyberLayout>
   ),
   component: WriteupPage,
@@ -119,30 +105,44 @@ const platformConfig: Record<string, { color: string; icon: typeof Swords }> = {
 
 function difficultyColor(d: string) {
   switch (d) {
-    case "Easy": return "text-[#9FEF00]";
-    case "Medium": return "text-[#FFD43B]";
-    case "Hard": return "text-[#FF7043]";
-    case "Insane": return "text-[#FF3E3E]";
-    default: return "text-foreground";
+    case "Easy":
+      return "text-[#9FEF00]";
+    case "Medium":
+      return "text-[#FFD43B]";
+    case "Hard":
+      return "text-[#FF7043]";
+    case "Insane":
+      return "text-[#FF3E3E]";
+    default:
+      return "text-foreground";
   }
 }
 
 function difficultyBg(d: string) {
   switch (d) {
-    case "Easy": return "bg-[#9FEF00]/10 border-[#9FEF00]/30";
-    case "Medium": return "bg-[#FFD43B]/10 border-[#FFD43B]/30";
-    case "Hard": return "bg-[#FF7043]/10 border-[#FF7043]/30";
-    case "Insane": return "bg-[#FF3E3E]/10 border-[#FF3E3E]/30";
-    default: return "bg-foreground/10";
+    case "Easy":
+      return "bg-[#9FEF00]/10 border-[#9FEF00]/30";
+    case "Medium":
+      return "bg-[#FFD43B]/10 border-[#FFD43B]/30";
+    case "Hard":
+      return "bg-[#FF7043]/10 border-[#FF7043]/30";
+    case "Insane":
+      return "bg-[#FF3E3E]/10 border-[#FF3E3E]/30";
+    default:
+      return "bg-foreground/10";
   }
 }
 
 function osIcon(os?: string) {
   switch (os) {
-    case "Linux": return <Terminal className="h-3.5 w-3.5" />;
-    case "Windows": return <Cpu className="h-3.5 w-3.5" />;
-    case "Web": return <Globe className="h-3.5 w-3.5" />;
-    default: return <Shield className="h-3.5 w-3.5" />;
+    case "Linux":
+      return <Terminal className="h-3.5 w-3.5" />;
+    case "Windows":
+      return <Cpu className="h-3.5 w-3.5" />;
+    case "Web":
+      return <Globe className="h-3.5 w-3.5" />;
+    default:
+      return <Shield className="h-3.5 w-3.5" />;
   }
 }
 
@@ -152,7 +152,11 @@ function WriteupPage() {
   const navigate = useNavigate();
   const { writeup } = Route.useLoaderData();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const { headings, activeId: activeHeading, progress } = useArticleToc("article", [2], writeup.slug);
+  const {
+    headings,
+    activeId: activeHeading,
+    progress,
+  } = useArticleToc("article", [2], writeup.slug);
 
   const config = platformConfig[writeup.platform] || platformConfig.Other;
   const PlatformIcon = config.icon;
@@ -160,10 +164,7 @@ function WriteupPage() {
   const components = useMemo(
     () => ({
       h1: (props: any) => (
-        <h1
-          className="mt-8 mb-4 text-2xl md:text-3xl font-semibold text-foreground"
-          {...props}
-        />
+        <h1 className="mt-8 mb-4 text-2xl md:text-3xl font-semibold text-foreground" {...props} />
       ),
       h2: (props: any) => (
         <h2
@@ -175,20 +176,12 @@ function WriteupPage() {
         </h2>
       ),
       h3: (props: any) => (
-        <h3
-          className="mt-8 mb-3 font-mono text-base text-foreground/90"
-          {...props}
-        />
+        <h3 className="mt-8 mb-3 font-mono text-base text-foreground/90" {...props} />
       ),
       h4: (props: any) => (
-        <h4
-          className="mt-6 mb-2 font-mono text-sm text-foreground/80"
-          {...props}
-        />
+        <h4 className="mt-6 mb-2 font-mono text-sm text-foreground/80" {...props} />
       ),
-      p: (props: any) => (
-        <p className="my-4 text-[15px] leading-7 text-foreground/85" {...props} />
-      ),
+      p: (props: any) => <p className="my-4 text-[15px] leading-7 text-foreground/85" {...props} />,
       ul: (props: any) => (
         <ul
           className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-disc ml-5"
@@ -201,12 +194,8 @@ function WriteupPage() {
           {...props}
         />
       ),
-      li: (props: any) => (
-        <li className="marker:text-foreground/40" {...props} />
-      ),
-      hr: (props: any) => (
-        <hr className="my-8 border-panel-border" {...props} />
-      ),
+      li: (props: any) => <li className="marker:text-foreground/40" {...props} />,
+      hr: (props: any) => <hr className="my-8 border-panel-border" {...props} />,
       a: (props: any) => (
         <a
           className="text-foreground underline underline-offset-2 decoration-foreground/30 hover:decoration-foreground transition-colors"
@@ -215,9 +204,7 @@ function WriteupPage() {
           {...props}
         />
       ),
-      strong: (props: any) => (
-        <strong className="font-semibold text-foreground" {...props} />
-      ),
+      strong: (props: any) => <strong className="font-semibold text-foreground" {...props} />,
       code: (props: any) => {
         if (props.className) {
           const language = props.className
@@ -227,11 +214,7 @@ function WriteupPage() {
           if (language === "mermaid") {
             return <Mermaid chart={props.children as string} />;
           }
-          return (
-            <TerminalCode title={language}>
-              {props.children as string}
-            </TerminalCode>
-          );
+          return <TerminalCode title={language}>{props.children as string}</TerminalCode>;
         }
         return (
           <code className="rounded bg-white/[0.06] border border-white/[0.08] px-1.5 py-0.5 text-[12px] text-foreground/90 font-mono">
@@ -265,10 +248,7 @@ function WriteupPage() {
       ),
       thead: (props: any) => <thead {...props} />,
       tr: (props: any) => (
-        <tr
-          className="border-b border-panel-border/50 last:border-0"
-          {...props}
-        />
+        <tr className="border-b border-panel-border/50 last:border-0" {...props} />
       ),
       th: (props: any) => (
         <th
@@ -276,9 +256,7 @@ function WriteupPage() {
           {...props}
         />
       ),
-      td: (props: any) => (
-        <td className="px-3 py-2 align-top text-foreground/85" {...props} />
-      ),
+      td: (props: any) => <td className="px-3 py-2 align-top text-foreground/85" {...props} />,
       blockquote: (props: any) => (
         <blockquote
           className="border-l-4 border-foreground/20 pl-4 italic my-4 text-foreground/70 bg-white/[0.03] py-2 rounded-r"
@@ -287,14 +265,11 @@ function WriteupPage() {
       ),
       SpoilerFlag,
       KillChain,
-      SkillMatrix,
     }),
     [setLightboxSrc],
   );
 
-  const MDXContent =
-    WriteupMdxComponents[writeup.slug] ||
-    (() => <div>Component not found</div>);
+  const MDXContent = WriteupMdxComponents[writeup.slug] || (() => <div>Component not found</div>);
 
   // Related writeups (same platform or overlapping tags)
   const relatedWriteups = useMemo(() => {
@@ -302,8 +277,7 @@ function WriteupPage() {
       .filter(
         (w) =>
           w.slug !== writeup.slug &&
-          (w.platform === writeup.platform ||
-            w.tags.some((t) => writeup.tags.includes(t))),
+          (w.platform === writeup.platform || w.tags.some((t) => writeup.tags.includes(t))),
       )
       .slice(0, 4);
   }, [writeup]);
@@ -486,8 +460,7 @@ function WriteupPage() {
                       <span className="text-muted-foreground">rating</span>
                       <span className="text-foreground">
                         {"★".repeat(Math.round(writeup.rating))}
-                        {"☆".repeat(5 - Math.round(writeup.rating))}{" "}
-                        {writeup.rating}
+                        {"☆".repeat(5 - Math.round(writeup.rating))} {writeup.rating}
                       </span>
                     </div>
                   )}
@@ -516,11 +489,7 @@ function WriteupPage() {
           </aside>
         </div>
       </article>
-      <ImageLightbox
-        src={lightboxSrc}
-        alt="Expanded image"
-        onClose={() => setLightboxSrc(null)}
-      />
+      <ImageLightbox src={lightboxSrc} alt="Expanded image" onClose={() => setLightboxSrc(null)} />
     </CyberLayout>
   );
 }

@@ -6,10 +6,10 @@ import { cheatsheetFiles } from "@/data/cheatsheets";
 export function handleTagClick(tag: string, navigate: any) {
   const normalizedTag = tag.toLowerCase().trim();
   const hasPosts = postsMeta.some((p) =>
-    p.tags.some((t) => t.toLowerCase().trim() === normalizedTag)
+    p.tags.some((t) => t.toLowerCase().trim() === normalizedTag),
   );
   const hasCheatsheets = cheatsheetFiles.some((c) =>
-    c.meta.tags?.some((t) => t.toLowerCase().trim() === normalizedTag)
+    c.meta.tags?.some((t) => t.toLowerCase().trim() === normalizedTag),
   );
 
   if (hasPosts && !hasCheatsheets) {
@@ -49,9 +49,7 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section
-      className={`rounded-lg glass-panel overflow-hidden ${className}`}
-    >
+    <section className={`rounded-lg glass-panel overflow-hidden ${className}`}>
       {title && (
         <header className="flex items-center justify-between border-b border-glass-border bg-foreground/[0.02] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           <span className="flex items-center gap-2">
@@ -68,43 +66,43 @@ export function Panel({
 
 const TAG_COLORS: Record<string, string> = {
   // OS & Platform Tags
-  "windows": "#00A4EF",
-  "linux": "#F5A623",
-  "macos": "#A8A8A8",
-  "android": "#3DDC84",
-  "ios": "#FC3D39",
+  windows: "#00A4EF",
+  linux: "#F5A623",
+  macos: "#A8A8A8",
+  android: "#3DDC84",
+  ios: "#FC3D39",
 
   // Network & Infrastructure Tags
-  "network": "#00D4AA",
-  "wireless": "#FFD93D",
-  "bluetooth": "#4A90D9",
-  "dns": "#7B68EE",
+  network: "#00D4AA",
+  wireless: "#FFD93D",
+  bluetooth: "#4A90D9",
+  dns: "#7B68EE",
   "active-directory": "#E06060",
   "active directory": "#E06060",
-  "cloud": "#64B5F6",
-  "aws": "#FF9900",
-  "docker": "#2496ED",
-  "kubernetes": "#326CE5",
-  "k8s": "#326CE5",
+  cloud: "#64B5F6",
+  aws: "#FF9900",
+  docker: "#2496ED",
+  kubernetes: "#326CE5",
+  k8s: "#326CE5",
 
   // Forensics & Analysis Tags
-  "forensics": "#BB86FC",
-  "malware": "#FF5252",
+  forensics: "#BB86FC",
+  malware: "#FF5252",
   "reverse-engineering": "#6C63FF",
   "reverse engineering": "#6C63FF",
-  "osint": "#4FC3F7",
+  osint: "#4FC3F7",
   "threat-intel": "#FF7043",
   "threat intel": "#FF7043",
 
   // Exploitation & Attack Tags
-  "rce": "#FF1744",
-  "lpe": "#FF5252",
-  "xss": "#E040FB",
-  "sqli": "#FF6E40",
-  "exploit": "#FF3D00",
+  rce: "#FF1744",
+  lpe: "#FF5252",
+  xss: "#E040FB",
+  sqli: "#FF6E40",
+  exploit: "#FF3D00",
   "privilege-escalation": "#FFAB40",
   "privilege escalation": "#FFAB40",
-  "phishing": "#CE93D8",
+  phishing: "#CE93D8",
   "post-exploitation": "#D50000",
   "post exploitation": "#D50000",
 
@@ -113,41 +111,41 @@ const TAG_COLORS: Record<string, string> = {
   "mobile security": "#69F0AE",
   "web-security": "#FF80AB",
   "web security": "#FF80AB",
-  "cryptography": "#FFD740",
-  "pentest": "#FF6D00",
+  cryptography: "#FFD740",
+  pentest: "#FF6D00",
   "red-team": "#FF1744",
   "red team": "#FF1744",
   "blue-team": "#448AFF",
   "blue team": "#448AFF",
   "purple-team": "#B388FF",
   "purple team": "#B388FF",
-  "hardware": "#AED581",
-  "iot": "#80CBC4",
-  "firmware": "#90A4AE",
+  hardware: "#AED581",
+  iot: "#80CBC4",
+  firmware: "#90A4AE",
 
   // Tool & Language Tags
-  "python": "#FFD43B",
+  python: "#FFD43B",
   "c/c++": "#659AD2",
   "c++": "#659AD2",
-  "c": "#659AD2",
-  "rust": "#CE422B",
-  "golang": "#00ADD8",
-  "powershell": "#5391FE",
-  "bash": "#4EAA25",
-  "assembly": "#8D6E63",
-  "ida": "#F48FB1",
-  "ghidra": "#80DEEA",
-  "wireshark": "#1679A7",
+  c: "#659AD2",
+  rust: "#CE422B",
+  golang: "#00ADD8",
+  powershell: "#5391FE",
+  bash: "#4EAA25",
+  assembly: "#8D6E63",
+  ida: "#F48FB1",
+  ghidra: "#80DEEA",
+  wireshark: "#1679A7",
 
   // General / Fallback Tags
-  "tutorial": "#81C784",
-  "writeup": "#90CAF9",
-  "ctf": "#FFAB91",
-  "research": "#B39DDB",
-  "news": "#FFF176",
+  tutorial: "#81C784",
+  writeup: "#90CAF9",
+  ctf: "#FFAB91",
+  research: "#B39DDB",
+  news: "#FFF176",
   "default/other": "#6B7280",
-  "default": "#6B7280",
-  "other": "#6B7280",
+  default: "#6B7280",
+  other: "#6B7280",
 };
 
 function getTagColor(tag: string): string {

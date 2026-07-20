@@ -1,6 +1,6 @@
 ---
 slug: "olar-device-forensics"
-title: "Battlefield Forensics: Anatomy of the IDF's Captured \"Olar\" Secure Smartphone in Syria"
+title: 'Battlefield Forensics: Anatomy of the IDF''s Captured "Olar" Secure Smartphone in Syria'
 date: "2026-07-02"
 category: "Forensics"
 tags:
@@ -9,7 +9,7 @@ tags:
   - "Android"
   - "Hardware"
 severity: "Low"
-excerpt: "An analysis of the IDF's captured \"Olar\" secure smartphone in Syria, detailing its hardware, MDM-enforced kiosk hardening, ORION C4I payload, and the incident's OPSEC implications."
+excerpt: 'An analysis of the IDF''s captured "Olar" secure smartphone in Syria, detailing its hardware, MDM-enforced kiosk hardening, ORION C4I payload, and the incident''s OPSEC implications.'
 readTime: "30 min"
 url: "https://asbawy.github.io/logs/olar-device-forensics"
 ---
@@ -206,9 +206,10 @@ The most time-critical action is revoking the device's mesh identity. In a TAK-s
 - Rotating any preshared symmetric keys used for offline mesh authentication in case the device's certificate extraction is paired with a protocol downgrade attack
 
 Until a Certificate Revocation List (CRL) reaches every active node, an attacker who extracts credentials from a captured device can masquerade as a friendly unit. This creates a critical window of vulnerability where a hostile actor could:
-*   **Inject spoofed PLI** (Position Location Information) to falsify troop locations.
-*   **Broadcast false mission updates** to confuse tactical command.
-*   **Monitor traffic** to passively harvest intelligence.
+
+- **Inject spoofed PLI** (Position Location Information) to falsify troop locations.
+- **Broadcast false mission updates** to confuse tactical command.
+- **Monitor traffic** to passively harvest intelligence.
 
 This triggers a direct race between the attacker's extraction speed and the defender's revocation speed. In an on-grid environment, this containment happens in minutes; however, if a squad is fully offline, propagation is delayed until the next tactical synchronization window—which can take hours.
 
@@ -253,9 +254,9 @@ A captured device also leaks RF identity. Even if the SIM is destroyed and Wi-Fi
 
 Cryptographic rotation can instantly invalidate stolen digital keys, but it cannot change a phone's physical hardware. A captured device permanently leaks fixed identifiers to SIGINT (Signals Intelligence) units:
 
-*   **Persistent Watchlists:** A capable hacker will harvest the phone's unique hardware signatures (such as IMEI, Wi-Fi MAC, and Bluetooth MAC addresses). 
-*   **Tactical Proximity Alerts:** Adding these static identifiers to an RF watchlist allows the hackers to immediately flag and locate friendly units if the same hardware reappears on the battlefield.
-*   **Retroactive Traffic Attribution:** Captured MAC addresses can be cross-referenced against historical SIGINT captures to reconstruct and attribute past network traffic to specific squad movements.
+- **Persistent Watchlists:** A capable hacker will harvest the phone's unique hardware signatures (such as IMEI, Wi-Fi MAC, and Bluetooth MAC addresses).
+- **Tactical Proximity Alerts:** Adding these static identifiers to an RF watchlist allows the hackers to immediately flag and locate friendly units if the same hardware reappears on the battlefield.
+- **Retroactive Traffic Attribution:** Captured MAC addresses can be cross-referenced against historical SIGINT captures to reconstruct and attribute past network traffic to specific squad movements.
 
 ---
 
@@ -375,24 +376,28 @@ While the specific dropped phone in Abdeen may soon be forgotten, the architectu
 ## References
 
 ### Incident Reporting & News
-*   **Ynet News:** [IDF operational raid in Syria](https://www.ynetnews.com/article/bjrnygbmml)
-*   **Anadolu Agency:** [Israeli army admits losing encrypted military device during southern Syria raid](https://aa.com.tr/en/middle-east/israeli-army-admits-losing-encrypted-military-device-during-southern-syria-raid/3982576)
+
+- **Ynet News:** [IDF operational raid in Syria](https://www.ynetnews.com/article/bjrnygbmml)
+- **Anadolu Agency:** [Israeli army admits losing encrypted military device during southern Syria raid](https://aa.com.tr/en/middle-east/israeli-army-admits-losing-encrypted-military-device-during-southern-syria-raid/3982576)
 
 ### Vendor Documentation (Asio Technologies)
-*   **ORION Product Page:** [Asio Technologies - ORION](https://asiotech.com/orion/)
-*   **Company Blog:** [Situational Awareness Platforms (ORION)](https://asiotech.com/blog/situational-awareness-platforms-orion/)
-*   **Company Blog:** [Tactical Edge C4ISR Overview](https://asiotech.com/blog/c4isr-tactical-edge-asio/)
-*   **Company Blog:** [Tactical Intelligence Systems](https://asiotech.com/blog/tactical-intelligence-systems/)
-*   **Video Showcase:** [Asio Technologies Official YouTube Presentation](https://www.youtube.com/watch?v=PHh5ibAvsT4)
+
+- **ORION Product Page:** [Asio Technologies - ORION](https://asiotech.com/orion/)
+- **Company Blog:** [Situational Awareness Platforms (ORION)](https://asiotech.com/blog/situational-awareness-platforms-orion/)
+- **Company Blog:** [Tactical Edge C4ISR Overview](https://asiotech.com/blog/c4isr-tactical-edge-asio/)
+- **Company Blog:** [Tactical Intelligence Systems](https://asiotech.com/blog/tactical-intelligence-systems/)
+- **Video Showcase:** [Asio Technologies Official YouTube Presentation](https://www.youtube.com/watch?v=PHh5ibAvsT4)
 
 ### Defense Industry & Procurement Analysis
-*   **EDR Magazine:** [Asio Technologies completes another delivery of thousands of ORION systems to the IDF](https://www.edrmagazine.eu/asio-technologies-completes-another-delivery-of-thousands-of-orion-systems-to-the-idf)
-*   **EDR Magazine:** [Asio Technologies completes the delivery of thousands of ORION systems to the IDF](https://www.edrmagazine.eu/asio-technologies-completes-the-delivery-of-thousands-of-orion-systems-to-the-idf)
-*   **Defense Update:** [IDF Fields Thousands of Interactive Information Devices Assisting Dismounted Leaders](https://defense-update.com/20220928_idf-fields-thousands-of-interactive-information-devices-assisting-dismounted-leaders.html)
-*   **European Security & Defence:** [ASIO Completes ORION IDF Deliveries](https://euro-sd.com/2022/09/articles/exclusive/27467/asio-completes-orion-idf-deliveries/)
-*   **Joint Forces News:** [Another Asio Technologies ORION Delivery to IDF](https://www.joint-forces.com/defence-equipment-news/62645-another-asio-technologies-orion-delivery-to-idf)
-*   **sUAS News:** [Asio Technologies completed the delivery of 100 vision-based navigation systems](https://www.suasnews.com/2023/10/asio-technologies-completed-the-delivery-of-100-vision-based-navigation-systems-to-a-strategic-customer/)
+
+- **EDR Magazine:** [Asio Technologies completes another delivery of thousands of ORION systems to the IDF](https://www.edrmagazine.eu/asio-technologies-completes-another-delivery-of-thousands-of-orion-systems-to-the-idf)
+- **EDR Magazine:** [Asio Technologies completes the delivery of thousands of ORION systems to the IDF](https://www.edrmagazine.eu/asio-technologies-completes-the-delivery-of-thousands-of-orion-systems-to-the-idf)
+- **Defense Update:** [IDF Fields Thousands of Interactive Information Devices Assisting Dismounted Leaders](https://defense-update.com/20220928_idf-fields-thousands-of-interactive-information-devices-assisting-dismounted-leaders.html)
+- **European Security & Defence:** [ASIO Completes ORION IDF Deliveries](https://euro-sd.com/2022/09/articles/exclusive/27467/asio-completes-orion-idf-deliveries/)
+- **Joint Forces News:** [Another Asio Technologies ORION Delivery to IDF](https://www.joint-forces.com/defence-equipment-news/62645-another-asio-technologies-orion-delivery-to-idf)
+- **sUAS News:** [Asio Technologies completed the delivery of 100 vision-based navigation systems](https://www.suasnews.com/2023/10/asio-technologies-completed-the-delivery-of-100-vision-based-navigation-systems-to-a-strategic-customer/)
 
 ### Technical & Security Architecture Resources
-*   **Android Enterprise:** [Dedicated Device Kiosk Mode & LockTask](https://developer.android.com/work/dpc/dedicated-devices)
-*   **TAK Product Center:** [Team Awareness Kit (TAK) Architecture](https://tak.gov/)
+
+- **Android Enterprise:** [Dedicated Device Kiosk Mode & LockTask](https://developer.android.com/work/dpc/dedicated-devices)
+- **TAK Product Center:** [Team Awareness Kit (TAK) Architecture](https://tak.gov/)

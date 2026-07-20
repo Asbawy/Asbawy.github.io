@@ -21,7 +21,10 @@ export type WriteupMeta = {
 export type Writeup = WriteupMeta;
 
 // Eager: load the modules to get their frontmatter export.
-const mdxModules = import.meta.glob<WriteupMeta>("./writeups/*.mdx", { eager: true, import: "frontmatter" });
+const mdxModules = import.meta.glob<WriteupMeta>("./writeups/*.mdx", {
+  eager: true,
+  import: "frontmatter",
+});
 
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: WriteupMeta }>(
   "./writeups/*.mdx",

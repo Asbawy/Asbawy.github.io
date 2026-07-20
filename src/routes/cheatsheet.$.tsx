@@ -198,7 +198,10 @@ function CheatsheetViewer() {
       },
       code: (props: any) => {
         if (props.className) {
-          const language = props.className.replace(/language-/, "").replace("hljs", "").trim();
+          const language = props.className
+            .replace(/language-/, "")
+            .replace("hljs", "")
+            .trim();
           return <TerminalCode title={language}>{props.children as string}</TerminalCode>;
         }
         return (
@@ -340,8 +343,8 @@ function CheatsheetViewer() {
                   {meta.tags && meta.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {meta.tags.map((tag: string) => (
-                        <Tag 
-                          key={tag} 
+                        <Tag
+                          key={tag}
                           variant={tagVariantFor(tag)}
                           onClick={(e) => {
                             e.preventDefault();

