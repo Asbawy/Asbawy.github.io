@@ -11,6 +11,7 @@ async function main() {
   const staticPages = [
     { path: "/", changefreq: "weekly", priority: "1.0" },
     { path: "/logs", changefreq: "daily", priority: "0.9" },
+    { path: "/writeups", changefreq: "weekly", priority: "0.9" },
     { path: "/about", changefreq: "monthly", priority: "0.8" },
     { path: "/cheatsheet", changefreq: "monthly", priority: "0.7" },
     { path: "/tools", changefreq: "monthly", priority: "0.7" },
@@ -40,7 +41,18 @@ async function main() {
       });
   } catch (e) {}
 
-  const entries = [...staticPages, ...postPages, ...cheatPages];
+  const writeupsDir = join(process.cwd(), "src/data/writeups");
+  let writeupPages: any[] = [];
+  try {
+    const writeupFiles = readdirSync(writeupsDir).filter((f) => typeof f === "string" && f.endsWith(".mdx"));
+    writeupPages = writeupFiles.map((f) => ({
+      path: `/writeups/${(f as string).replace(/\.mdx$/, "")}`,
+      changefreq: "monthly",
+      priority: "0.8",
+    }));
+  } catch (e) {}
+
+  const entries = [...staticPages, ...postPages, ...cheatPages, ...writeupPages];
 
   const urls = entries.map((e) =>
     [
