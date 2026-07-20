@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { JwtDecoder, PayloadEncoder } from "@/components/cyber/Tools";
+import { GithubTools } from "@/components/cyber/GithubTools";
 
 export const Route = createFileRoute("/tools")({
   head: () => ({
@@ -22,12 +23,13 @@ export const Route = createFileRoute("/tools")({
 });
 
 const tabs = [
+  { id: "github", label: "github_tools" },
   { id: "jwt", label: "jwt_decoder" },
   { id: "payload", label: "payload_codec" },
 ] as const;
 
 function ToolsPage() {
-  const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("jwt");
+  const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("github");
 
   return (
     <CyberLayout>
@@ -59,7 +61,11 @@ function ToolsPage() {
           ))}
         </div>
 
-        <div className="mt-6">{tab === "jwt" ? <JwtDecoder /> : <PayloadEncoder />}</div>
+        <div className="mt-6">
+          {tab === "github" && <GithubTools />}
+          {tab === "jwt" && <JwtDecoder />}
+          {tab === "payload" && <PayloadEncoder />}
+        </div>
       </section>
     </CyberLayout>
   );
