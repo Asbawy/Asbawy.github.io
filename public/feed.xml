@@ -4,7 +4,7 @@
     <title>Asbawy Blog</title>
     <description>Security cheatsheets, quick references, and field notes by Asbawy.</description>
     <link>https://asbawy.github.io</link>
-    <lastBuildDate>Mon, 13 Jul 2026 12:36:25 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 20 Jul 2026 00:36:23 GMT</lastBuildDate>
     
     <item>
       <title><![CDATA[File Transfer Techniques]]></title>
@@ -39,8 +39,8 @@
     </item>
   
     <item>
-      <title><![CDATA[Active Directory Vulnerability & Misconfiguration Cheatsheet]]></title>
-      <description><![CDATA[A reference for AD attack paths — covering ACL abuse, Kerberos attacks, delegation abuse, domain dominance, GPO exploitation, and ADCS misconfigurations. Designed for Red Team engagements.]]></description>
+      <title><![CDATA[Active Directory Enumeration & Attacks Cheatsheet]]></title>
+      <description><![CDATA[A comprehensive reference for AD enumeration and attack paths — covering external/internal recon, password spraying, network poisoning, credentialed enumeration, ACL abuse, Kerberos attacks, delegation abuse, lateral movement, domain dominance, GPO exploitation, ADCS misconfigurations, cross-forest trust abuse, and advanced exploits. Designed for Red Team engagements.]]></description>
       <link>https://asbawy.github.io/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet</link>
       <guid>https://asbawy.github.io/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet</guid>
       <pubDate>Mon, 15 Jun 2026 00:00:00 GMT</pubDate>
