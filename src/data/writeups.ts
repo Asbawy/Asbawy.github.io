@@ -8,8 +8,19 @@ export type WriteupMeta = {
   date: string;
   platform: "HackTheBox" | "TryHackMe" | "VulnHub" | "CTF" | "Other";
   type: "Machine" | "Challenge" | "Sherlock" | "Fortress" | "Endgame" | "Pro Lab";
+  category?:
+    | "Reverse Engineering"
+    | "Web"
+    | "Crypto"
+    | "Pwn"
+    | "Forensics"
+    | "Hardware"
+    | "Misc"
+    | "Mobile"
+    | "OSINT"
+    | string;
   os?: "Linux" | "Windows" | "Web" | "Misc";
-  difficulty: "Easy" | "Medium" | "Hard" | "Insane";
+  difficulty: "Very Easy" | "Easy" | "Medium" | "Hard" | "Insane";
   tags: string[];
   excerpt: string;
   readTime: string;
@@ -78,11 +89,13 @@ export function getPlatformStats() {
     total: writeupsMeta.length,
     platforms: {} as Record<string, number>,
     difficulties: {} as Record<string, number>,
+    types: {} as Record<string, number>,
     os: {} as Record<string, number>,
   };
   for (const w of writeupsMeta) {
     stats.platforms[w.platform] = (stats.platforms[w.platform] || 0) + 1;
     stats.difficulties[w.difficulty] = (stats.difficulties[w.difficulty] || 0) + 1;
+    stats.types[w.type] = (stats.types[w.type] || 0) + 1;
     if (w.os) stats.os[w.os] = (stats.os[w.os] || 0) + 1;
   }
   return stats;

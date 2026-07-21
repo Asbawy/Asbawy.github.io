@@ -12,7 +12,7 @@ import {
 } from "@/data/writeups";
 import { Suspense } from "react";
 import { ArrowLeft, Swords, Flag, Server, Globe, Terminal, Cpu, Shield } from "lucide-react";
-import { PlatformIcon, SpoilerFlag, KillChain } from "@/components/cyber/WriteupComponents";
+import { PlatformIcon, SpoilerFlag, KillChain, SkillMatrix, CategoryIcon } from "@/components/cyber/WriteupComponents";
 import { ImageLightbox } from "@/components/cyber/ImageLightbox";
 import { ShareButtons } from "@/components/cyber/ShareButtons";
 import { AuthorBio } from "@/components/cyber/AuthorBio";
@@ -105,6 +105,8 @@ const platformConfig: Record<string, { color: string; icon: typeof Swords }> = {
 
 function difficultyColor(d: string) {
   switch (d) {
+    case "Very Easy":
+      return "text-[#00E5FF]";
     case "Easy":
       return "text-[#9FEF00]";
     case "Medium":
@@ -120,6 +122,8 @@ function difficultyColor(d: string) {
 
 function difficultyBg(d: string) {
   switch (d) {
+    case "Very Easy":
+      return "bg-[#00E5FF]/10 border-[#00E5FF]/30";
     case "Easy":
       return "bg-[#9FEF00]/10 border-[#9FEF00]/30";
     case "Medium":
@@ -265,6 +269,8 @@ function WriteupPage() {
       ),
       SpoilerFlag,
       KillChain,
+      SkillMatrix,
+      CategoryIcon,
     }),
     [setLightboxSrc],
   );
@@ -313,8 +319,8 @@ function WriteupPage() {
               {writeup.title}
             </h1>
 
-            {/* Difficulty + OS badge row */}
-            <div className="mt-3 flex items-center gap-3">
+            {/* Difficulty + OS + Category badge row */}
+            <div className="mt-3 flex flex-wrap items-center gap-3">
               <span
                 className={`font-mono text-[11px] px-2.5 py-1 rounded border ${difficultyBg(
                   writeup.difficulty,
@@ -322,6 +328,12 @@ function WriteupPage() {
               >
                 {writeup.difficulty}
               </span>
+              {writeup.category && (
+                <span className="flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300">
+                  <CategoryIcon category={writeup.category} className="h-3.5 w-3.5" />
+                  {writeup.category}
+                </span>
+              )}
               {writeup.os && (
                 <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
                   {osIcon(writeup.os)} {writeup.os}

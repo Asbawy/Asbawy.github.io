@@ -266,6 +266,10 @@ exit 0
   there, it will be executed as root.
 </Callout>
 
+<Callout type="info">
+  We talk about this technique, PATH hijacking, and Linux sudo escalation vectors in depth in our blog & cheatsheet: [Linux Privilege Escalation: Basics & Exploitation](/cheatsheet/linux/privesc-exploitation) and [Linux Privilege Escalation: Enumeration & Recon](/cheatsheet/linux/privesc-enumeration).
+</Callout>
+
 ### Exploitation — PAM Backdoor Injection via Relative Path Hijack
 
 Instead of the typical SUID bash or reverse shell approach, we abuse the relative path vulnerability to inject a **PAM authentication backdoor**. This modifies the system's authentication stack so that `su root` succeeds with any password — a stealthier and more elegant escalation.

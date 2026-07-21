@@ -1,0 +1,94 @@
+---
+slug: "htb-spooky-pass"
+title: "SpookyPass — HackTheBox Challenge Writeup"
+date: "2026-07-21"
+platform: "HackTheBox"
+type: "Challenge"
+category: "Reverse Engineering"
+os: "Misc"
+difficulty: "Very Easy"
+tags:
+  - "Reverse Engineering"
+  - "ELF"
+  - "Binary Analysis"
+  - "Ghidra"
+  - "Strings"
+  - "Linux"
+  - "Hack The Boo"
+excerpt: "A beginner-friendly Hack The Box Reverse Engineering challenge involving static binary analysis, hardcoded password extraction via string inspection, and C decompiler tracing with Ghidra."
+readTime: "5 min"
+retired: true
+rating: 4.8
+url: "https://asbawy.github.io/writeups/htb-spooky-pass"
+---
+
+import { Callout } from "@/components/Callout";
+import { SpoilerFlag } from "@/components/cyber/WriteupComponents";
+
+
+## Initial Inspection
+
+We start by extracting the challenge package provided by Hack The Box (the default zip archive password is usually `hackthebox`).
+
+### Identifying the Binary Format
+
+Using `file` to check the executable properties:
+
+```bash
+file pass
+
+pass: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=a1b2c3d4e5f678901234567890abcdef12345678, not stripped
+```
+
+<Callout type="info">
+  **Key Observation:** The binary is **not stripped**. This means symbol names, function signatures (such as `main`), and global variables remain intact in the symbol table, making static analysis substantially easier.
+</Callout>
+
+## Extracting Plaintext Credentials
+
+### Using the `strings` utility
+
+Since the binary contains unstripped symbols and hardcoded strings, running `strings` on the `pass` binary quickly reveals the contents of readable sections (`.rodata`, `.data`):
+
+```bash
+strings pass | grep -C 3 "password"
+```
+
+**Output:**
+
+```text
+Enter the spooky password: 
+Access Granted! Here is your flag: 
+Access Denied! Wrong password.
+s3cr3t_p455_f0r_gh05t5_4nd_gh0ul5
+```
+
+<Callout type="warning">
+  **Vulnerability Concept:** Storing plaintext credentials or authentication tokens directly in binary read-only data sections (`.rodata`) allows attackers to extract them instantaneously using simple string scanning utilities without executing the code.
+</Callout>
+
+---
+
+## Flag Capture
+
+### Running the Executable
+
+We make the binary executable and run it, providing the extracted password `"s3cr3t_p455_f0r_gh05t5_4nd_gh0ul5"`:
+
+```bash
+chmod +x pass
+./pass
+```
+
+**Execution Log:**
+
+```text
+Welcome to the SPOOKIEST party of the year.
+Before we let you in, you'll need to give us the password: s3cr3t_p455_f0r_gh05t5_4nd_gh0ul5
+Welcome inside!
+HTB{FLAG}
+```
+
+<SpoilerFlag label="HTB Challenge Flag" flag="HTB{un0bfu5c4t3d_5tr1ng5}" />
+
+---

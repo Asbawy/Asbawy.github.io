@@ -14,6 +14,11 @@ import {
   ArrowRight,
   ChevronRight,
   Activity,
+  Cpu,
+  Lock,
+  Globe,
+  Wrench,
+  FileCode2,
 } from "lucide-react";
 
 /* ── Platform Logos (SVG) ────────────────────────────── */
@@ -310,3 +315,63 @@ export function KillChain({ steps }: { steps: KillChainStep[] }) {
     </div>
   );
 }
+
+/* ── Skill Matrix Component ──────────────────────────── */
+
+export interface SkillItem {
+  name: string;
+  level: number; // 1 to 10
+}
+
+export function SkillMatrix({ skills }: { skills: SkillItem[] }) {
+  return (
+    <div className="my-5 rounded-xl border border-border bg-card/80 p-4 font-mono shadow-sm">
+      <div className="flex items-center gap-2 mb-3 border-b border-border/50 pb-2">
+        <Activity className="h-4 w-4 text-accent-primary" />
+        <span className="text-xs font-bold uppercase tracking-wider text-foreground">
+          Skill_Breakdown
+        </span>
+      </div>
+      <div className="space-y-2.5">
+        {skills.map((s, i) => {
+          const pct = Math.min(100, Math.max(10, s.level * 10));
+          return (
+            <div key={i} className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-foreground/90 font-medium">{s.name}</span>
+                <span className="text-muted-foreground text-[11px]">{s.level}/10</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-foreground/80 transition-all duration-500"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Category Helpers ────────────────────────────────── */
+
+export function CategoryIcon({
+  category,
+  className = "h-3.5 w-3.5",
+}: {
+  category?: string;
+  className?: string;
+}) {
+  if (!category) return <Target className={className} />;
+  const c = category.toLowerCase();
+  if (c.includes("reverse") || c.includes("rev")) return <Cpu className={className} />;
+  if (c.includes("crypto")) return <Lock className={className} />;
+  if (c.includes("web")) return <Globe className={className} />;
+  if (c.includes("pwn") || c.includes("binary")) return <Skull className={className} />;
+  if (c.includes("forensic")) return <Search className={className} />;
+  if (c.includes("hardware")) return <Wrench className={className} />;
+  return <FileCode2 className={className} />;
+}
+

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { CyberLayout, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
 import { writeupsMeta, getPlatformStats, type WriteupMeta } from "@/data/writeups";
-import { PlatformIcon } from "@/components/cyber/WriteupComponents";
+import { PlatformIcon, CategoryIcon } from "@/components/cyber/WriteupComponents";
 
 export const Route = createFileRoute("/writeups/")({
   head: () => ({
@@ -96,6 +96,8 @@ const platformConfig: Record<
 
 function difficultyColor(d: string) {
   switch (d) {
+    case "Very Easy":
+      return "text-[#00E5FF]";
     case "Easy":
       return "text-[#9FEF00]";
     case "Medium":
@@ -111,6 +113,8 @@ function difficultyColor(d: string) {
 
 function difficultyBg(d: string) {
   switch (d) {
+    case "Very Easy":
+      return "bg-[#00E5FF]/10 border-[#00E5FF]/30";
     case "Easy":
       return "bg-[#9FEF00]/10 border-[#9FEF00]/30";
     case "Medium":
@@ -126,6 +130,8 @@ function difficultyBg(d: string) {
 
 function difficultyDot(d: string) {
   switch (d) {
+    case "Very Easy":
+      return "bg-[#00E5FF]";
     case "Easy":
       return "bg-[#9FEF00]";
     case "Medium":
@@ -157,12 +163,42 @@ function osIcon(os?: string) {
 function WriteupsIndex() {
   const navigate = useNavigate();
   const stats = getPlatformStats();
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [platformFilter, setPlatformFilter] = useState<string | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const machineCount = useMemo(
+    () => writeupsMeta.filter((w) => w.type === "Machine").length,
+    [],
+  );
+  const challengeCount = useMemo(
+    () => writeupsMeta.filter((w) => w.type === "Challenge").length,
+    [],
+  );
+
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const w of writeupsMeta) {
+      if (w.category) cats.add(w.category);
+    }
+    // Default categories if empty
+    if (cats.size === 0) {
+      ["Reverse Engineering", "Web", "Crypto", "Pwn", "Forensics", "Misc"].forEach((c) =>
+        cats.add(c),
+      );
+    }
+    return Array.from(cats);
+  }, []);
+
   const filteredWriteups = useMemo(() => {
     let result = writeupsMeta;
+    if (typeFilter) result = result.filter((w) => w.type === typeFilter);
+    if (categoryFilter)
+      result = result.filter(
+        (w) => w.category === categoryFilter || w.tags.includes(categoryFilter),
+      );
     if (platformFilter) result = result.filter((w) => w.platform === platformFilter);
     if (difficultyFilter) result = result.filter((w) => w.difficulty === difficultyFilter);
     if (searchQuery.trim()) {
@@ -171,13 +207,19 @@ function WriteupsIndex() {
         (w) =>
           w.title.toLowerCase().includes(q) ||
           w.excerpt.toLowerCase().includes(q) ||
+          (w.category && w.category.toLowerCase().includes(q)) ||
           w.tags.some((t) => t.toLowerCase().includes(q)),
       );
     }
     return result;
-  }, [platformFilter, difficultyFilter, searchQuery]);
+  }, [typeFilter, categoryFilter, platformFilter, difficultyFilter, searchQuery]);
 
-  const hasActiveFilter = platformFilter || difficultyFilter || searchQuery.trim();
+  const hasActiveFilter =
+    Boolean(typeFilter) ||
+    Boolean(categoryFilter) ||
+    Boolean(platformFilter) ||
+    Boolean(difficultyFilter) ||
+    Boolean(searchQuery.trim());
 
   return (
     <CyberLayout>
@@ -207,8 +249,12 @@ function WriteupsIndex() {
             {/* Live Stats mini-pills */}
             <div className="flex items-center gap-2 shrink-0 flex-wrap">
               <span className="flex items-center gap-1.5 border border-border bg-card/60 rounded-full px-3 py-1 font-mono text-[10px] text-foreground/70">
-                <Activity className="h-3 w-3 text-green-400" />
-                {stats.total} machines pwned
+                <Server className="h-3 w-3 text-green-400" />
+                {machineCount} machines
+              </span>
+              <span className="flex items-center gap-1.5 border border-border bg-card/60 rounded-full px-3 py-1 font-mono text-[10px] text-foreground/70">
+                <Sparkles className="h-3 w-3 text-purple-400" />
+                {challengeCount} challenges
               </span>
               <span className="flex items-center gap-1.5 border border-border bg-card/60 rounded-full px-3 py-1 font-mono text-[10px] text-foreground/70">
                 <TrendingUp className="h-3 w-3 text-blue-400" />
@@ -290,6 +336,87 @@ function WriteupsIndex() {
           })}
         </div>
 
+        {/* ── Type Tabs & Category Filter Row ────────────────────────────── */}
+        <div className="mb-6 space-y-3 font-mono">
+          {/* Machine vs Challenge Selector */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setTypeFilter(null)}
+                className={`text-xs px-3.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                  !typeFilter
+                    ? "border-foreground/40 bg-foreground/10 text-foreground font-semibold"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 bg-card/40"
+                }`}
+              >
+                All ({writeupsMeta.length})
+              </button>
+              <button
+                onClick={() => setTypeFilter(typeFilter === "Machine" ? null : "Machine")}
+                className={`flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                  typeFilter === "Machine"
+                    ? "border-green-500/40 bg-green-500/10 text-green-400 font-semibold"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 bg-card/40"
+                }`}
+              >
+                <Server className="h-3.5 w-3.5" />
+                Machines ({machineCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter(typeFilter === "Challenge" ? null : "Challenge")}
+                className={`flex items-center gap-1.5 text-xs px-3.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                  typeFilter === "Challenge"
+                    ? "border-purple-500/40 bg-purple-500/10 text-purple-300 font-semibold"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/20 bg-card/40"
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Challenges ({challengeCount})
+              </button>
+            </div>
+
+            {hasActiveFilter && (
+              <button
+                onClick={() => {
+                  setTypeFilter(null);
+                  setCategoryFilter(null);
+                  setPlatformFilter(null);
+                  setDifficultyFilter(null);
+                  setSearchQuery("");
+                }}
+                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/60 hover:bg-muted/40"
+              >
+                <X className="h-3 w-3" />
+                reset_filters
+              </button>
+            )}
+          </div>
+
+          {/* Challenge Category Filter Tags */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-widest shrink-0">
+              Categories:
+            </span>
+            {availableCategories.map((cat) => {
+              const isSelected = categoryFilter === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(isSelected ? null : cat)}
+                  className={`flex items-center gap-1.5 shrink-0 text-[11px] px-2.5 py-1 rounded-md border transition-all cursor-pointer ${
+                    isSelected
+                      ? "border-purple-500/50 bg-purple-500/20 text-purple-300 font-semibold shadow-sm"
+                      : "border-border/60 text-muted-foreground hover:text-foreground hover:border-foreground/30 bg-card/30"
+                  }`}
+                >
+                  <CategoryIcon category={cat} className="h-3 w-3" />
+                  <span>{cat}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* ── Filter & Search Bar ───────────────────── */}
         <div className="flex flex-col sm:flex-row gap-3 mb-8">
           {/* Search */}
@@ -297,7 +424,7 @@ function WriteupsIndex() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50" />
             <input
               type="text"
-              placeholder="Search writeups, tags, techniques..."
+              placeholder="Search writeups, tags, categories, techniques..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-lg border border-border bg-card/60 pl-9 pr-4 py-2 font-mono text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:border-foreground/30 focus:bg-card/80 transition-all"
@@ -315,7 +442,7 @@ function WriteupsIndex() {
           {/* Difficulty pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <Filter className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-            {["Easy", "Medium", "Hard", "Insane"].map((d) => (
+            {["Very Easy", "Easy", "Medium", "Hard", "Insane"].map((d) => (
               <button
                 key={d}
                 onClick={() => setDifficultyFilter(difficultyFilter === d ? null : d)}
@@ -329,19 +456,6 @@ function WriteupsIndex() {
                 {d}
               </button>
             ))}
-            {hasActiveFilter && (
-              <button
-                onClick={() => {
-                  setPlatformFilter(null);
-                  setDifficultyFilter(null);
-                  setSearchQuery("");
-                }}
-                className="font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-muted/40"
-              >
-                <X className="h-3 w-3" />
-                clear
-              </button>
-            )}
           </div>
         </div>
 
@@ -424,7 +538,7 @@ function WriteupCard({
             <PlatformIcon platform={w.platform} className={`h-3.5 w-3.5 ${config.color}`} />
             <span className={`font-semibold ${config.color}`}>{w.platform}</span>
             <span className="text-muted-foreground/30 mx-0.5">·</span>
-            <span className="text-muted-foreground">{w.type}</span>
+            <span className="text-muted-foreground">{w.category || w.type}</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             {w.os && (

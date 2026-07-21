@@ -84,6 +84,7 @@ function StatsPage() {
   ).sort((a, b) => a.localeCompare(b));
 
   const writeupDiffs: { name: string; color: string }[] = [
+    { name: "Very Easy", color: "bg-[#00E5FF]" },
     { name: "Easy", color: "bg-[#9FEF00]" },
     { name: "Medium", color: "bg-[#FFD43B]" },
     { name: "Hard", color: "bg-[#FF7043]" },

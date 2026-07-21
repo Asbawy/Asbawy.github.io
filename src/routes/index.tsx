@@ -189,21 +189,25 @@ function Index() {
                           ? "text-[#FFD43B]"
                           : "text-[#C792EA]";
                 const diffColor =
-                  w.difficulty === "Easy"
-                    ? "text-[#9FEF00]"
-                    : w.difficulty === "Medium"
-                      ? "text-[#FFD43B]"
-                      : w.difficulty === "Hard"
-                        ? "text-[#FF7043]"
-                        : "text-[#FF3E3E]";
+                  w.difficulty === "Very Easy"
+                    ? "text-[#00E5FF]"
+                    : w.difficulty === "Easy"
+                      ? "text-[#9FEF00]"
+                      : w.difficulty === "Medium"
+                        ? "text-[#FFD43B]"
+                        : w.difficulty === "Hard"
+                          ? "text-[#FF7043]"
+                          : "text-[#FF3E3E]";
                 const diffBg =
-                  w.difficulty === "Easy"
-                    ? "bg-[#9FEF00]/10 border-[#9FEF00]/20"
-                    : w.difficulty === "Medium"
-                      ? "bg-[#FFD43B]/10 border-[#FFD43B]/20"
-                      : w.difficulty === "Hard"
-                        ? "bg-[#FF7043]/10 border-[#FF7043]/20"
-                        : "bg-[#FF3E3E]/10 border-[#FF3E3E]/20";
+                  w.difficulty === "Very Easy"
+                    ? "bg-[#00E5FF]/10 border-[#00E5FF]/20"
+                    : w.difficulty === "Easy"
+                      ? "bg-[#9FEF00]/10 border-[#9FEF00]/20"
+                      : w.difficulty === "Medium"
+                        ? "bg-[#FFD43B]/10 border-[#FFD43B]/20"
+                        : w.difficulty === "Hard"
+                          ? "bg-[#FF7043]/10 border-[#FF7043]/20"
+                          : "bg-[#FF3E3E]/10 border-[#FF3E3E]/20";
 
                 return (
                   <Link
