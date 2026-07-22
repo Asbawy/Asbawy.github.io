@@ -251,7 +251,7 @@ export function TerminalCode({
       </div>
       <pre
         className={`px-4 py-3 text-[12.5px] leading-relaxed text-foreground/90 font-mono ${
-          isWrapped ? "whitespace-pre-wrap break-all" : "whitespace-pre overflow-x-auto"
+          isWrapped ? "whitespace-pre-wrap break-all" : "whitespace-pre overflow-x-auto break-all"
         }`}
       >
         <code

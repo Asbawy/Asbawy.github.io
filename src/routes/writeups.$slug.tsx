@@ -210,18 +210,21 @@ function WriteupPage() {
       ),
       strong: (props: any) => <strong className="font-semibold text-foreground" {...props} />,
       code: (props: any) => {
-        if (props.className) {
+        const isBlock =
+          Boolean(props.className) ||
+          (typeof props.children === "string" && props.children.includes("\n"));
+
+        if (isBlock) {
           const language = props.className
-            .replace(/language-/, "")
-            .replace("hljs", "")
-            .trim();
+            ? props.className.replace(/language-/, "").replace("hljs", "").trim() || "code"
+            : "code";
           if (language === "mermaid") {
             return <Mermaid chart={props.children as string} />;
           }
           return <TerminalCode title={language}>{props.children as string}</TerminalCode>;
         }
         return (
-          <code className="rounded bg-white/[0.06] border border-white/[0.08] px-1.5 py-0.5 text-[12px] text-foreground/90 font-mono">
+          <code className="rounded bg-white/[0.06] border border-white/[0.08] px-1.5 py-0.5 text-[12px] text-foreground/90 font-mono [word-break:break-word] inline-block max-w-full">
             {props.children}
           </code>
         );
