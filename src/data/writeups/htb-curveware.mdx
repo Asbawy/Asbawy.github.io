@@ -1,0 +1,194 @@
+---
+slug: "htb-curveware"
+title: "Curveware — HackTheBox Challenge Writeup"
+date: "2026-07-21"
+platform: "HackTheBox"
+type: "Challenge"
+category: "Cryptography"
+os: "Windows"
+difficulty: "Hard"
+tags:
+  - "Cryptography"
+  - "Elliptic Curve"
+  - "Hidden Number Problem"
+  - "Ransomware"
+  - "LLL"
+  - "SageMath"
+  - "Windows"
+excerpt: "Reversing a Windows ransomware binary, exploiting ECDSA partial nonce leakage (40-bit LSB), and recovering the AES-256 key via LLL lattice reduction on the Hidden Number Problem (HNP)."
+readTime: "5 min"
+retired: true
+rating: 4.9
+url: "https://asbawy.github.io/writeups/htb-curveware"
+---
+
+import { Callout } from "@/components/Callout";
+import { SpoilerFlag } from "@/components/cyber/WriteupComponents";
+
+---
+
+## Challenge Overview
+
+**Curveware** is a hard Cryptography / Reverse Engineering challenge simulating a ransomware infection. We are given a 64-bit Windows executable (`curveware.exe`) and a directory of encrypted files appended with `.vlny[10-hex]`.
+
+Our objective is to reverse-engineer the cryptographic scheme, exploit partial nonce leakage via lattice reduction, and decrypt `flag.txt`.
+
+---
+
+## Binary Analysis & File Structure
+
+Static analysis with Ghidra reveals:
+- **Crypto Engine**: Statically linked against **libecc** (ANSSI's Elliptic Curve library) using **NIST P-256 (`secp256r1`)**.
+- **Key Generation**: Uses `CryptGenRandom` to generate a single 32-byte secret key $d$, serving as both the **AES-256-CBC key** and the **ECDSA private key**.
+- **Nonce Leakage**: The 10-character hex extension suffix (e.g., `.vlny0742e9337a`) exposes the lower **40 bits** of the ephemeral nonce (`k = SHA256(plaintext)`).
+
+### Encrypted File Layout
+
+| Component | Offset / Range | Size | Description |
+| :--- | :--- | :--- | :--- |
+| **Signature $r$** | `0x00` – `0x1F` | 32 Bytes | ECDSA signature component $r$ |
+| **Signature $s$** | `0x20` – `0x3F` | 32 Bytes | ECDSA signature component $s$ |
+| **AES IV** | `0x40` – `0x4F` | 16 Bytes | AES-256-CBC Initialization Vector |
+| **AES Ciphertext** | `0x50` – EOF | Variable | Encrypted file payload |
+
+<Callout type="info">
+  To decrypt any file, strip the first 64 bytes (signature) and next 16 bytes (IV), then decrypt the payload using AES-256-CBC with the key $d$.
+</Callout>
+
+---
+
+## Cryptographic Vulnerability: Hidden Number Problem (HNP)
+
+The binary computes signatures as:
+```text
+k ≡ r + s·d (mod n)
+```
+
+Since the lower 40 bits of `k` are exposed in the filename extension (`leak`), we express `k` as:
+```text
+k = leak + 2⁴⁰ · x  (where x < 2²¹⁶)
+```
+
+### Deriving the HNP Relation
+
+Substituting `k` into the signature equation:
+
+1. **Substitute `k`:**
+   ```text
+   leak + 2⁴⁰ · x ≡ r + s·d (mod n)
+   ```
+
+2. **Rearrange & multiply by `(2⁴⁰)⁻¹ (mod n)`:**
+   ```text
+   x - (2⁴⁰)⁻¹ · s·d + (2⁴⁰)⁻¹ · (leak - r) ≡ 0 (mod n)
+   ```
+
+With 18 encrypted sample files, we construct an $(m+2) \times (m+2)$ lattice matrix and apply **LLL reduction** to recover the secret key $d$.
+
+---
+
+## Exploitation & Key Recovery
+
+### 1. Lattice Reduction (`solve.sage`)
+
+```bash
+sudo apt update && sudo apt install sagemath -y
+```
+
+<Callout type="info">
+  **Note:** SageMath is not available on Ubuntu 22.04 LTS. You can install it by adding the
+  EPEL repository to your APT sources.
+</Callout>
+
+
+```python
+from pathlib import Path
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+from Crypto.Util.number import bytes_to_long, long_to_bytes
+
+n = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
+B = 2^40     
+Binv = pow(B, -1, n)                   
+
+root  = Path('business-ctf-2025-dev')
+files = sorted(root.rglob('*.vlny*'))
+
+r, s, leak = [], [], []
+
+for f in files:
+    blob = f.read_bytes()
+    r.append(bytes_to_long(blob[  :32]))
+    s.append(bytes_to_long(blob[32:64]))
+    leak.append(int(f.suffix[5:], 16))
+
+m = len(r)
+a = []
+t = []
+
+for ri, si, li in zip(r, s, leak):
+    t.append((Binv * si) % n)
+    a.append((-Binv * (li - ri)) % n)
+
+M = identity_matrix(QQ, m)*n
+M = M.stack(vector(t))
+M = M.stack(vector(a))
+M = M.augment(vector([0]*m + [B/n, 0]))
+M = M.augment(vector([0]*m + [0,   B]))
+
+for row in M.LLL():
+    if abs(row[-1]) == B:
+        d = row[-2]*n/B % n
+        print(f"d = {hex(d)}")
+        break
+
+key = long_to_bytes(d)
+```
+
+```bash
+sage solve.sage
+```
+**Recovered Private Key:** `0xc5120eda0305ce74a125b5bd727e4fee5a24457ab376b69578c179f8440881e0`
+
+---
+
+### 2. Decryption & Flag Capture (`solve.py`)
+
+```python
+#!/usr/bin/env python3
+import sys
+import argparse
+from pathlib import Path
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+
+def solve(target: str = None, port: int = None) -> str:
+    key = bytes.fromhex('c5120eda0305ce74a125b5bd727e4fee5a24457ab376b69578c179f8440881e0')
+    flag_file = Path('business-ctf-2025-dev/crypto/curveware/flag.txt.vlny0742e9337a')
+    
+    blob = flag_file.read_bytes()
+    payload = blob[64:]
+    iv = payload[-16:]
+    ct = payload[:-16]
+
+    aes = AES.new(key, AES.MODE_CBC, iv)
+    pt = unpad(aes.decrypt(ct), 16)
+    return pt.decode().strip()
+
+def main():
+    print(f"[+] FLAG: {solve()}")
+
+if __name__ == "__main__":
+    main()
+```
+
+<SpoilerFlag label="HTB Challenge Flag" flag="HTB{m4lw4r3_d3v3l0p3rs_sh0uld_sTuDy_m0r3_crypt0}" />
+
+---
+
+## References
+
+1. **Hidden Number Problem (HNP)**: D. Boneh and R. Venkatesan, *"Hardness of Computing the Most Significant Bits of Secret Keys in Diffie-Hellman and Related Schemes"*, CRYPTO '96.
+2. **ECDSA Nonce Attacks**: N. Smart, *"The Exact Security of ECDSA of Small Nonces"*, 2001.
+3. **libecc Library**: ANSSI Open Source Elliptic Curve Cryptography Library — [GitHub Repository](https://github.com/ANSSI-FR/libecc).
+4. **SageMath LLL Reduction**: SageMath Documentation on [Integer Lattices and LLL Reduction](https://doc.sagemath.org/html/en/reference/matrices/sage/matrix/matrix_integer_dense.html#sage.matrix.matrix_integer_dense.Matrix_integer_dense.LLL).
