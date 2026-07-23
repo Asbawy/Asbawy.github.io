@@ -1,6 +1,27 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import hljs from "highlight.js";
-import { Check, Copy, WrapText, ListOrdered } from "lucide-react";
+import { Check, Copy, WrapText, ListOrdered, ChevronDown, ChevronUp } from "lucide-react";
+
+const COLLAPSE_LINE_THRESHOLD = 10;
+
+/**
+ * Recursively extracts plain text from React nodes/children, preventing "[object Object]" outputs.
+ */
+function getNodeText(node: React.ReactNode): string {
+  if (node === null || node === undefined || typeof node === "boolean") {
+    return "";
+  }
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(getNodeText).join("");
+  }
+  if (React.isValidElement(node)) {
+    return getNodeText((node.props as { children?: React.ReactNode }).children);
+  }
+  return "";
+}
 
 function parseLineHighlight(metastring?: string): Set<number> {
   const highlighted = new Set<number>();
@@ -29,7 +50,7 @@ function parseLineHighlight(metastring?: string): Set<number> {
 const SHELL_LANGUAGES = new Set(["bash", "powershell", "cmd", "shell", "sh"]);
 
 function highlightShellCommands(html: string): string {
-  if (!html) return html;
+  if (!html || typeof document === "undefined") return html;
 
   const temp = document.createElement("div");
   temp.innerHTML = html;
@@ -37,31 +58,15 @@ function highlightShellCommands(html: string): string {
   // Classes to skip — never re-color tokens inside comments or strings
   const SKIP_CLASSES = ["hljs-comment", "hljs-string", "hljs-meta"];
 
-  // Order matters! Longer/more-specific patterns must come first:
-  //  1. URLs (before IPs so http://10.10.14.5/foo stays as one URL)
-  //  2. IPs
-  //  3. PowerShell cmdlets — Verb-Noun pattern (before options so -Noun isn't stolen)
-  //  4. Hardcoded tool/command names
-  //  5. PowerShell variables ($name)
-  //  6. Option flags (-flag, --flag)
-  //  7. Pipe operator (|)
   const masterPattern = new RegExp(
     [
-      // 0: Shell/PowerShell comments (fallback if hljs misses them). Must come first so IPs inside comments aren't colored!
       `((?:^|\\s+)#.*)`,
-      // 1: URLs
       `(https?://[^\\s'"<>&]+|ftp://[^\\s'"<>&]+)`,
-      // 2: IPv4 addresses
       `(\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(?:/\\d{1,2})?\\b)`,
-      // 3: PowerShell cmdlets — Verb-Noun (e.g. ConvertTo-SecureString, Add-DomainGroupMember)
       `(\\b(?:Get|Set|New|Add|Remove|Clear|Import|Export|Start|Stop|Restart|Enable|Disable|Invoke|Register|Unregister|Test|Update|Find|Install|Uninstall|Save|Publish|Write|Read|Out|Enter|Exit|Connect|Disconnect|Move|Copy|Rename|Select|Where|ForEach|Sort|Group|Measure|Compare|Join|Split|Format|ConvertTo|ConvertFrom|Convert|Assert|Wait|Use|Show|Hide|Protect|Unprotect|Grant|Revoke|Block|Unblock|Send|Receive|Approve|Deny|Debug|Trace|Confirm|Submit|Undo|Redo|Open|Close|Lock|Unlock|Watch|Resolve|Expand|Compress|Push|Pop|Suspend|Resume|Reset|Checkpoint|Restore|Repair|Optimize|Mount|Dismount|Merge|Publish|Limit|Initialize|Request|Sync)-[A-Z][a-zA-Z]+\\b)`,
-      // 4: Hardcoded tools & commands
       `(\\b(?:msfvenom|grep|awk|sed|find|xargs|bloodyAD|Rubeus\\.exe|getTGT\\.py|gets4uTicket\\.py|impacket-psexec|impacket-secretsdump|impacket-getTGT|impacket-getST|impacket-ticketer|impacket-ntlmrelayx|dsacls|secretsdump|ticketer|SharpGPOAbuse|Certify|Certipy|ntlmrelayx|PetitPotam|bloodyad|crackmapexec|evil-winrm|bloodhound-python|kerbrute|mimikatz|hashcat|john|python3?|bash|sh|sudo|cmd|powershell|pwsh|curl|wget|scp|rsync|nc|ncat|socat|ssh|net|copy|move|del|type|certutil(?:\\.exe)?|bitsadmin|impacket-smbserver|ruby|php|perl|xxd|base64|openssl|chisel|nmap|proxychains|smbclient|rpcclient|ldapsearch|winrs|wmic|cat|ls|cd|echo|chmod|chown|tar|mkdir|rm|mv|cp|ping|ifconfig|ip|whoami|id|hostname|uname|iwr|iex|IEX|IWR)\\b)`,
-      // 5: PowerShell variables ($name, $_, $env:PATH, etc.)
       `(\\$(?:[a-zA-Z_]\\w*(?::[a-zA-Z_]\\w*)?|_))`,
-      // 6: Option flags (-Verbose, --output, etc.)
       `(\\B-{1,2}[a-zA-Z][a-zA-Z0-9_]*)`,
-      // 7: Pipe
       `(\\|)`,
     ].join("|"),
     "g",
@@ -70,20 +75,16 @@ function highlightShellCommands(html: string): string {
   const walk = (node: Node) => {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as HTMLElement;
-      // Skip elements with these hljs classes
       if (SKIP_CLASSES.some((c) => el.classList?.contains(c))) return;
-      // Walk children (snapshot to avoid live-mutation)
       Array.from(el.childNodes).forEach(walk);
     } else if (node.nodeType === Node.TEXT_NODE) {
       const text = node.nodeValue;
       if (!text || !text.trim()) return;
 
-      // Check for any match first to avoid unnecessary DOM work
       masterPattern.lastIndex = 0;
       if (!masterPattern.test(text)) return;
       masterPattern.lastIndex = 0;
 
-      // Build a document fragment with highlighted spans
       const frag = document.createDocumentFragment();
       let lastIndex = 0;
       let match: RegExpExecArray | null;
@@ -92,12 +93,10 @@ function highlightShellCommands(html: string): string {
         const [full, comment, url, ip, psCmdlet, command, psVar, option, pipe] = match;
         const matchStart = match.index;
 
-        // Add any text before this match
         if (matchStart > lastIndex) {
           frag.appendChild(document.createTextNode(text.slice(lastIndex, matchStart)));
         }
 
-        // Create the colored span
         const span = document.createElement("span");
         span.className = "font-mono";
         span.textContent = full;
@@ -128,7 +127,6 @@ function highlightShellCommands(html: string): string {
         lastIndex = matchStart + full.length;
       }
 
-      // Add remaining text after the last match
       if (lastIndex < text.length) {
         frag.appendChild(document.createTextNode(text.slice(lastIndex)));
       }
@@ -141,6 +139,51 @@ function highlightShellCommands(html: string): string {
   return temp.innerHTML;
 }
 
+/**
+ * Safely splits highlighted HTML into lines while keeping HTML tags balanced per line.
+ */
+function splitHtmlIntoLines(html: string): string[] {
+  const lines: string[] = [];
+  let currentLine = "";
+  const openTags: string[] = [];
+
+  const tagRegex = /(<\/?[a-z0-9]+[^>]*>)|(\r?\n)/gi;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = tagRegex.exec(html)) !== null) {
+    const textChunk = html.slice(lastIndex, match.index);
+    currentLine += textChunk;
+    lastIndex = tagRegex.lastIndex;
+
+    const [, tag, newline] = match;
+
+    if (newline) {
+      let closedLine = currentLine;
+      for (let i = openTags.length - 1; i >= 0; i--) {
+        const tagName = openTags[i].match(/<([a-z0-9]+)/i)?.[1];
+        if (tagName) closedLine += `</${tagName}>`;
+      }
+      lines.push(closedLine);
+      currentLine = openTags.join("");
+    } else if (tag) {
+      if (tag.startsWith("</")) {
+        openTags.pop();
+      } else if (!tag.endsWith("/>")) {
+        openTags.push(tag);
+      }
+      currentLine += tag;
+    }
+  }
+
+  currentLine += html.slice(lastIndex);
+  if (currentLine.length > 0 || lines.length === 0) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
 export function TerminalCode({
   title = "bash",
   metastring,
@@ -150,55 +193,80 @@ export function TerminalCode({
   metastring?: string;
   children: React.ReactNode;
 }) {
-  const codeRef = useRef<HTMLElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [isWrapped, setIsWrapped] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const highlightedLines = useMemo(() => parseLineHighlight(metastring), [metastring]);
 
-  useEffect(() => {
-    if (codeRef.current) {
-      if (typeof children === "string") {
-        codeRef.current.textContent = children;
+  const rawCodeString = useMemo(() => {
+    return getNodeText(children);
+  }, [children]);
+
+  // Compute processed lines with balanced HTML highlighting
+  const processedLines = useMemo(() => {
+    let highlightedHtml = "";
+    try {
+      if (hljs.getLanguage(title)) {
+        highlightedHtml = hljs.highlight(rawCodeString, { language: title }).value;
+      } else {
+        highlightedHtml = hljs.highlightAuto(rawCodeString).value;
       }
-
-      hljs.highlightElement(codeRef.current);
-
-      const rawHtml = codeRef.current.innerHTML;
-      const lines = rawHtml.split(/\r?\n/);
-
-      if (lines.length > 0 && lines[lines.length - 1] === "") {
-        lines.pop();
-      }
-
-      const isShell = SHELL_LANGUAGES.has(title.toLowerCase());
-      const wrappedHtml = lines
-        .map((line, idx) => {
-          const lineNum = idx + 1;
-          const isHighlighted = highlightedLines.has(lineNum);
-          const highlightClass = isHighlighted
-            ? "bg-foreground/10 border-l-2 border-foreground/40 -mx-4 px-4"
-            : "";
-          const processedLine = isShell ? highlightShellCommands(line) : line;
-          return `<span class="code-line ${highlightClass}">${processedLine || " "}</span>`;
-        })
-        .join("");
-
-      codeRef.current.innerHTML = wrappedHtml;
+    } catch {
+      highlightedHtml = rawCodeString
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
     }
-  }, [children, title, highlightedLines]);
+
+    const isShell = SHELL_LANGUAGES.has(title.toLowerCase());
+    if (isShell) {
+      highlightedHtml = highlightShellCommands(highlightedHtml);
+    }
+
+    const lines = splitHtmlIntoLines(highlightedHtml);
+    if (lines.length > 0 && lines[lines.length - 1].trim() === "") {
+      lines.pop();
+    }
+    return lines;
+  }, [rawCodeString, title]);
+
+  const totalLines = processedLines.length;
+  const isCollapsible = totalLines > COLLAPSE_LINE_THRESHOLD;
+  const shouldCollapse = isCollapsible && !isExpanded;
 
   const handleCopy = () => {
-    if (typeof children === "string") {
-      navigator.clipboard.writeText(children);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard.writeText(rawCodeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleToggleExpand = () => {
+    if (isExpanded) {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const targetY = scrollTop + rect.top - 80;
+        setIsExpanded(false);
+        setTimeout(() => {
+          window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+        }, 10);
+      } else {
+        setIsExpanded(false);
+      }
+    } else {
+      setIsExpanded(true);
     }
   };
 
   return (
-    <div className="my-5 rounded-md border border-border bg-card/65 backdrop-blur-sm overflow-hidden shadow-lg group text-foreground light:border-border/60 light:bg-white/40 light:backdrop-blur-md light:text-[#333333] light:shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+    <div
+      ref={containerRef}
+      className="my-5 rounded-md border border-border bg-card/65 backdrop-blur-sm overflow-hidden shadow-lg group text-foreground light:border-border/60 light:bg-white/40 light:backdrop-blur-md light:text-[#333333] light:shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+    >
+      {/* Top Header Bar */}
       <div className="flex items-center justify-between border-b border-border bg-secondary/80 px-3 py-2 select-none light:border-border/60 light:bg-white/50">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="h-3 w-3 rounded-full bg-[oklch(0.7_0.25_25)]" />
@@ -249,20 +317,82 @@ export function TerminalCode({
           </button>
         </div>
       </div>
-      <pre
-        className={`px-4 py-3 text-[12.5px] leading-relaxed text-foreground/90 font-mono ${
-          isWrapped ? "whitespace-pre-wrap break-all" : "whitespace-pre overflow-x-auto break-all"
-        }`}
-      >
-        <code
-          ref={codeRef}
-          className={`language-${title} !bg-transparent !p-0 ${
-            showLineNumbers ? "show-line-numbers" : ""
+
+      {/* Code Container */}
+      <div className="relative">
+        <div
+          className={`py-3 transition-[max-height] duration-300 ease-in-out ${
+            isWrapped ? "overflow-x-hidden" : "overflow-x-auto"
           }`}
+          style={
+            shouldCollapse
+              ? { maxHeight: "250px", overflowY: "hidden" }
+              : { maxHeight: "none" }
+          }
         >
-          {children}
-        </code>
-      </pre>
+          {processedLines.map((lineHtml, idx) => {
+            const lineNum = idx + 1;
+            const isHighlighted = highlightedLines.has(lineNum);
+
+            return (
+              <div
+                key={idx}
+                className={`flex flex-row items-baseline w-full px-4 hover:bg-foreground/[0.02] ${
+                  isHighlighted ? "bg-foreground/10 border-l-2 border-foreground/40" : ""
+                }`}
+              >
+                {showLineNumbers && (
+                  <span className="w-9 shrink-0 select-none text-right pr-3 font-mono text-[11px] text-muted-foreground/40">
+                    {lineNum}
+                  </span>
+                )}
+                <span
+                  className={`grow font-mono text-[12.5px] leading-[1.6] text-foreground/90 ${
+                    isWrapped ? "whitespace-pre-wrap break-all" : "whitespace-pre"
+                  }`}
+                  dangerouslySetInnerHTML={{ __html: lineHtml || "&nbsp;" }}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Gradient Fade Mask when Collapsed */}
+        {shouldCollapse && (
+          <div
+            className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(to bottom, transparent 0%, hsl(var(--card)) 100%)",
+            }}
+          />
+        )}
+      </div>
+
+      {/* Expand / Collapse Action Bar */}
+      {isCollapsible && (
+        <button
+          onClick={handleToggleExpand}
+          className="group/toggle flex items-center justify-center gap-2 w-full py-2.5 px-4 border-t border-border/50 bg-secondary/40 hover:bg-secondary/80 transition-all duration-200 cursor-pointer select-none light:bg-white/30 light:hover:bg-white/60 light:border-border/30"
+          title={isExpanded ? "Show first 10 lines" : `Show all ${totalLines} lines`}
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="h-4 w-4 text-muted-foreground group-hover/toggle:text-foreground transition-transform duration-200 group-hover/toggle:-translate-y-0.5" />
+              <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-muted-foreground group-hover/toggle:text-foreground">
+                Show first 10 lines
+              </span>
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-4 w-4 text-muted-foreground group-hover/toggle:text-foreground transition-transform duration-200 group-hover/toggle:translate-y-0.5" />
+              <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-muted-foreground group-hover/toggle:text-foreground">
+                Show all {totalLines} lines
+              </span>
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }

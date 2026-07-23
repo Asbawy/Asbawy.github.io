@@ -609,32 +609,13 @@
   color: #22863a !important;
 }
 
-/* Code block line numbers and highlight styles */
-code.show-line-numbers {
-  counter-reset: line;
-}
-
-code.show-line-numbers .code-line {
-  position: relative;
-  padding-left: 2.8rem;
-}
-
-code.show-line-numbers .code-line::before {
-  counter-increment: line;
-  content: counter(line);
-  position: absolute;
-  left: 0;
-  width: 2rem;
-  text-align: right;
-  color: var(--muted-foreground);
-  opacity: 0.5;
-  user-select: none;
-  font-size: 11px;
-}
-
+/* Code block line styles */
 .code-line {
   display: block;
-  min-height: 1.25rem;
+  width: 100%;
+  min-height: 1.5rem;
+  line-height: 1.5rem;
+  box-sizing: border-box;
 }
 
 /* Print Stylesheet */
