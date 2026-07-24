@@ -16,6 +16,7 @@ import { PlatformIcon, SpoilerFlag, KillChain, SkillMatrix, CategoryIcon } from 
 import { ImageLightbox } from "@/components/cyber/ImageLightbox";
 import { ShareButtons } from "@/components/cyber/ShareButtons";
 import { AuthorBio } from "@/components/cyber/AuthorBio";
+import { useSharedMdxComponents } from "@/components/cyber/SharedMdxComponents";
 import { useArticleToc } from "@/hooks/use-article-toc";
 
 export const Route = createFileRoute("/writeups/$slug")({
@@ -165,118 +166,7 @@ function WriteupPage() {
   const config = platformConfig[writeup.platform] || platformConfig.Other;
   const PlatformIcon = config.icon;
 
-  const components = useMemo(
-    () => ({
-      h1: (props: any) => (
-        <h1 className="mt-8 mb-4 text-2xl md:text-3xl font-semibold text-foreground" {...props} />
-      ),
-      h2: (props: any) => (
-        <h2
-          className="scroll-mt-24 mt-10 mb-4 font-mono text-lg text-foreground border-l-2 border-foreground/30 pl-3"
-          {...props}
-        >
-          <span className="text-foreground/50 mr-2">▸</span>
-          {props.children}
-        </h2>
-      ),
-      h3: (props: any) => (
-        <h3 className="mt-8 mb-3 font-mono text-base text-foreground/90" {...props} />
-      ),
-      h4: (props: any) => (
-        <h4 className="mt-6 mb-2 font-mono text-sm text-foreground/80" {...props} />
-      ),
-      p: (props: any) => <p className="my-4 text-[15px] leading-7 text-foreground/85" {...props} />,
-      ul: (props: any) => (
-        <ul
-          className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-disc ml-5"
-          {...props}
-        />
-      ),
-      ol: (props: any) => (
-        <ol
-          className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-decimal ml-5"
-          {...props}
-        />
-      ),
-      li: (props: any) => <li className="marker:text-foreground/40" {...props} />,
-      hr: (props: any) => <hr className="my-8 border-panel-border" {...props} />,
-      a: (props: any) => (
-        <a
-          className="text-foreground underline underline-offset-2 decoration-foreground/30 hover:decoration-foreground transition-colors"
-          target="_blank"
-          rel="noopener noreferrer"
-          {...props}
-        />
-      ),
-      strong: (props: any) => <strong className="font-semibold text-foreground" {...props} />,
-      code: (props: any) => {
-        const isBlock =
-          Boolean(props.className) ||
-          (typeof props.children === "string" && props.children.includes("\n"));
-
-        if (isBlock) {
-          const language = props.className
-            ? props.className.replace(/language-/, "").replace("hljs", "").trim() || "code"
-            : "code";
-          if (language === "mermaid") {
-            return <Mermaid chart={props.children as string} />;
-          }
-          return <TerminalCode title={language}>{props.children as string}</TerminalCode>;
-        }
-        return (
-          <code className="rounded bg-white/[0.06] border border-white/[0.08] px-1.5 py-0.5 text-[12px] text-foreground/90 font-mono [word-break:break-word] inline-block max-w-full">
-            {props.children}
-          </code>
-        );
-      },
-      pre: (props: any) => <>{props.children}</>,
-      img: (props: any) => (
-        <figure className="my-8">
-          <img
-            {...props}
-            className="w-full rounded border border-panel-border cursor-zoom-in"
-            loading="lazy"
-            onClick={() => setLightboxSrc(props.src)}
-          />
-          {props.alt && (
-            <figcaption className="mt-2 text-center font-mono text-[11px] text-muted-foreground">
-              {props.alt}
-            </figcaption>
-          )}
-        </figure>
-      ),
-      table: (props: any) => (
-        <div className="my-6 overflow-x-auto rounded border border-panel-border">
-          <table
-            className="w-full min-w-[320px] border-collapse font-mono text-[13px]"
-            {...props}
-          />
-        </div>
-      ),
-      thead: (props: any) => <thead {...props} />,
-      tr: (props: any) => (
-        <tr className="border-b border-panel-border/50 last:border-0" {...props} />
-      ),
-      th: (props: any) => (
-        <th
-          className="px-3 py-2 text-left font-semibold text-foreground border-b border-white/[0.06] bg-white/[0.03]"
-          {...props}
-        />
-      ),
-      td: (props: any) => <td className="px-3 py-2 align-top text-foreground/85" {...props} />,
-      blockquote: (props: any) => (
-        <blockquote
-          className="border-l-4 border-foreground/20 pl-4 italic my-4 text-foreground/70 bg-white/[0.03] py-2 rounded-r"
-          {...props}
-        />
-      ),
-      SpoilerFlag,
-      KillChain,
-      SkillMatrix,
-      CategoryIcon,
-    }),
-    [setLightboxSrc],
-  );
+  const components = useSharedMdxComponents(setLightboxSrc);
 
   const MDXContent = WriteupMdxComponents[writeup.slug] || (() => <div>Component not found</div>);
 
@@ -293,96 +183,109 @@ function WriteupPage() {
 
   return (
     <CyberLayout>
-      <article className="px-6 md:px-10 py-10 max-w-6xl glass-panel rounded-xl mx-4 my-6">
+      {/* Global Scroll Progress Bar */}
+      <div className="fixed top-0 left-0 h-1 z-50 w-full bg-transparent">
+        <div 
+          className="h-full bg-foreground/80 transition-all duration-100 ease-out shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
         <Link
           to="/writeups"
-          className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> cd ../writeups
         </Link>
 
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10">
-          <div className="min-w-0">
-            {/* Meta row */}
-            <div className="font-mono text-[11px] flex flex-wrap items-center gap-3">
-              <span className="text-muted-foreground">{writeup.date}</span>
-              <span className="text-foreground/20">·</span>
-              <span className={`flex items-center gap-1.5 ${config.color}`}>
-                <PlatformIcon platform={writeup.platform} className="h-4 w-4" />
-                {writeup.platform}
-              </span>
-              <span className="text-foreground/20">·</span>
-              <span className="text-muted-foreground">{writeup.type}</span>
-              <span className="text-foreground/20">·</span>
-              <span className="text-accent-link">{writeup.readTime}</span>
-            </div>
-
-            {/* Title */}
-            <h1 className="mt-3 text-2xl md:text-4xl font-semibold leading-tight text-foreground">
-              {writeup.title}
-            </h1>
-
-            {/* Difficulty + OS + Category badge row */}
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <span
-                className={`font-mono text-[11px] px-2.5 py-1 rounded border ${difficultyBg(
-                  writeup.difficulty,
-                )} ${difficultyColor(writeup.difficulty)}`}
-              >
-                {writeup.difficulty}
-              </span>
-              {writeup.category && (
-                <span className="flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300">
-                  <CategoryIcon category={writeup.category} className="h-3.5 w-3.5" />
-                  {writeup.category}
+        <div className="mt-2 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-12">
+          <div className="min-w-0 flex flex-col items-start">
+            
+            {/* Mission Briefing Card */}
+            <div className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] p-6 mb-10 shadow-[0_0_15px_rgba(0,0,0,0.2)] relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-foreground/20 to-transparent opacity-50"></div>
+              
+              <div className="font-mono text-[11px] flex flex-wrap items-center gap-3 mb-4 tracking-wider">
+                <span className="text-muted-foreground">{writeup.date}</span>
+                <span className="text-foreground/20">·</span>
+                <span className={`flex items-center gap-1.5 ${config.color}`}>
+                  <PlatformIcon platform={writeup.platform} className="h-4 w-4" />
+                  {writeup.platform}
                 </span>
-              )}
-              {writeup.os && (
-                <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
-                  {osIcon(writeup.os)} {writeup.os}
-                </span>
-              )}
-              {writeup.retired !== undefined && (
+                <span className="text-foreground/20">·</span>
+                <span className="text-muted-foreground">{writeup.type}</span>
+                <span className="text-foreground/20">·</span>
+                <span className="text-foreground/60">{writeup.readTime}</span>
+              </div>
+
+              <h1 className="text-3xl md:text-5xl font-bold leading-tight text-foreground tracking-tight mb-6">
+                {writeup.title}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-3 mb-6">
                 <span
-                  className={`font-mono text-[10px] px-2 py-0.5 rounded border ${
-                    writeup.retired
-                      ? "border-foreground/10 text-muted-foreground"
-                      : "border-[#9FEF00]/20 text-[#9FEF00]"
-                  }`}
+                  className={`font-mono text-[11px] px-2.5 py-1 rounded border ${difficultyBg(
+                    writeup.difficulty,
+                  )} ${difficultyColor(writeup.difficulty)} uppercase font-bold tracking-widest`}
                 >
-                  {writeup.retired ? "retired" : "active"}
+                  {writeup.difficulty}
                 </span>
-              )}
-            </div>
+                {writeup.category && (
+                  <span className="flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300 uppercase font-bold tracking-widest">
+                    <CategoryIcon category={writeup.category} className="h-3.5 w-3.5" />
+                    {writeup.category}
+                  </span>
+                )}
+                {writeup.os && (
+                  <span className="flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded border border-white/10 bg-white/5 text-muted-foreground uppercase font-bold tracking-widest">
+                    {osIcon(writeup.os)} {writeup.os}
+                  </span>
+                )}
+                {writeup.retired !== undefined && (
+                  <span
+                    className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase font-bold tracking-widest ${
+                      writeup.retired
+                        ? "border-foreground/10 text-muted-foreground bg-white/5"
+                        : "border-[#9FEF00]/20 text-[#9FEF00] bg-[#9FEF00]/5"
+                    }`}
+                  >
+                    {writeup.retired ? "retired" : "active"}
+                  </span>
+                )}
+              </div>
 
-            {/* Tags */}
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {writeup.tags?.map((t) => (
-                <Tag
-                  key={t}
-                  variant={tagVariantFor(t)}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleTagClick(t, navigate);
-                  }}
-                >
-                  {t}
-                </Tag>
-              ))}
+              <div className="flex flex-wrap gap-2">
+                {writeup.tags?.map((t) => (
+                  <Tag
+                    key={t}
+                    variant={tagVariantFor(t)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleTagClick(t, navigate);
+                    }}
+                  >
+                    {t}
+                  </Tag>
+                ))}
+              </div>
             </div>
 
             {/* Share */}
-            <div className="mt-5">
+            <div className="mb-8 w-full max-w-[75ch]">
               <ShareButtons title={writeup.title} slug={writeup.slug} />
             </div>
 
             {/* MDX Content */}
-            <div className="mt-6">
+            <div className="w-full text-[16px]">
               <Suspense
                 fallback={
-                  <div className="animate-pulse text-foreground/60 font-mono">
-                    Loading exploit chain...
+                  <div className="animate-pulse text-foreground/60 font-mono flex flex-col gap-4">
+                    <div className="h-4 bg-white/10 rounded w-3/4"></div>
+                    <div className="h-4 bg-white/10 rounded w-full"></div>
+                    <div className="h-4 bg-white/10 rounded w-5/6"></div>
+                    <div className="mt-8 text-sm">[ LOADING EXPLOIT CHAIN... ]</div>
                   </div>
                 }
               >
@@ -391,7 +294,7 @@ function WriteupPage() {
             </div>
 
             {/* Share bottom */}
-            <div className="mt-10">
+            <div className="mt-16 w-full max-w-[75ch]">
               <ShareButtons title={writeup.title} slug={writeup.slug} />
             </div>
 
@@ -424,20 +327,22 @@ function WriteupPage() {
                 </div>
 
                 {headings.length > 0 && (
-                  <ol className="space-y-1 font-mono text-xs">
+                  <ol className="space-y-1.5 font-mono text-xs">
                     {headings.map((s) => {
                       const isActive = activeHeading === s.id;
                       return (
                         <li key={s.id}>
                           <a
                             href={`#${s.id}`}
-                            className={`flex items-center gap-2 rounded px-2 py-1.5 transition-colors ${
+                            className={`flex items-center gap-2 rounded px-2.5 py-1.5 transition-all duration-300 ${
                               isActive
-                                ? "text-foreground bg-white/[0.05]"
-                                : "text-muted-foreground hover:text-foreground"
+                                ? "text-foreground bg-white/[0.08] shadow-[inset_2px_0_0_0_currentColor]"
+                                : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
                             }`}
                           >
-                            <span>{isActive ? "▸" : "·"}</span>
+                            <span className={isActive ? "opacity-100 text-foreground" : "opacity-40"}>
+                              {isActive ? "▸" : "·"}
+                            </span>
                             <span className="truncate">{s.title}</span>
                           </a>
                         </li>

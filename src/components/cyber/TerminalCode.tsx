@@ -264,14 +264,14 @@ export function TerminalCode({
   return (
     <div
       ref={containerRef}
-      className="my-5 rounded-md border border-border bg-card/65 backdrop-blur-sm overflow-hidden shadow-lg group text-foreground light:border-border/60 light:bg-white/40 light:backdrop-blur-md light:text-[#333333] light:shadow-[0_8px_30px_rgb(0,0,0,0.06)]"
+      className="my-6 rounded-xl border border-white/[0.08] bg-[#0a0a0c]/90 backdrop-blur-md shadow-[0_8px_30px_rgba(0,0,0,0.6)] overflow-hidden group text-foreground light:border-border/60 light:bg-white/40 light:backdrop-blur-md light:text-[#333333] light:shadow-[0_8px_30px_rgb(0,0,0,0.06)] max-w-[75ch]"
     >
       {/* Top Header Bar */}
-      <div className="flex items-center justify-between border-b border-border bg-secondary/80 px-3 py-2 select-none light:border-border/60 light:bg-white/50">
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="h-3 w-3 rounded-full bg-[oklch(0.7_0.25_25)]" />
-          <span className="h-3 w-3 rounded-full bg-[oklch(0.82_0.18_80)]" />
-          <span className="h-3 w-3 rounded-full bg-white/20 light:bg-black/20" />
+      <div className="flex items-center justify-between border-b border-white/[0.05] bg-black/40 px-4 py-2.5 select-none light:border-border/60 light:bg-white/50">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="h-3 w-3 rounded-full bg-[#ff5f56] shadow-[0_0_5px_rgba(255,95,86,0.3)] border border-[#e0443e]" />
+          <span className="h-3 w-3 rounded-full bg-[#ffbd2e] shadow-[0_0_5px_rgba(255,189,46,0.3)] border border-[#dea123]" />
+          <span className="h-3 w-3 rounded-full bg-[#27c93f] shadow-[0_0_5px_rgba(39,201,63,0.3)] border border-[#1aab29]" />
         </div>
         <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground ml-4 truncate light:text-[#666666]">
           ~ / {title}

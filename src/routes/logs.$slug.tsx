@@ -12,6 +12,7 @@ import { ShareButtons } from "@/components/cyber/ShareButtons";
 import { AuthorBio } from "@/components/cyber/AuthorBio";
 import { getRelatedPosts } from "@/lib/related-posts";
 import { useArticleToc } from "@/hooks/use-article-toc";
+import { useSharedMdxComponents } from "@/components/cyber/SharedMdxComponents";
 
 export const Route = createFileRoute("/logs/$slug")({
   loader: async ({ params }) => {
@@ -28,43 +29,43 @@ export const Route = createFileRoute("/logs/$slug")({
     return {
       meta: p
         ? [
-            { title: `${p.title} — Asbawy Blog` },
-            { name: "description", content: p.excerpt },
-            { property: "og:title", content: p.title },
-            { property: "og:description", content: p.excerpt },
-            { property: "og:type", content: "article" },
-            { property: "og:url", content: url },
-            { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
-            { name: "twitter:card", content: "summary_large_image" },
-            { name: "twitter:image", content: "https://asbawy.github.io/eye-of-ra.png" },
-          ]
+          { title: `${p.title} — Asbawy Blog` },
+          { name: "description", content: p.excerpt },
+          { property: "og:title", content: p.title },
+          { property: "og:description", content: p.excerpt },
+          { property: "og:type", content: "article" },
+          { property: "og:url", content: url },
+          { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
+          { name: "twitter:card", content: "summary_large_image" },
+          { name: "twitter:image", content: "https://asbawy.github.io/eye-of-ra.png" },
+        ]
         : [{ title: "Asbawy Blog" }],
       links: [{ rel: "canonical", href: url }],
       scripts: p
         ? [
-            {
-              type: "application/ld+json",
-              children: JSON.stringify({
-                "@context": "https://schema.org",
-                "@type": "BlogPosting",
-                headline: p.title,
-                description: p.excerpt,
-                datePublished: p.date,
-                author: {
-                  "@type": "Person",
-                  name: "Asbawy",
-                  url: "https://asbawy.github.io",
-                },
-                publisher: {
-                  "@type": "Person",
-                  name: "Asbawy",
-                },
-                url,
-                mainEntityOfPage: { "@type": "WebPage", "@id": url },
-                keywords: p.tags.join(", "),
-              }),
-            },
-          ]
+          {
+            type: "application/ld+json",
+            children: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BlogPosting",
+              headline: p.title,
+              description: p.excerpt,
+              datePublished: p.date,
+              author: {
+                "@type": "Person",
+                name: "Asbawy",
+                url: "https://asbawy.github.io",
+              },
+              publisher: {
+                "@type": "Person",
+                name: "Asbawy",
+              },
+              url,
+              mainEntityOfPage: { "@type": "WebPage", "@id": url },
+              keywords: p.tags.join(", "),
+            }),
+          },
+        ]
         : [],
     };
   },
@@ -93,121 +94,13 @@ function PostPage() {
   const { post } = Route.useLoaderData();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const { headings, activeId: activeHeading, progress } = useArticleToc("article", [2], post.slug);
-
-  const components = useMemo(
-    () => ({
-      h1: (props: any) => (
-        <h1 className="mt-8 mb-4 text-2xl md:text-3xl font-semibold text-foreground" {...props} />
-      ),
-      h2: (props: any) => (
-        <h2
-          className="scroll-mt-24 mt-10 mb-4 font-mono text-lg text-foreground border-l-2 border-foreground/30 pl-3"
-          {...props}
-        >
-          <span className="text-foreground/50 mr-2">▸</span>
-          {props.children}
-        </h2>
-      ),
-      h3: (props: any) => (
-        <h3 className="mt-8 mb-3 font-mono text-base text-foreground/90" {...props} />
-      ),
-      h4: (props: any) => (
-        <h4 className="mt-6 mb-2 font-mono text-sm text-foreground/80" {...props} />
-      ),
-      p: (props: any) => <p className="my-4 text-[15px] leading-7 text-foreground/85" {...props} />,
-      ul: (props: any) => (
-        <ul
-          className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-disc ml-5"
-          {...props}
-        />
-      ),
-      ol: (props: any) => (
-        <ol
-          className="my-4 space-y-2 text-[15px] leading-7 text-foreground/85 list-decimal ml-5"
-          {...props}
-        />
-      ),
-      li: (props: any) => <li className="marker:text-foreground/40" {...props} />,
-      hr: (props: any) => <hr className="my-8 border-panel-border" {...props} />,
-      a: (props: any) => (
-        <a
-          className="text-foreground underline underline-offset-2 decoration-foreground/30 hover:decoration-foreground transition-colors"
-          target="_blank"
-          rel="noopener noreferrer"
-          {...props}
-        />
-      ),
-      strong: (props: any) => <strong className="font-semibold text-foreground" {...props} />,
-      code: (props: any) => {
-        const isBlock =
-          Boolean(props.className) ||
-          (typeof props.children === "string" && props.children.includes("\n"));
-
-        if (isBlock) {
-          const language = props.className
-            ? props.className.replace(/language-/, "").replace("hljs", "").trim() || "code"
-            : "code";
-          if (language === "mermaid") {
-            return <Mermaid chart={props.children as string} />;
-          }
-          return <TerminalCode title={language}>{props.children as string}</TerminalCode>;
-        }
-        return (
-          <code className="rounded bg-white/[0.06] border border-white/[0.08] px-1.5 py-0.5 text-[12px] text-foreground/90 font-mono [word-break:break-word] inline-block max-w-full">
-            {props.children}
-          </code>
-        );
-      },
-      pre: (props: any) => <>{props.children}</>, // The internal code element renders TerminalCode
-      img: (props: any) => (
-        <figure className="my-8">
-          <img
-            {...props}
-            className="w-full rounded border border-panel-border cursor-zoom-in"
-            loading="lazy"
-            onClick={() => setLightboxSrc(props.src)}
-          />
-          {props.alt && (
-            <figcaption className="mt-2 text-center font-mono text-[11px] text-muted-foreground">
-              {props.alt}
-            </figcaption>
-          )}
-        </figure>
-      ),
-      table: (props: any) => (
-        <div className="my-6 overflow-x-auto rounded border border-panel-border">
-          <table
-            className="w-full min-w-[320px] border-collapse font-mono text-[13px]"
-            {...props}
-          />
-        </div>
-      ),
-      thead: (props: any) => <thead {...props} />,
-      tr: (props: any) => (
-        <tr className="border-b border-panel-border/50 last:border-0" {...props} />
-      ),
-      th: (props: any) => (
-        <th
-          className="px-3 py-2 text-left font-semibold text-foreground border-b border-white/[0.06] bg-white/[0.03]"
-          {...props}
-        />
-      ),
-      td: (props: any) => <td className="px-3 py-2 align-top text-foreground/85" {...props} />,
-      blockquote: (props: any) => (
-        <blockquote
-          className="border-l-4 border-foreground/20 pl-4 italic my-4 text-foreground/70 bg-white/[0.03] py-2 rounded-r"
-          {...props}
-        />
-      ),
-    }),
-    [setLightboxSrc],
-  );
+  const components = useSharedMdxComponents(setLightboxSrc);
 
   const MDXContent = MdxComponents[post.slug] || (() => <div>Component not found</div>);
 
   return (
     <CyberLayout>
-      <article className="px-6 md:px-10 py-10 max-w-6xl glass-panel rounded-xl mx-4 my-6">
+      <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
         <Link
           to="/logs"
           className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-foreground transition-colors"
@@ -319,11 +212,10 @@ function PostPage() {
                         <li key={s.id}>
                           <a
                             href={`#${s.id}`}
-                            className={`flex items-center gap-2 rounded px-2 py-1.5 transition-colors ${
-                              isActive
+                            className={`flex items-center gap-2 rounded px-2 py-1.5 transition-colors ${isActive
                                 ? "text-foreground bg-white/[0.05]"
                                 : "text-muted-foreground hover:text-foreground"
-                            }`}
+                              }`}
                           >
                             <span>{isActive ? "▸" : "·"}</span>
                             <span className="truncate">{s.title}</span>
