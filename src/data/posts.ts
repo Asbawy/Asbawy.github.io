@@ -1,7 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ComponentType } from "react";
-import { lazy } from "react";
-
 export type PostMeta = {
   slug: string;
   title: string;
@@ -25,6 +22,7 @@ const mdxModules = import.meta.glob<PostMeta>("./posts/*.mdx", {
 
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: PostMeta }>(
   "./posts/*.mdx",
+  { eager: true }
 );
 
 export const postsMeta: PostMeta[] = Object.values(mdxModules)
@@ -36,18 +34,10 @@ export function getPostMeta(slug: string): PostMeta | undefined {
   return postsMeta.find((p) => p.slug === slug);
 }
 
-// Export a dictionary of lazy-loaded MDX components so they don't pass through the loader
 export const MdxComponents: Record<string, ComponentType<any>> = Object.fromEntries(
-  Object.entries(contentModules).map(([path, resolver]) => {
+  Object.entries(contentModules).map(([path, mod]) => {
     const slug = path.replace("./posts/", "").replace(".mdx", "");
-    // Use React.lazy for dynamic chunking without breaking SSR
-    return [
-      slug,
-      lazy(async () => {
-        const mod = await resolver();
-        return { default: mod.default };
-      }),
-    ];
+    return [slug, mod.default];
   }),
 );
 
@@ -55,6 +45,6 @@ export async function getPostContent(slug: string): Promise<Post | undefined> {
   const key = Object.keys(contentModules).find((k) => k.includes(`/${slug}.mdx`));
   if (!key) return undefined;
 
-  const mod = await contentModules[key]();
+  const mod = contentModules[key];
   return mod.frontmatter as Post;
 }

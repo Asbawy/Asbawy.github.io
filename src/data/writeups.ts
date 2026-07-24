@@ -1,7 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ComponentType } from "react";
-import { lazy } from "react";
-
 export type WriteupMeta = {
   slug: string;
   title: string;
@@ -39,6 +36,7 @@ const mdxModules = import.meta.glob<WriteupMeta>("./writeups/*.mdx", {
 
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: WriteupMeta }>(
   "./writeups/*.mdx",
+  { eager: true }
 );
 
 export const writeupsMeta: WriteupMeta[] = Object.values(mdxModules)
@@ -50,17 +48,10 @@ export function getWriteupMeta(slug: string): WriteupMeta | undefined {
   return writeupsMeta.find((p) => p.slug === slug);
 }
 
-// Export a dictionary of lazy-loaded MDX components
 export const WriteupMdxComponents: Record<string, ComponentType<any>> = Object.fromEntries(
-  Object.entries(contentModules).map(([path, resolver]) => {
+  Object.entries(contentModules).map(([path, mod]) => {
     const slug = path.replace("./writeups/", "").replace(".mdx", "");
-    return [
-      slug,
-      lazy(async () => {
-        const mod = await resolver();
-        return { default: mod.default };
-      }),
-    ];
+    return [slug, mod.default];
   }),
 );
 
@@ -68,7 +59,7 @@ export async function getWriteupContent(slug: string): Promise<Writeup | undefin
   const key = Object.keys(contentModules).find((k) => k.includes(`/${slug}.mdx`));
   if (!key) return undefined;
 
-  const mod = await contentModules[key]();
+  const mod = contentModules[key];
   return mod.frontmatter as Writeup;
 }
 

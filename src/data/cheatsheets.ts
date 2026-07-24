@@ -1,7 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { ComponentType } from "react";
-import { lazy } from "react";
-
 export type CheatsheetMeta = {
   title?: string;
   excerpt?: string;
@@ -28,9 +25,10 @@ const mdxModules = import.meta.glob<CheatsheetMeta>("./cheatsheets/**/*.mdx", {
   import: "frontmatter",
 });
 
-// Lazy glob for actual React components
+// Eager glob for actual React components to remove loading delay
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: CheatsheetMeta }>(
   "./cheatsheets/**/*.mdx",
+  { eager: true }
 );
 
 export const cheatsheetFiles = Object.entries(mdxModules).map(([path, mod]) => {
@@ -77,14 +75,8 @@ export function getCheatsheetTree(): FileNode[] {
 }
 
 export const CheatsheetMdxComponents: Record<string, ComponentType<any>> = Object.fromEntries(
-  Object.entries(contentModules).map(([path, resolver]) => {
+  Object.entries(contentModules).map(([path, mod]) => {
     const cleanPath = path.replace("./cheatsheets/", "").replace(".mdx", "");
-    return [
-      cleanPath,
-      lazy(async () => {
-        const mod = await resolver();
-        return { default: mod.default };
-      }),
-    ];
+    return [cleanPath, mod.default];
   }),
 );
