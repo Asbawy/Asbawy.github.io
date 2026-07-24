@@ -2,13 +2,10 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Swords,
   BookOpen,
-  ChevronRight,
-  Activity,
   FileTerminal,
-  Crosshair,
   Search,
 } from "lucide-react";
-import { CyberLayout, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
+import { CyberLayout } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
 import { cheatsheetFiles } from "@/data/cheatsheets";
 import { writeupsMeta } from "@/data/writeups";
@@ -46,133 +43,126 @@ function Index() {
 
   return (
     <CyberLayout>
-      <section className="px-4 md:px-10 py-8 max-w-6xl space-y-10">
-        {/* ── Minimal Space Hero Section ──────────────────── */}
-        <div className="rounded-xl border border-border bg-card/40 p-6 md:p-8 font-mono">
-          <div className="text-[11px] text-muted-foreground mb-3 flex items-center gap-1.5">
-            <span className="text-foreground font-semibold">asbawy</span>
-            <span className="opacity-40">:</span>
-            <span className="text-muted-foreground">~/space</span>
-            <span className="opacity-40">$</span>
-            <span className="text-muted-foreground/60">cat status.log</span>
+      <section className="px-4 md:px-10 py-8 max-w-6xl space-y-12">
+        {/* ── Retro Minimalist Hero Section ──────────────────── */}
+        <div className="rounded-xl border border-border bg-card/80 p-6 md:p-8 font-mono shadow-xl transition-all duration-300 hover:border-foreground/30">
+          {/* Terminal Command Header */}
+          <div className="text-[11px] mb-5 flex items-center gap-1.5 font-mono">
+            <span className="text-emerald-500 font-bold">asbawy</span>
+            <span className="text-muted-foreground">@</span>
+            <span className="text-cyan-500">dedsec</span>
+            <span className="text-muted-foreground">~$</span>
+            <span className="text-foreground/80 font-medium">./status --all</span>
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
-            Asbawy <span className="text-muted-foreground/60 font-normal">— security_research</span>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+            Asbawy
+            <span className="text-muted-foreground font-normal text-lg md:text-xl font-mono ml-2">
+              _security_research
+            </span>
           </h1>
 
-          <p className="mt-2.5 max-w-2xl text-xs md:text-sm text-muted-foreground leading-relaxed font-sans">
+          <p className="mt-4 max-w-2xl text-xs md:text-sm text-muted-foreground leading-relaxed font-mono">
             Offensive security research, reverse engineering, endpoint security, and CTF
             walkthroughs. Documenting exploit development, low-level internals, and red teaming
             tools.
           </p>
 
-          {/* Minimal Navigation Links */}
-          <div className="mt-6 flex flex-wrap items-center gap-2.5 text-xs">
+          {/* Retro Navigation Links */}
+          <div className="mt-8 flex flex-wrap items-center gap-6 text-xs font-mono">
             <Link
               to="/writeups"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-foreground text-background px-3.5 py-1.5 font-semibold hover:bg-foreground/90 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 text-emerald-500 hover:text-emerald-400 hover:underline underline-offset-4 transition-all"
             >
               <Swords className="h-3.5 w-3.5" />
-              <span>/writeups</span>
-              <ChevronRight className="h-3 w-3 opacity-60" />
+              <span>[writeups]</span>
             </Link>
             <Link
               to="/cheatsheet"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-3.5 py-1.5 font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 text-fuchsia-500 hover:text-fuchsia-400 hover:underline underline-offset-4 transition-all"
             >
-              <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>/cheatsheets</span>
+              <BookOpen className="h-3.5 w-3.5" />
+              <span>[cheatsheets]</span>
             </Link>
             <Link
               to="/logs"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-3.5 py-1.5 font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 text-cyan-500 hover:text-cyan-400 hover:underline underline-offset-4 transition-all"
             >
-              <FileTerminal className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>/logs</span>
+              <FileTerminal className="h-3.5 w-3.5" />
+              <span>[logs]</span>
             </Link>
           </div>
 
-          {/* Minimal Search Prompt */}
-          <div className="mt-6 flex items-center justify-between rounded-md border border-border/60 bg-background/50 px-3 py-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2 min-w-0 truncate text-[11px]">
-              <Search className="h-3 w-3 text-muted-foreground/60 shrink-0" />
-              <span className="truncate">
+          {/* Retro Search Prompt */}
+          <div className="mt-8 flex items-center justify-between border-t border-border/50 pt-4 text-xs text-muted-foreground font-mono">
+            <div className="flex items-center gap-2">
+              <Search className="h-3.5 w-3.5" />
+              <span>
                 Press{" "}
-                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[9px] text-foreground font-mono">
+                <kbd className="rounded border border-border bg-background px-1.5 py-0.5 text-[9.5px] text-foreground font-bold">
                   Ctrl+K
                 </kbd>{" "}
-                to search writeups, cheatsheets, and logs
+                to search dedsec
               </span>
             </div>
           </div>
         </div>
 
-        {/* ── Key Metrics Bar ─────────────────────────────── */}
+        {/* ── Retro Minimalist Metrics Bar ─────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-lg border border-border bg-card/40 p-3.5 font-mono text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <Swords className="h-3.5 w-3.5 text-foreground/70" />
-              <span className="uppercase tracking-wider text-[10px]">pwned</span>
+          <div className="group rounded-lg border border-border bg-card p-4 font-mono text-center transition-all duration-300 hover:border-emerald-500/50">
+            <div className="text-2xl font-bold text-foreground group-hover:text-emerald-500 transition-colors">
+              {writeupsMeta.length}
             </div>
-            <div className="text-xl font-bold text-foreground">{writeupsMeta.length}</div>
-            <div className="text-[9px] text-muted-foreground/60 uppercase tracking-widest mt-0.5">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
               writeups
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card/40 p-3.5 font-mono text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <BookOpen className="h-3.5 w-3.5 text-foreground/70" />
-              <span className="uppercase tracking-wider text-[10px]">knowledge</span>
+          <div className="group rounded-lg border border-border bg-card p-4 font-mono text-center transition-all duration-300 hover:border-fuchsia-500/50">
+            <div className="text-2xl font-bold text-foreground group-hover:text-fuchsia-500 transition-colors">
+              {cheatsheetFiles.length}
             </div>
-            <div className="text-xl font-bold text-foreground">{cheatsheetFiles.length}</div>
-            <div className="text-[9px] text-muted-foreground/60 uppercase tracking-widest mt-0.5">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
               cheatsheets
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card/40 p-3.5 font-mono text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <FileTerminal className="h-3.5 w-3.5 text-foreground/70" />
-              <span className="uppercase tracking-wider text-[10px]">research</span>
+          <div className="group rounded-lg border border-border bg-card p-4 font-mono text-center transition-all duration-300 hover:border-cyan-500/50">
+            <div className="text-2xl font-bold text-foreground group-hover:text-cyan-500 transition-colors">
+              {postsMeta.length}
             </div>
-            <div className="text-xl font-bold text-foreground">{postsMeta.length}</div>
-            <div className="text-[9px] text-muted-foreground/60 uppercase tracking-widest mt-0.5">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
               logs
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card/40 p-3.5 font-mono text-center">
-            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <Activity className="h-3.5 w-3.5 text-foreground/70" />
-              <span className="uppercase tracking-wider text-[10px]">status</span>
+          <div className="group rounded-lg border border-border bg-card p-4 font-mono text-center transition-all duration-300 hover:border-amber-500/50">
+            <div className="text-2xl font-bold text-amber-500">
+              Active
             </div>
-            <div className="text-xl font-bold text-foreground">Active</div>
-            <div className="text-[9px] text-muted-foreground/60 uppercase tracking-widest mt-0.5">
-              online
+            <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">
+              status
             </div>
           </div>
         </div>
 
         {/* ── Section: Machine Writeups ────────────────────── */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between font-mono">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-bold text-foreground">
-              <Crosshair className="h-3.5 w-3.5 text-foreground/70" />
-              <span>Pwned_Machines</span>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between font-mono border-b border-border pb-2">
+            <div className="text-xs uppercase tracking-[0.2em] font-bold text-emerald-500">
+              ~/pwned_machines
             </div>
             <Link
               to="/writeups"
               className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
-              <span>[ view_all ]</span>
-              <ChevronRight className="h-3 w-3" />
+              <span>[view_all]</span>
             </Link>
           </div>
 
           {writeupsMeta.length === 0 ? (
-            <div className="rounded-lg border border-border bg-card/40 p-8 text-center font-mono text-xs text-muted-foreground">
+            <div className="rounded-lg border border-border bg-card p-8 text-center font-mono text-xs text-muted-foreground">
               // no writeups available
             </div>
           ) : (
@@ -188,26 +178,17 @@ function Index() {
                         : w.platform === "CTF"
                           ? "text-[#FFD43B]"
                           : "text-[#C792EA]";
-                const diffColor =
-                  w.difficulty === "Very Easy"
-                    ? "text-[#00E5FF]"
-                    : w.difficulty === "Easy"
-                      ? "text-[#9FEF00]"
-                      : w.difficulty === "Medium"
-                        ? "text-[#FFD43B]"
-                        : w.difficulty === "Hard"
-                          ? "text-[#FF7043]"
-                          : "text-[#FF3E3E]";
-                const diffBg =
-                  w.difficulty === "Very Easy"
-                    ? "bg-[#00E5FF]/10 border-[#00E5FF]/20"
-                    : w.difficulty === "Easy"
-                      ? "bg-[#9FEF00]/10 border-[#9FEF00]/20"
-                      : w.difficulty === "Medium"
-                        ? "bg-[#FFD43B]/10 border-[#FFD43B]/20"
-                        : w.difficulty === "Hard"
-                          ? "bg-[#FF7043]/10 border-[#FF7043]/20"
-                          : "bg-[#FF3E3E]/10 border-[#FF3E3E]/20";
+
+                const difficultyColor =
+                  w.difficulty.toLowerCase() === "easy"
+                    ? "text-emerald-500"
+                    : w.difficulty.toLowerCase() === "medium"
+                      ? "text-amber-500"
+                      : w.difficulty.toLowerCase() === "hard"
+                        ? "text-red-500"
+                        : w.difficulty.toLowerCase() === "insane"
+                          ? "text-fuchsia-500"
+                          : "text-muted-foreground";
 
                 return (
                   <Link
@@ -215,35 +196,23 @@ function Index() {
                     to="/writeups/$slug"
                     params={{ slug: w.slug }}
                     preload="intent"
-                    className="group relative block rounded-lg border border-border bg-card/40 p-4 transition-all duration-200 hover:border-foreground/20 hover:bg-card/70"
+                    className="group block rounded-lg border border-border bg-card p-4 transition-all duration-300 hover:border-emerald-500/50 hover:bg-card-hover"
                   >
-                    <div className="flex items-center justify-between font-mono text-[10px] mb-2">
+                    <div className="flex items-center justify-between font-mono text-[10px] mb-3">
                       <span className={`font-semibold ${platformColor}`}>{w.platform}</span>
-                      <span
-                        className={`px-2 py-0.5 rounded border font-semibold ${diffBg} ${diffColor}`}
-                      >
-                        {w.difficulty}
-                      </span>
+                      <span className={`${difficultyColor} uppercase tracking-wider font-bold`}>{w.difficulty}</span>
                     </div>
-                    <h3 className="text-sm font-semibold text-foreground group-hover:text-foreground transition-colors leading-snug">
+                    <h3 className="text-sm font-semibold text-foreground group-hover:text-emerald-500 transition-colors leading-snug">
                       {w.title}
                     </h3>
-                    <p className="mt-1.5 text-xs text-muted-foreground/75 line-clamp-2 leading-relaxed">
+                    <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                       {w.excerpt}
                     </p>
-                    <div className="mt-3 flex flex-wrap gap-1">
+                    <div className="mt-4 flex flex-wrap gap-2">
                       {w.tags.slice(0, 3).map((t) => (
-                        <Tag
-                          key={t}
-                          variant={tagVariantFor(t)}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleTagClick(t, navigate);
-                          }}
-                        >
+                        <span key={t} className="text-[9px] text-muted-foreground font-mono before:content-['#']">
                           {t}
-                        </Tag>
+                        </span>
                       ))}
                     </div>
                   </Link>
@@ -254,23 +223,21 @@ function Index() {
         </div>
 
         {/* ── Section: Dev Logs & Research ───────────────── */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between font-mono">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-bold text-foreground">
-              <FileTerminal className="h-3.5 w-3.5 text-foreground/70" />
-              <span>Security_Research</span>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between font-mono border-b border-border pb-2">
+            <div className="text-xs uppercase tracking-[0.2em] font-bold text-cyan-500">
+              ~/security_research
             </div>
             <Link
               to="/logs"
               className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
-              <span>[ view_all ]</span>
-              <ChevronRight className="h-3 w-3" />
+              <span>[view_all]</span>
             </Link>
           </div>
 
           {postsMeta.length === 0 ? (
-            <div className="rounded-lg border border-border bg-card/40 p-8 text-center font-mono text-xs text-muted-foreground">
+            <div className="rounded-lg border border-border bg-card p-8 text-center font-mono text-xs text-muted-foreground">
               // no log entries yet
             </div>
           ) : (
@@ -281,33 +248,25 @@ function Index() {
                   to="/logs/$slug"
                   params={{ slug: p.slug }}
                   preload="intent"
-                  className="group relative block rounded-lg border border-border bg-card/40 p-4 transition-all duration-200 hover:border-foreground/20 hover:bg-card/70"
+                  className="group block rounded-lg border border-border bg-card p-4 transition-all duration-300 hover:border-cyan-500/50 hover:bg-card-hover"
                 >
-                  <div className="flex items-center justify-between font-mono text-[10px] mb-2">
-                    <span className="text-muted-foreground/60">{p.date}</span>
-                    <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[9px]">
+                  <div className="flex items-center justify-between font-mono text-[10px] mb-3">
+                    <span className="text-muted-foreground">{p.date}</span>
+                    <span className="text-cyan-500 font-semibold uppercase tracking-wider">
                       {p.category.toLowerCase()}
                     </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-foreground transition-colors leading-snug">
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-cyan-500 transition-colors leading-snug">
                     {p.title}
                   </h3>
-                  <p className="mt-1.5 text-xs text-muted-foreground/75 line-clamp-2 leading-relaxed">
+                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                     {p.excerpt}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-1">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {p.tags.map((t) => (
-                      <Tag
-                        key={t}
-                        variant={tagVariantFor(t)}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleTagClick(t, navigate);
-                        }}
-                      >
+                      <span key={t} className="text-[9px] text-muted-foreground font-mono before:content-['#']">
                         {t}
-                      </Tag>
+                      </span>
                     ))}
                   </div>
                 </Link>
@@ -317,23 +276,21 @@ function Index() {
         </div>
 
         {/* ── Section: Reference Cheatsheets ────────────── */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between font-mono">
-            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] font-bold text-foreground">
-              <BookOpen className="h-3.5 w-3.5 text-foreground/70" />
-              <span>Reference_Cheatsheets</span>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between font-mono border-b border-border pb-2">
+            <div className="text-xs uppercase tracking-[0.2em] font-bold text-fuchsia-500">
+              ~/reference_cheatsheets
             </div>
             <Link
               to="/cheatsheet"
               className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
             >
-              <span>[ view_all ]</span>
-              <ChevronRight className="h-3 w-3" />
+              <span>[view_all]</span>
             </Link>
           </div>
 
           {sortedCheatsheets.length === 0 ? (
-            <div className="rounded-lg border border-border bg-card/40 p-8 text-center font-mono text-xs text-muted-foreground">
+            <div className="rounded-lg border border-border bg-card p-8 text-center font-mono text-xs text-muted-foreground">
               // no cheatsheets available
             </div>
           ) : (
@@ -344,35 +301,27 @@ function Index() {
                   to="/cheatsheet/$"
                   params={{ _splat: file.path }}
                   preload="intent"
-                  className="group relative block rounded-lg border border-border bg-card/40 p-4 transition-all duration-200 hover:border-foreground/20 hover:bg-card/70"
+                  className="group block rounded-lg border border-border bg-card p-4 transition-all duration-300 hover:border-fuchsia-500/50 hover:bg-card-hover"
                 >
-                  <div className="flex items-center justify-between font-mono text-[10px] mb-2">
-                    <span className="text-muted-foreground/60">
+                  <div className="flex items-center justify-between font-mono text-[10px] mb-3">
+                    <span className="text-muted-foreground">
                       {file.meta.updated || file.meta.date}
                     </span>
-                    <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[9px]">
+                    <span className="text-fuchsia-500 font-semibold uppercase tracking-wider">
                       {file.meta.category?.toLowerCase() || "reference"}
                     </span>
                   </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-foreground transition-colors leading-snug">
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-fuchsia-500 transition-colors leading-snug">
                     {file.meta.title || file.path.split("/").pop()}
                   </h3>
-                  <p className="mt-1.5 text-xs text-muted-foreground/75 line-clamp-2 leading-relaxed">
+                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                     {file.meta.excerpt}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-1">
+                  <div className="mt-4 flex flex-wrap gap-2">
                     {file.meta.tags?.slice(0, 3).map((t) => (
-                      <Tag
-                        key={t}
-                        variant={tagVariantFor(t)}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleTagClick(t, navigate);
-                        }}
-                      >
+                      <span key={t} className="text-[9px] text-muted-foreground font-mono before:content-['#']">
                         {t}
-                      </Tag>
+                      </span>
                     ))}
                   </div>
                 </Link>
@@ -384,3 +333,4 @@ function Index() {
     </CyberLayout>
   );
 }
+

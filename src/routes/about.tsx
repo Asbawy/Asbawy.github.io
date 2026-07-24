@@ -326,7 +326,7 @@ function AboutPage() {
               className="group rounded-xl border border-panel-border bg-panel/60 p-5 text-center hover:border-foreground/30 hover:bg-foreground/[0.02] hover:shadow-[0_0_20px_rgba(0,255,136,0.05)] transition-all duration-300 flex flex-col justify-between min-h-[135px] focus:outline-none focus-visible:ring-1 focus-visible:ring-foreground"
             >
               <div className="flex-1 flex flex-col items-center justify-center">
-                <AnimatedCount target={150} />
+                <AnimatedCount target={120} />
                 <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                   htb_global_rank
                 </div>

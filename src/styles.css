@@ -82,33 +82,33 @@
 :root {
   --radius: 0.625rem;
 
-  /* 🎨 User Base Theme Colors */
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #111111;
-  --bg-card: #161616;
-  --bg-card-hover: #1a1a1a;
-  --bg-navbar: #0d0d0d;
-  --border: #222222;
-  --border-subtle: #1a1a1a;
+  /* 🎨 User Base Theme Colors - Minimalist Retro */
+  --bg-primary: #09090b; /* zinc-950 */
+  --bg-secondary: #18181b; /* zinc-900 */
+  --bg-card: #09090b;
+  --bg-card-hover: #18181b;
+  --bg-navbar: #09090b;
+  --border: #27272a; /* zinc-800 */
+  --border-subtle: #18181b;
 
-  /* Glassmorphism Variables */
-  --glass-bg: rgba(22, 22, 22, 0.45);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  /* Glassmorphism Variables - Removed for sharp minimal look */
+  --glass-bg: #09090b;
+  --glass-border: #27272a;
   --glass-shadow: rgba(0, 0, 0, 0.5);
 
-  --text-primary: #e8e8e8;
-  --text-secondary: #999999;
-  --text-muted: #666666;
-  --text-heading: #f5f5f5;
+  --text-primary: #f4f4f5; /* zinc-100 */
+  --text-secondary: #a1a1aa; /* zinc-400 */
+  --text-muted: #71717a; /* zinc-500 */
+  --text-heading: #fafafa; /* zinc-50 */
 
-  --accent-primary: #ffffff;
-  --accent-secondary: #bb86fc;
-  --accent-link: #4fc3f7;
+  --accent-primary: #34d399; /* emerald-400 */
+  --accent-secondary: #e879f9; /* fuchsia-400 */
+  --accent-link: #22d3ee; /* cyan-400 */
 
   /* Custom Tag Styling Variables */
   --tag-bg-opacity: 0.12;
   --tag-border-opacity: 0.25;
-  --tag-radius: 6px;
+  --tag-radius: 4px;
   --tag-padding: 3px 10px;
   --tag-font-size: 11px;
   --tag-font-weight: 600;
@@ -184,31 +184,31 @@
 /* ── Light Mode (kept for compatibility) ────────────────────────── */
 .light {
   --radius: 0.625rem;
-  --bg-primary: #f5f2eb;
-  --bg-secondary: #ece8df;
-  --bg-card: #fffaf0;
-  --bg-card-hover: #fcf9f2;
-  --bg-navbar: #f0ede5;
-  --border: #d4c9a8;
-  --border-subtle: #ece8df;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f4f4f5;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f4f4f5;
+  --bg-navbar: #ffffff;
+  --border: #e4e4e7;
+  --border-subtle: #f4f4f5;
 
   /* Glassmorphism Variables */
-  --glass-bg: rgba(255, 250, 240, 0.65);
-  --glass-border: rgba(59, 60, 55, 0.12);
-  --glass-shadow: rgba(59, 60, 55, 0.05);
+  --glass-bg: #ffffff;
+  --glass-border: #e4e4e7;
+  --glass-shadow: rgba(0, 0, 0, 0.05);
 
-  --text-primary: #3b3c37;
-  --text-secondary: #6a6a64;
-  --text-muted: rgba(59, 60, 55, 0.55);
-  --text-heading: #2d2e29;
+  --text-primary: #18181b; /* zinc-900 */
+  --text-secondary: #52525b; /* zinc-600 */
+  --text-muted: #a1a1aa; /* zinc-400 */
+  --text-heading: #09090b;
 
-  --accent-primary: #000000;
-  --accent-secondary: #8e44ad;
-  --accent-link: #2980b9;
+  --accent-primary: #059669; /* emerald-600 */
+  --accent-secondary: #c026d3; /* fuchsia-600 */
+  --accent-link: #0891b2; /* cyan-600 */
 
   --tag-bg-opacity: 0.12;
   --tag-border-opacity: 0.25;
-  --tag-radius: 6px;
+  --tag-radius: 4px;
   --tag-padding: 3px 10px;
   --tag-font-size: 11px;
   --tag-font-weight: 600;
@@ -274,27 +274,27 @@
 /* ── Dark Mode Class override ───────────────────────────────────── */
 .dark {
   --radius: 0.625rem;
-  --bg-primary: #0a0a0a;
-  --bg-secondary: #111111;
-  --bg-card: #161616;
-  --bg-card-hover: #1a1a1a;
-  --bg-navbar: #0d0d0d;
-  --border: #222222;
-  --border-subtle: #1a1a1a;
+  --bg-primary: #09090b;
+  --bg-secondary: #18181b;
+  --bg-card: #09090b;
+  --bg-card-hover: #18181b;
+  --bg-navbar: #09090b;
+  --border: #27272a;
+  --border-subtle: #18181b;
 
   /* Glassmorphism Variables */
-  --glass-bg: rgba(22, 22, 22, 0.45);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: #09090b;
+  --glass-border: #27272a;
   --glass-shadow: rgba(0, 0, 0, 0.5);
 
-  --text-primary: #e8e8e8;
-  --text-secondary: #999999;
-  --text-muted: #666666;
-  --text-heading: #f5f5f5;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-heading: #fafafa;
 
-  --accent-primary: #00d4aa;
-  --accent-secondary: #bb86fc;
-  --accent-link: #4fc3f7;
+  --accent-primary: #34d399;
+  --accent-secondary: #e879f9;
+  --accent-link: #22d3ee;
 
   --tag-bg-opacity: 0.12;
   --tag-border-opacity: 0.25;
