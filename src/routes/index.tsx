@@ -147,6 +147,59 @@ function Index() {
           </div>
         </div>
 
+        {/* ── Section: Dev Logs & Research ───────────────── */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between font-mono border-b border-border pb-2">
+            <div className="text-xs uppercase tracking-[0.2em] font-bold text-cyan-500">
+              ~/security_research
+            </div>
+            <Link
+              to="/logs"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            >
+              <span>[view_all]</span>
+            </Link>
+          </div>
+
+          {postsMeta.length === 0 ? (
+            <div className="rounded-lg border border-border bg-card p-8 text-center font-mono text-xs text-muted-foreground">
+              // no log entries yet
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {postsMeta.slice(0, 4).map((p) => (
+                <Link
+                  key={p.slug}
+                  to="/logs/$slug"
+                  params={{ slug: p.slug }}
+                  preload="intent"
+                  className="group block rounded-lg border border-border bg-card p-4 transition-all duration-300 hover:border-cyan-500/50 hover:bg-card-hover"
+                >
+                  <div className="flex items-center justify-between font-mono text-[10px] mb-3">
+                    <span className="text-muted-foreground">{p.date}</span>
+                    <span className="text-cyan-500 font-semibold uppercase tracking-wider">
+                      {p.category.toLowerCase()}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-semibold text-foreground group-hover:text-cyan-500 transition-colors leading-snug">
+                    {p.title}
+                  </h3>
+                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                    {p.excerpt}
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {p.tags.map((t) => (
+                      <span key={t} className="text-[9px] text-muted-foreground font-mono before:content-['#']">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* ── Section: Machine Writeups ────────────────────── */}
         <div className="space-y-4">
           <div className="flex items-center justify-between font-mono border-b border-border pb-2">
@@ -218,59 +271,6 @@ function Index() {
                   </Link>
                 );
               })}
-            </div>
-          )}
-        </div>
-
-        {/* ── Section: Dev Logs & Research ───────────────── */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between font-mono border-b border-border pb-2">
-            <div className="text-xs uppercase tracking-[0.2em] font-bold text-cyan-500">
-              ~/security_research
-            </div>
-            <Link
-              to="/logs"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-            >
-              <span>[view_all]</span>
-            </Link>
-          </div>
-
-          {postsMeta.length === 0 ? (
-            <div className="rounded-lg border border-border bg-card p-8 text-center font-mono text-xs text-muted-foreground">
-              // no log entries yet
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {postsMeta.slice(0, 4).map((p) => (
-                <Link
-                  key={p.slug}
-                  to="/logs/$slug"
-                  params={{ slug: p.slug }}
-                  preload="intent"
-                  className="group block rounded-lg border border-border bg-card p-4 transition-all duration-300 hover:border-cyan-500/50 hover:bg-card-hover"
-                >
-                  <div className="flex items-center justify-between font-mono text-[10px] mb-3">
-                    <span className="text-muted-foreground">{p.date}</span>
-                    <span className="text-cyan-500 font-semibold uppercase tracking-wider">
-                      {p.category.toLowerCase()}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-semibold text-foreground group-hover:text-cyan-500 transition-colors leading-snug">
-                    {p.title}
-                  </h3>
-                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    {p.excerpt}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {p.tags.map((t) => (
-                      <span key={t} className="text-[9px] text-muted-foreground font-mono before:content-['#']">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                </Link>
-              ))}
             </div>
           )}
         </div>

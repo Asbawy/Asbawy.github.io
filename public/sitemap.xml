@@ -41,6 +41,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://asbawy.github.io/logs/certighost-cve-2026-54121</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://asbawy.github.io/logs/cve-2021-43798-grafana-directory-traversal</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

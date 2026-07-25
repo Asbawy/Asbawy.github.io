@@ -115,11 +115,6 @@ export function useSharedMdxComponents(
       img: (props: any) => (
         <figure className="my-10 max-w-[75ch] group cursor-zoom-in" onClick={() => setLightboxSrc?.(props.src)}>
           <div className="relative rounded-lg border border-foreground/10 bg-background overflow-hidden shadow-md">
-            <div className="bg-foreground/5 border-b border-foreground/10 px-3 py-1.5 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-threat-high/60" />
-              <span className="w-2.5 h-2.5 rounded-full bg-threat-mid/60" />
-              <span className="w-2.5 h-2.5 rounded-full bg-accent-primary/60" />
-            </div>
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none"></div>
               <img
