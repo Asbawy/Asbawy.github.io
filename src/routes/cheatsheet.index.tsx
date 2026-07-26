@@ -13,29 +13,29 @@ export const Route = createFileRoute("/cheatsheet/")({
 function getCategoryBadgeColor(cat?: string) {
   const c = (cat || "").toLowerCase();
   if (c.includes("active directory") || c === "ad") {
-    return "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
+    return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
   }
   if (c.includes("linux")) {
-    return "bg-teal-500/15 text-teal-400 border border-teal-500/30";
+    return "bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30";
   }
   if (c.includes("tool")) {
-    return "bg-purple-500/15 text-purple-400 border border-purple-500/30";
+    return "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30";
   }
   if (c.includes("windows")) {
-    return "bg-blue-500/15 text-blue-400 border border-blue-500/30";
+    return "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30";
   }
-  return "bg-[#4ec9b0]/15 text-[#4ec9b0] border border-[#4ec9b0]/30";
+  return "bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30";
 }
 
 function getDifficultyBadgeColor(diff?: string) {
   const d = (diff || "Intermediate").toLowerCase();
   if (d === "advanced") {
-    return "bg-rose-500/10 text-rose-400 border border-rose-500/20";
+    return "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30";
   }
   if (d === "beginner") {
-    return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+    return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
   }
-  return "bg-amber-500/10 text-amber-400 border border-amber-500/20";
+  return "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30";
 }
 
 function CheatsheetIndex() {
@@ -162,20 +162,20 @@ function CheatsheetIndex() {
   const hasActiveFilters = Boolean(q || selectedCategory !== "All" || activeTag);
 
   return (
-    <div className="w-full min-h-full bg-[#0d0d0d] text-[#e0e0e0] py-12 px-6 md:px-12 lg:px-16">
+    <div className="w-full min-h-full bg-background text-foreground py-12 px-6 md:px-12 lg:px-16">
       <div className="mx-auto max-w-7xl space-y-10">
         {/* Simple Page Header — Blog Style */}
         <div className="space-y-3">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white font-sans">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground font-sans">
             Cheatsheets
           </h1>
-          <p className="text-base md:text-lg text-[#888] font-sans max-w-2xl">
+          <p className="text-base md:text-lg text-muted-foreground font-sans max-w-2xl">
             Security cheatsheets, command references, and tactical field notes.
           </p>
         </div>
 
         {/* Category Filter Bar + Search Input — Horizontal Toolbar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#222] pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
           {/* Category Pill Tabs */}
           <div className="flex flex-wrap items-center gap-2">
             {categories.map((c) => {
@@ -187,15 +187,14 @@ function CheatsheetIndex() {
                   className={`
                     px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer font-sans
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]/50
-                    ${
-                      isActive
-                        ? "bg-[#4ec9b0]/15 text-[#4ec9b0] border border-[#4ec9b0]/40 font-semibold shadow-[0_0_15px_rgba(78,201,176,0.12)]"
-                        : "text-[#888] hover:text-[#e0e0e0] hover:bg-[#1a1a1a] border border-transparent"
+                    ${isActive
+                      ? "bg-[#4ec9b0]/15 text-[#4ec9b0] border border-[#4ec9b0]/40 font-semibold shadow-[0_0_15px_rgba(78,201,176,0.12)]"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
                     }
                   `}
                 >
                   {c.name}{" "}
-                  <span className={`ml-1 text-xs ${isActive ? "text-[#4ec9b0]/80" : "text-[#666]"}`}>
+                  <span className={`ml-1 text-xs ${isActive ? "text-[#4ec9b0]/80" : "text-muted-foreground"}`}>
                     ({c.count})
                   </span>
                 </button>
@@ -206,18 +205,18 @@ function CheatsheetIndex() {
           {/* Search Bar + Reset Filters */}
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative flex-1 md:w-72">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666] pointer-events-none" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <input
                 type="text"
                 value={search.q || ""}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Search cheatsheets..."
-                className="w-full bg-[#1a1a1a] border border-[#333] text-[#e0e0e0] placeholder:text-[#666] rounded-lg pl-10 pr-9 py-2 text-sm font-sans focus:outline-none focus:border-[#4ec9b0] focus:ring-1 focus:ring-[#4ec9b0] transition-colors"
+                className="w-full bg-muted border border-border text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-9 py-2 text-sm font-sans focus:outline-none focus:border-[#4ec9b0] focus:ring-1 focus:ring-[#4ec9b0] transition-colors"
               />
               {q && (
                 <button
                   onClick={() => handleSearchChange("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#e0e0e0] cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                   title="Clear search"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -240,7 +239,7 @@ function CheatsheetIndex() {
         {/* Quick Tag Pills Row (Blog-Style) */}
         {topTags.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-[#666] mr-1 flex items-center gap-1 font-sans">
+            <span className="text-xs font-medium text-muted-foreground mr-1 flex items-center gap-1 font-sans">
               <TagIcon className="w-3.5 h-3.5 text-[#4ec9b0]" />
               Tags:
             </span>
@@ -253,10 +252,9 @@ function CheatsheetIndex() {
                   className={`
                     px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer font-sans border
                     focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4ec9b0]/50
-                    ${
-                      isTagActive
-                        ? "bg-[#4ec9b0]/20 text-[#4ec9b0] border-[#4ec9b0]/50 shadow-[0_0_12px_rgba(78,201,176,0.15)]"
-                        : "bg-[#161616] text-[#888] hover:text-[#e0e0e0] border-[#262626] hover:border-[#383838]"
+                    ${isTagActive
+                      ? "bg-[#4ec9b0]/20 text-[#4ec9b0] border-[#4ec9b0]/50 shadow-[0_0_12px_rgba(78,201,176,0.15)]"
+                      : "bg-muted text-muted-foreground hover:text-foreground border-border hover:border-border"
                     }
                   `}
                 >
@@ -283,7 +281,7 @@ function CheatsheetIndex() {
                   to="/cheatsheet/$"
                   params={{ _splat: file.path }}
                   className="
-                    group flex flex-col justify-between rounded-xl bg-[#181818] border border-[#262626] p-6
+                    group flex flex-col justify-between rounded-xl bg-card border border-border p-6
                     hover:-translate-y-1 hover:border-[#4ec9b0]/40 hover:shadow-[0_12px_36px_rgba(0,0,0,0.5)]
                     transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]
                   "
@@ -299,21 +297,21 @@ function CheatsheetIndex() {
                     </div>
 
                     {/* Title */}
-                    <h2 className="text-xl font-bold text-[#e0e0e0] group-hover:text-[#4ec9b0] transition-colors font-sans leading-snug">
+                    <h2 className="text-xl font-bold text-foreground group-hover:text-[#4ec9b0] transition-colors font-sans leading-snug">
                       {file.meta.title || file.path.split("/").pop()}
                     </h2>
 
                     {/* Description */}
                     {file.meta.excerpt && (
-                      <p className="text-sm text-[#888] font-sans leading-relaxed line-clamp-3">
+                      <p className="text-sm text-muted-foreground font-sans leading-relaxed line-clamp-3">
                         {file.meta.excerpt}
                       </p>
                     )}
 
                     {/* Metadata Row: Reading Time + Difficulty Level */}
                     <div className="flex items-center gap-2.5 pt-1 text-xs font-sans">
-                      <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#202020] text-[#a0a0a0] border border-[#2d2d2d]">
-                        <Clock className="w-3.5 h-3.5 text-[#888]" />
+                      <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-muted text-muted-foreground border border-border font-medium">
+                        <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                         {readTime}
                       </span>
                       <span
@@ -325,12 +323,12 @@ function CheatsheetIndex() {
                   </div>
 
                   {/* Bottom Row: Tags + Hover Action Arrow */}
-                  <div className="mt-6 pt-4 border-t border-[#242424] flex items-center justify-between gap-2">
+                  <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-1.5">
                       {file.meta.tags?.slice(0, 3).map((tag) => (
                         <span
                           key={tag}
-                          className="text-xs text-[#777] bg-[#141414] border border-[#262626] px-2.5 py-0.5 rounded-full font-sans"
+                          className="text-xs text-muted-foreground bg-muted border border-border px-2.5 py-0.5 rounded-full font-sans"
                         >
                           #{tag}
                         </span>
@@ -348,11 +346,11 @@ function CheatsheetIndex() {
           </div>
         ) : (
           /* Empty State */
-          <div className="py-20 text-center rounded-2xl border border-dashed border-[#282828] bg-[#141414] space-y-4">
+          <div className="py-20 text-center rounded-2xl border border-dashed border-border bg-card space-y-4">
             <BookOpen className="w-12 h-12 text-[#444] mx-auto" />
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-[#e0e0e0] font-sans">No cheatsheets found</h3>
-              <p className="text-sm text-[#888] font-sans max-w-md mx-auto">
+              <h3 className="text-lg font-bold text-foreground font-sans">No cheatsheets found</h3>
+              <p className="text-sm text-muted-foreground font-sans max-w-md mx-auto">
                 No cheatsheets matched your search query or selected category and tags.
               </p>
             </div>

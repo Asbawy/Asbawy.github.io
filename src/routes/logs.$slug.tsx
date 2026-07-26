@@ -72,7 +72,7 @@ export const Route = createFileRoute("/logs/$slug")({
 
   notFoundComponent: () => (
     <CyberLayout>
-      <div className="p-10 font-mono text-sm text-muted-foreground">
+      <div className="p-10 font-sans text-sm text-muted-foreground">
         // post not found —{" "}
         <Link to="/logs" className="text-foreground hover:text-foreground/80 transition-colors">
           return to feed
@@ -83,7 +83,7 @@ export const Route = createFileRoute("/logs/$slug")({
 
   errorComponent: ({ error }) => (
     <CyberLayout>
-      <div className="p-10 font-mono text-sm text-threat-high">// {error.message}</div>
+      <div className="p-10 font-sans text-sm text-threat-high">// {error.message}</div>
     </CyberLayout>
   ),
   component: PostPage,
@@ -103,14 +103,14 @@ function PostPage() {
       <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
         <Link
           to="/logs"
-          className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 font-sans text-[11px] text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> cd ../logs
         </Link>
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10">
           <div className="min-w-0">
-            <div className="font-mono text-[11px] flex flex-wrap items-center gap-3">
+            <div className="font-sans text-[11px] flex flex-wrap items-center gap-3">
               <span className="text-muted-foreground">{post.date}</span>
               <span className="text-foreground/20">·</span>
               <span className="text-accent-primary">{post.category?.toLowerCase()}</span>
@@ -165,7 +165,7 @@ function PostPage() {
             <div className="mt-6">
               <Suspense
                 fallback={
-                  <div className="animate-pulse text-foreground/60 font-mono">
+                  <div className="animate-pulse text-foreground/60 font-sans">
                     Loading core modules...
                   </div>
                 }
@@ -182,7 +182,7 @@ function PostPage() {
             {/* Author Bio */}
             <AuthorBio />
 
-            <div className="mt-10 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
+            <div className="mt-10 border-t border-panel-border pt-6 font-sans text-[11px] text-muted-foreground">
               // end of post —{" "}
               <Link
                 to="/logs"
@@ -205,7 +205,7 @@ function PostPage() {
                 </div>
 
                 {headings.length > 0 && (
-                  <ol className="space-y-1 font-mono text-xs">
+                  <ol className="space-y-1 font-sans text-xs">
                     {headings.map((s) => {
                       const isActive = activeHeading === s.id;
                       return (

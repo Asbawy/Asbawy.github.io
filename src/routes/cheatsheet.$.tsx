@@ -85,7 +85,7 @@ export const Route = createFileRoute("/cheatsheet/$")({
   },
   component: CheatsheetViewer,
   notFoundComponent: () => (
-    <div className="h-full flex flex-col items-center justify-center text-muted-foreground font-mono opacity-50 p-8">
+    <div className="h-full flex flex-col items-center justify-center text-muted-foreground font-sans opacity-50 p-8">
       <FileText className="h-12 w-12 mb-4" />
       <p className="text-sm">File not found.</p>
       <p className="text-xs mt-1 text-muted-foreground/60">Check the path and try again.</p>
@@ -167,7 +167,7 @@ function CheatsheetViewer() {
     <div className="h-full flex flex-col bg-background">
       {/* Sticky Action Top Bar + Breadcrumbs */}
       <div className="sticky top-0 z-40 border-b border-white/[0.08] bg-background/95 backdrop-blur-md">
-        <div className="flex items-center justify-between px-4 md:px-8 py-2.5 font-mono text-xs">
+        <div className="flex items-center justify-between px-4 md:px-8 py-2.5 font-sans text-xs">
           {/* Left: Breadcrumbs */}
           <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
             <span className="text-foreground font-bold">~</span>
@@ -247,7 +247,7 @@ function CheatsheetViewer() {
               {meta.title && (
                 <div className="mb-8 pb-6 border-b border-white/[0.08]">
                   {/* Badge Row */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 font-mono text-xs mb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 font-sans text-xs mb-4">
                     <div className="flex items-center gap-2">
                       <span className="bg-accent-primary/15 text-accent-primary border border-accent-primary/30 px-2.5 py-0.5 rounded text-[11px] font-bold">
                         {meta.category || "General"}
@@ -281,7 +281,7 @@ function CheatsheetViewer() {
                   </div>
 
                   {/* Title */}
-                  <h1 className="font-mono text-3xl md:text-4xl font-black text-foreground mb-3 tracking-tight">
+                  <h1 className="font-sans text-3xl md:text-4xl font-black text-foreground mb-3 tracking-tight">
                     {meta.title}
                   </h1>
 
@@ -317,7 +317,7 @@ function CheatsheetViewer() {
               <div id="cheatsheet-article" className="prose prose-invert max-w-none">
                 <Suspense
                   fallback={
-                    <div className="flex items-center gap-2 animate-pulse text-foreground font-mono text-sm py-8">
+                    <div className="flex items-center gap-2 animate-pulse text-foreground font-sans text-sm py-8">
                       <span className="inline-block w-2 h-4 bg-foreground/80 animate-pulse" />
                       Reading sector...
                     </div>
@@ -329,7 +329,7 @@ function CheatsheetViewer() {
 
               {/* Sequential Prev/Next Navigation */}
               {(prevItem || nextItem) && (
-                <div className="mt-14 pt-8 border-t border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
+                <div className="mt-14 pt-8 border-t border-white/[0.08] grid grid-cols-1 sm:grid-cols-2 gap-4 font-sans text-xs">
                   {prevItem ? (
                     <Link
                       to="/cheatsheet/$"
@@ -371,7 +371,7 @@ function CheatsheetViewer() {
               {/* Bottom Related Reference Modules Grid */}
               {related.length > 0 && (
                 <div className="mt-12 pt-8 border-t border-white/[0.08]">
-                  <div className="flex items-center gap-2 font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground mb-4">
+                  <div className="flex items-center gap-2 font-sans text-xs uppercase tracking-[0.18em] text-muted-foreground mb-4">
                     <BookOpen className="w-3.5 h-3.5 text-accent-primary" />
                     <span>RELATED REFERENCE MODULES</span>
                   </div>
@@ -384,10 +384,10 @@ function CheatsheetViewer() {
                         className="group cheatsheet-card-hover rounded-lg glass-panel p-4 border border-white/[0.08] flex flex-col justify-between"
                       >
                         <div>
-                          <span className="font-mono text-[10px] text-accent-primary uppercase font-bold">
+                          <span className="font-sans text-[10px] text-accent-primary uppercase font-bold">
                             {p.meta.category || "General"}
                           </span>
-                          <h4 className="mt-1 font-mono text-sm font-bold text-foreground group-hover:text-accent-primary transition-colors line-clamp-1">
+                          <h4 className="mt-1 font-sans text-sm font-bold text-foreground group-hover:text-accent-primary transition-colors line-clamp-1">
                             {p.meta.title || p.path.split("/").pop()}
                           </h4>
                           {p.meta.excerpt && (
@@ -396,7 +396,7 @@ function CheatsheetViewer() {
                             </p>
                           )}
                         </div>
-                        <div className="mt-3 flex items-center justify-end font-mono text-[10px] text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="mt-3 flex items-center justify-end font-sans text-[10px] text-accent-primary opacity-0 group-hover:opacity-100 transition-opacity">
                           LOAD →
                         </div>
                       </Link>
@@ -419,7 +419,7 @@ function CheatsheetViewer() {
                   </div>
 
                   {headings.length > 0 ? (
-                    <ol className="space-y-1.5 font-mono text-xs">
+                    <ol className="space-y-1.5 font-sans text-xs">
                       {headings.map((s) => {
                         const isActive = activeId === s.id;
                         const isH3 = s.level === 3;
@@ -441,7 +441,7 @@ function CheatsheetViewer() {
                       })}
                     </ol>
                   ) : (
-                    <span className="font-mono text-[11px] text-muted-foreground/50 italic">
+                    <span className="font-sans text-[11px] text-muted-foreground/50 italic">
                       // no sections found
                     </span>
                   )}
@@ -450,7 +450,7 @@ function CheatsheetViewer() {
                 {/* Related Cheatsheets Sidebar Cards */}
                 {related.length > 0 && (
                   <Panel title="related modules">
-                    <div className="space-y-2.5 font-mono text-xs">
+                    <div className="space-y-2.5 font-sans text-xs">
                       {related.map((p) => (
                         <Link
                           key={p.path}

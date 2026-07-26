@@ -1,22 +1,18 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CyberLayout, Panel, Tag, handleTagClick } from "@/components/cyber/Layout";
+import { CyberLayout, handleTagClick } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
 import { cheatsheetFiles } from "@/data/cheatsheets";
 import { writeupsMeta } from "@/data/writeups";
+import { Activity, Swords, FileTerminal, BookOpen, Tag as TagIcon, BarChart2 } from "lucide-react";
 
 export const Route = createFileRoute("/stats")({
   head: () => ({
     meta: [
-      { title: "/stats — Asbawy Blog" },
+      { title: "Stats & Analytics — Asbawy Blog" },
       {
         name: "description",
         content:
           "Aggregate stats, machine telemetry, and metrics across all writeups, logs, and cheatsheets.",
-      },
-      { property: "og:title", content: "/stats — Telemetry & Analytics" },
-      {
-        property: "og:description",
-        content: "Writeups, dev logs, and cheatsheets telemetry and analytics.",
       },
     ],
   }),
@@ -26,8 +22,9 @@ export const Route = createFileRoute("/stats")({
 function StatsPage() {
   const navigate = useNavigate();
 
-  // 1. Writeups Telemetry
   const totalWriteups = writeupsMeta.length;
+  const totalLogs = postsMeta.length;
+  const totalCheatsheets = cheatsheetFiles.length;
 
   const writeupPlatformCount = writeupsMeta.reduce<Record<string, number>>((acc, w) => {
     acc[w.platform] = (acc[w.platform] ?? 0) + 1;
@@ -44,9 +41,6 @@ function StatsPage() {
     return acc;
   }, {});
 
-  // 2. Logs Telemetry
-  const totalLogs = postsMeta.length;
-
   const logSevCount = postsMeta.reduce<Record<string, number>>((acc, p) => {
     acc[p.severity] = (acc[p.severity] ?? 0) + 1;
     return acc;
@@ -56,9 +50,6 @@ function StatsPage() {
     acc[p.category] = (acc[p.category] ?? 0) + 1;
     return acc;
   }, {});
-
-  // 3. Cheatsheets Telemetry
-  const totalCheatsheets = cheatsheetFiles.length;
 
   const cheatsheetCatCount = cheatsheetFiles.reduce<Record<string, number>>((acc, p) => {
     const cat = p.meta.category || p.path.split("/")[0] || "General";
@@ -73,7 +64,6 @@ function StatsPage() {
     return acc;
   }, {});
 
-  // Global Combined Calculations
   const combinedTotal = totalWriteups + totalLogs + totalCheatsheets;
   const combinedTags = Array.from(
     new Set([
@@ -85,253 +75,269 @@ function StatsPage() {
 
   const writeupDiffs: { name: string; color: string }[] = [
     { name: "Very Easy", color: "bg-[#00E5FF]" },
-    { name: "Easy", color: "bg-[#9FEF00]" },
-    { name: "Medium", color: "bg-[#FFD43B]" },
-    { name: "Hard", color: "bg-[#FF7043]" },
-    { name: "Insane", color: "bg-[#FF3E3E]" },
+    { name: "Easy", color: "bg-emerald-400" },
+    { name: "Medium", color: "bg-amber-400" },
+    { name: "Hard", color: "bg-rose-400" },
+    { name: "Insane", color: "bg-fuchsia-400" },
   ];
 
   const logSevs: { name: string; color: string }[] = [
-    { name: "Critical", color: "bg-threat-high" },
-    { name: "High", color: "bg-threat-mid" },
-    { name: "Medium", color: "bg-foreground" },
-    { name: "Low", color: "bg-foreground" },
+    { name: "Critical", color: "bg-rose-500" },
+    { name: "High", color: "bg-amber-500" },
+    { name: "Medium", color: "bg-cyan-400" },
+    { name: "Low", color: "bg-emerald-400" },
   ];
 
   const cheatsheetDiffs: { name: string; color: string }[] = [
-    { name: "Advanced", color: "bg-threat-high" },
-    { name: "Intermediate", color: "bg-threat-mid" },
-    { name: "Beginner", color: "bg-foreground" },
+    { name: "Advanced", color: "bg-rose-400" },
+    { name: "Intermediate", color: "bg-amber-400" },
+    { name: "Beginner", color: "bg-emerald-400" },
   ];
 
   return (
     <CyberLayout>
-      <section className="px-4 md:px-10 py-8 max-w-6xl space-y-8">
-        {/* Header */}
-        <div>
-          <div className="font-mono text-[11px] text-muted-foreground mb-1">
-            <span className="text-foreground">asbawy</span>:
-            <span className="text-foreground">~/stats</span>$ cat telemetry.log
-          </div>
-          <h1 className="font-mono text-2xl md:text-3xl font-bold text-foreground">
-            /stats{" "}
-            <span className="text-muted-foreground/60 font-normal">— telemetry & analytics</span>
-          </h1>
-        </div>
-
-        {/* Global Overview Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 font-mono">
-          {[
-            ["total_entries", String(combinedTotal)],
-            ["writeups", String(totalWriteups)],
-            ["logs", String(totalLogs)],
-            ["cheatsheets", String(totalCheatsheets)],
-            ["total_tags", String(combinedTags.length)],
-          ].map(([k, v]) => (
-            <div key={k} className="rounded-lg border border-border bg-card/40 p-3.5">
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{k}</div>
-              <div className="mt-1 text-2xl font-bold text-foreground">{v}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* 3-Column Telemetry Breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 font-mono">
-          {/* Writeups Column */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <div className="h-1.5 w-1.5 bg-[#9FEF00] rounded-full" />
-              <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground">
-                Section // Writeups Telemetry
-              </span>
-            </div>
-
-            <Panel title="difficulty_distribution">
-              <ul className="space-y-2.5 text-xs">
-                {writeupDiffs.map((d) => {
-                  const c = writeupDiffCount[d.name] ?? 0;
-                  const pct = totalWriteups ? (c / totalWriteups) * 100 : 0;
-                  return (
-                    <li key={d.name}>
-                      <div className="flex justify-between text-muted-foreground text-[11px]">
-                        <span>{d.name.toLowerCase()}</span>
-                        <span className="text-foreground font-semibold">{c}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-sm bg-secondary/60 overflow-hidden">
-                        <div className={`h-full ${d.color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Panel>
-
-            <Panel title="platform_breakdown">
-              <ul className="space-y-2.5 text-xs">
-                {Object.entries(writeupPlatformCount).map(([k, v]) => {
-                  const pct = totalWriteups ? (v / totalWriteups) * 100 : 0;
-                  return (
-                    <li key={k}>
-                      <div className="flex justify-between text-muted-foreground text-[11px]">
-                        <span>{k.toLowerCase()}</span>
-                        <span className="text-foreground font-semibold">{v}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-sm bg-secondary/60 overflow-hidden">
-                        <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Panel>
-
-            <Panel title="os_target_breakdown">
-              <ul className="space-y-2.5 text-xs">
-                {Object.entries(writeupOsCount).map(([k, v]) => {
-                  const pct = totalWriteups ? (v / totalWriteups) * 100 : 0;
-                  return (
-                    <li key={k}>
-                      <div className="flex justify-between text-muted-foreground text-[11px]">
-                        <span>{k.toLowerCase()}</span>
-                        <span className="text-foreground font-semibold">{v}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-sm bg-secondary/60 overflow-hidden">
-                        <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Panel>
+      <div className="w-full min-h-full bg-background text-foreground py-12 px-6 md:px-12 lg:px-16 font-sans">
+        <div className="mx-auto max-w-7xl space-y-8">
+          {/* Header */}
+          <div className="space-y-3">
+            
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+              Stats & Analytics
+            </h1>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+              Telemetry across writeups, logs, and cheatsheets.
+            </p>
           </div>
 
-          {/* Dev Logs Column */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <div className="h-1.5 w-1.5 bg-[#4FC3F7] rounded-full" />
-              <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground">
-                Section // Logs Telemetry
-              </span>
+          {/* Overview Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="rounded-xl border border-border bg-card p-5 text-center">
+              <BarChart2 className="w-5 h-5 text-sky-400 mx-auto mb-2" />
+              <div className="text-3xl font-extrabold text-foreground">{combinedTotal}</div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Total Entries
+              </div>
             </div>
 
-            <Panel title="severity_distribution">
-              <ul className="space-y-2.5 text-xs">
-                {logSevs.map((s) => {
-                  const c = logSevCount[s.name] ?? 0;
-                  const pct = totalLogs ? (c / totalLogs) * 100 : 0;
-                  return (
-                    <li key={s.name}>
-                      <div className="flex justify-between text-muted-foreground text-[11px]">
-                        <span>{s.name.toLowerCase()}</span>
-                        <span className="text-foreground font-semibold">{c}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-sm bg-secondary/60 overflow-hidden">
-                        <div className={`h-full ${s.color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Panel>
-
-            <Panel title="category_breakdown">
-              <ul className="space-y-2.5 text-xs">
-                {Object.entries(logCatCount).map(([k, v]) => {
-                  const pct = totalLogs ? (v / totalLogs) * 100 : 0;
-                  return (
-                    <li key={k}>
-                      <div className="flex justify-between text-muted-foreground text-[11px]">
-                        <span>{k.toLowerCase()}</span>
-                        <span className="text-foreground font-semibold">{v}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-sm bg-secondary/60 overflow-hidden">
-                        <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
-                {Object.keys(logCatCount).length === 0 && (
-                  <li className="text-muted-foreground">// no logs recorded</li>
-                )}
-              </ul>
-            </Panel>
-          </div>
-
-          {/* Cheatsheet Column */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <div className="h-1.5 w-1.5 bg-[#FFD43B] rounded-full" />
-              <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground">
-                Section // Cheatsheet Telemetry
-              </span>
+            <div className="rounded-xl border border-border bg-card p-5 text-center">
+              <Swords className="w-5 h-5 text-emerald-400 mx-auto mb-2" />
+              <div className="text-3xl font-extrabold text-foreground">{totalWriteups}</div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Writeups
+              </div>
             </div>
 
-            <Panel title="difficulty_distribution">
-              <ul className="space-y-2.5 text-xs">
-                {cheatsheetDiffs.map((d) => {
-                  const c = cheatsheetDiffCount[d.name] ?? 0;
-                  const pct = totalCheatsheets ? (c / totalCheatsheets) * 100 : 0;
-                  return (
-                    <li key={d.name}>
-                      <div className="flex justify-between text-muted-foreground text-[11px]">
-                        <span>{d.name.toLowerCase()}</span>
-                        <span className="text-foreground font-semibold">{c}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-sm bg-secondary/60 overflow-hidden">
-                        <div className={`h-full ${d.color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Panel>
+            <div className="rounded-xl border border-border bg-card p-5 text-center">
+              <FileTerminal className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
+              <div className="text-3xl font-extrabold text-foreground">{totalLogs}</div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Logs
+              </div>
+            </div>
 
-            <Panel title="category_breakdown">
-              <ul className="space-y-2.5 text-xs">
-                {Object.entries(cheatsheetCatCount).map(([k, v]) => {
-                  const pct = totalCheatsheets ? (v / totalCheatsheets) * 100 : 0;
-                  return (
-                    <li key={k}>
-                      <div className="flex justify-between text-muted-foreground text-[11px]">
-                        <span>{k.toLowerCase()}</span>
-                        <span className="text-foreground font-semibold">{v}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-sm bg-secondary/60 overflow-hidden">
-                        <div className="h-full bg-foreground" style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
-                {Object.keys(cheatsheetCatCount).length === 0 && (
-                  <li className="text-muted-foreground">// no cheatsheets recorded</li>
-                )}
-              </ul>
-            </Panel>
+            <div className="rounded-xl border border-border bg-card p-5 text-center">
+              <BookOpen className="w-5 h-5 text-fuchsia-400 mx-auto mb-2" />
+              <div className="text-3xl font-extrabold text-foreground">{totalCheatsheets}</div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Cheatsheets
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-card p-5 text-center col-span-2 sm:col-span-1">
+              <TagIcon className="w-5 h-5 text-purple-400 mx-auto mb-2" />
+              <div className="text-3xl font-extrabold text-foreground">{combinedTags.length}</div>
+              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+                Tags
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Combined Tag Cloud */}
-        <Panel title="combined_tag_cloud" className="mt-6">
-          <div className="flex flex-wrap gap-1.5">
-            {combinedTags.length === 0 ? (
-              <span className="font-mono text-xs text-muted-foreground">// no tags available</span>
-            ) : (
-              combinedTags.map((t) => (
-                <Tag
+          {/* 3 Telemetry Columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Writeups Breakdown */}
+            <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <Swords className="w-5 h-5 text-emerald-400" />
+                <h2 className="text-lg font-bold text-foreground">Writeups Breakdown</h2>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  Difficulty Distribution
+                </h3>
+                <div className="space-y-2.5">
+                  {writeupDiffs.map((d) => {
+                    const c = writeupDiffCount[d.name] ?? 0;
+                    const pct = totalWriteups ? (c / totalWriteups) * 100 : 0;
+                    return (
+                      <div key={d.name} className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground font-medium">{d.name}</span>
+                          <span className="text-foreground font-bold">{c}</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div className={`h-full ${d.color}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  Platform Breakdown
+                </h3>
+                <div className="space-y-2.5">
+                  {Object.entries(writeupPlatformCount).map(([k, v]) => {
+                    const pct = totalWriteups ? (v / totalWriteups) * 100 : 0;
+                    return (
+                      <div key={k} className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground font-medium">{k}</span>
+                          <span className="text-foreground font-bold">{v}</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div className="h-full bg-emerald-400" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Dev Logs Breakdown */}
+            <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <FileTerminal className="w-5 h-5 text-cyan-400" />
+                <h2 className="text-lg font-bold text-foreground">Dev Logs Breakdown</h2>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  Severity Breakdown
+                </h3>
+                <div className="space-y-2.5">
+                  {logSevs.map((s) => {
+                    const c = logSevCount[s.name] ?? 0;
+                    const pct = totalLogs ? (c / totalLogs) * 100 : 0;
+                    return (
+                      <div key={s.name} className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground font-medium">{s.name}</span>
+                          <span className="text-foreground font-bold">{c}</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div className={`h-full ${s.color}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  Category Breakdown
+                </h3>
+                <div className="space-y-2.5">
+                  {Object.entries(logCatCount).map(([k, v]) => {
+                    const pct = totalLogs ? (v / totalLogs) * 100 : 0;
+                    return (
+                      <div key={k} className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground font-medium">{k}</span>
+                          <span className="text-foreground font-bold">{v}</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div className="h-full bg-cyan-400" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Cheatsheets Breakdown */}
+            <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <BookOpen className="w-5 h-5 text-fuchsia-400" />
+                <h2 className="text-lg font-bold text-foreground">Cheatsheets Breakdown</h2>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  Difficulty Level
+                </h3>
+                <div className="space-y-2.5">
+                  {cheatsheetDiffs.map((d) => {
+                    const c = cheatsheetDiffCount[d.name] ?? 0;
+                    const pct = totalCheatsheets ? (c / totalCheatsheets) * 100 : 0;
+                    return (
+                      <div key={d.name} className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground font-medium">{d.name}</span>
+                          <span className="text-foreground font-bold">{c}</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div className={`h-full ${d.color}`} style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+                  Category Breakdown
+                </h3>
+                <div className="space-y-2.5">
+                  {Object.entries(cheatsheetCatCount).map(([k, v]) => {
+                    const pct = totalCheatsheets ? (v / totalCheatsheets) * 100 : 0;
+                    return (
+                      <div key={k} className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground font-medium">{k}</span>
+                          <span className="text-foreground font-bold">{v}</span>
+                        </div>
+                        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                          <div className="h-full bg-fuchsia-400" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Tag Cloud */}
+          <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+            <div className="flex items-center gap-2 border-b border-border pb-3">
+              <TagIcon className="w-5 h-5 text-purple-400" />
+              <h2 className="text-lg font-bold text-foreground">Combined Tag Index</h2>
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              {combinedTags.map((t) => (
+                <button
                   key={t}
                   onClick={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     handleTagClick(t, navigate);
                   }}
+                  className="px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border hover:border-emerald-400/50 hover:text-emerald-400 transition-all cursor-pointer"
                 >
-                  {t}
-                </Tag>
-              ))
-            )}
+                  #{t}
+                </button>
+              ))}
+            </div>
           </div>
-        </Panel>
-      </section>
+        </div>
+      </div>
     </CyberLayout>
   );
 }

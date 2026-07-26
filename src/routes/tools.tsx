@@ -3,19 +3,15 @@ import { useState } from "react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { JwtDecoder, PayloadEncoder } from "@/components/cyber/Tools";
 import { GithubTools } from "@/components/cyber/GithubTools";
+import { Wrench, Key, Code2, Github } from "lucide-react";
 
 export const Route = createFileRoute("/tools")({
   head: () => ({
     meta: [
-      { title: "/tools — Asbawy Blog" },
+      { title: "Tools — Browser Utilities & GitHub Repositories" },
       {
         name: "description",
-        content: "Browser-only utilities — JWT decoder, payload encoder, and more.",
-      },
-      { property: "og:title", content: "/tools — Asbawy Blog" },
-      {
-        property: "og:description",
-        content: "Interactive tools by Asbawy. Everything runs in your browser.",
+        content: "Browser-only utilities — JWT decoder, payload encoder, and GitHub tools by Asbawy.",
       },
     ],
   }),
@@ -23,9 +19,9 @@ export const Route = createFileRoute("/tools")({
 });
 
 const tabs = [
-  { id: "github", label: "github_tools" },
-  { id: "jwt", label: "jwt_decoder" },
-  { id: "payload", label: "payload_codec" },
+  { id: "github", label: "GitHub Tools", icon: Github },
+  { id: "jwt", label: "JWT Decoder", icon: Key },
+  { id: "payload", label: "Payload Codec", icon: Code2 },
 ] as const;
 
 function ToolsPage() {
@@ -33,40 +29,48 @@ function ToolsPage() {
 
   return (
     <CyberLayout>
-      <section className="px-6 md:px-10 py-10 max-w-5xl">
-        <div className="font-mono text-[11px] text-muted-foreground">
-          <span className="text-foreground">asbawy</span>:
-          <span className="text-foreground">~/tools</span>$ ./run
-        </div>
-        <h1 className="mt-2 font-mono text-2xl md:text-3xl text-foreground">
-          /tools <span className="text-muted-foreground">— offline_utils</span>
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Everything below runs in your browser. No network calls — paste away.
-        </p>
+      <div className="w-full min-h-full bg-background text-foreground py-12 px-6 md:px-12 lg:px-16 font-sans">
+        <div className="mx-auto max-w-6xl space-y-8">
+          {/* Header */}
+          <div className="space-y-3">
+            
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+              Tools
+            </h1>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+              Everything below runs locally in your browser. No network tracking — paste away.
+            </p>
+          </div>
 
-        <div className="mt-6 flex gap-2 border-b border-panel-border">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`relative -mb-px border-b-2 px-4 py-2 font-mono text-xs transition-colors ${
-                tab === t.id
-                  ? "border-foreground text-foreground "
-                  : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+          {/* Tab Navigation Bar */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-border pb-4">
+            {tabs.map((t) => {
+              const isActive = tab === t.id;
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${isActive
+                      ? "bg-amber-500/15 text-amber-400 border border-amber-500/40 font-semibold shadow-[0_0_15px_rgba(245,158,11,0.12)]"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
+                    }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="mt-6">
-          {tab === "github" && <GithubTools />}
-          {tab === "jwt" && <JwtDecoder />}
-          {tab === "payload" && <PayloadEncoder />}
+          {/* Active Tool View */}
+          <div className="pt-2">
+            {tab === "github" && <GithubTools />}
+            {tab === "jwt" && <JwtDecoder />}
+            {tab === "payload" && <PayloadEncoder />}
+          </div>
         </div>
-      </section>
+      </div>
     </CyberLayout>
   );
 }

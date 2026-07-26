@@ -83,12 +83,16 @@
   --radius: 0.625rem;
 
   /* 🎨 User Base Theme Colors - Minimalist Retro */
-  --bg-primary: #09090b; /* zinc-950 */
-  --bg-secondary: #18181b; /* zinc-900 */
-  --bg-card: #09090b;
-  --bg-card-hover: #18181b;
+  --bg-primary: #09090b;
+  /* zinc-950 */
+  --bg-secondary: #141417;
+  /* zinc-900 */
+  --bg-card: #121215;
+  /* Elevated dark surface */
+  --bg-card-hover: #1a1a1e;
   --bg-navbar: #09090b;
-  --border: #27272a; /* zinc-800 */
+  --border: #27272a;
+  /* zinc-800 */
   --border-subtle: #18181b;
 
   /* Glassmorphism Variables - Removed for sharp minimal look */
@@ -96,14 +100,21 @@
   --glass-border: #27272a;
   --glass-shadow: rgba(0, 0, 0, 0.5);
 
-  --text-primary: #f4f4f5; /* zinc-100 */
-  --text-secondary: #a1a1aa; /* zinc-400 */
-  --text-muted: #71717a; /* zinc-500 */
-  --text-heading: #fafafa; /* zinc-50 */
+  --text-primary: #f4f4f5;
+  /* zinc-100 */
+  --text-secondary: #a1a1aa;
+  /* zinc-400 */
+  --text-muted: #71717a;
+  /* zinc-500 */
+  --text-heading: #fafafa;
+  /* zinc-50 */
 
-  --accent-primary: #34d399; /* emerald-400 */
-  --accent-secondary: #e879f9; /* fuchsia-400 */
-  --accent-link: #22d3ee; /* cyan-400 */
+  --accent-primary: #34d399;
+  /* emerald-400 */
+  --accent-secondary: #e879f9;
+  /* fuchsia-400 */
+  --accent-link: #22d3ee;
+  /* cyan-400 */
 
   /* Custom Tag Styling Variables */
   --tag-bg-opacity: 0.12;
@@ -171,23 +182,23 @@
   --chart-4: var(--text-secondary);
   --chart-5: var(--text-muted);
 
-  --sidebar: var(--bg-navbar);
+  --sidebar: var(--bg-secondary);
   --sidebar-foreground: var(--text-primary);
   --sidebar-primary: var(--accent-primary);
   --sidebar-primary-foreground: var(--bg-primary);
-  --sidebar-accent: var(--bg-card);
+  --sidebar-accent: #27272a;
   --sidebar-accent-foreground: var(--text-primary);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--accent-primary);
 }
 
-/* ── Light Mode (kept for compatibility) ────────────────────────── */
+/* ── Light Mode ────────────────────────────────── */
 .light {
   --radius: 0.625rem;
-  --bg-primary: #ffffff;
-  --bg-secondary: #f4f4f5;
+  --bg-primary: #f4f4f6;
+  --bg-secondary: #e4e4e7;
   --bg-card: #ffffff;
-  --bg-card-hover: #f4f4f5;
+  --bg-card-hover: #f8fafc;
   --bg-navbar: #ffffff;
   --border: #e4e4e7;
   --border-subtle: #f4f4f5;
@@ -197,14 +208,20 @@
   --glass-border: #e4e4e7;
   --glass-shadow: rgba(0, 0, 0, 0.05);
 
-  --text-primary: #18181b; /* zinc-900 */
-  --text-secondary: #52525b; /* zinc-600 */
-  --text-muted: #a1a1aa; /* zinc-400 */
+  --text-primary: #09090b;
+  /* zinc-950 */
+  --text-secondary: #3f3f46;
+  /* zinc-700 */
+  --text-muted: #52525b;
+  /* zinc-600 - crisp contrast on white/light gray! */
   --text-heading: #09090b;
 
-  --accent-primary: #059669; /* emerald-600 */
-  --accent-secondary: #c026d3; /* fuchsia-600 */
-  --accent-link: #0891b2; /* cyan-600 */
+  --accent-primary: #059669;
+  /* emerald-600 */
+  --accent-secondary: #c026d3;
+  /* fuchsia-600 */
+  --accent-link: #0891b2;
+  /* cyan-600 */
 
   --tag-bg-opacity: 0.12;
   --tag-border-opacity: 0.25;
@@ -225,14 +242,14 @@
   --primary-foreground: var(--bg-primary);
   --secondary: var(--bg-secondary);
   --secondary-foreground: var(--text-secondary);
-  --muted: var(--bg-secondary);
+  --muted: #f1f5f9;
   --muted-foreground: var(--text-muted);
   --accent: var(--accent-secondary);
   --accent-foreground: var(--bg-primary);
   --destructive: #c0392b;
   --destructive-foreground: var(--text-primary);
   --border-var: var(--border);
-  --input: var(--bg-secondary);
+  --input: #f1f5f9;
   --ring: var(--accent-primary);
 
   --neon-green: var(--accent-primary);
@@ -244,11 +261,11 @@
   --threat-high: #c0392b;
   --gold: #6a6a64;
 
-  --sidebar: var(--bg-navbar);
+  --sidebar: var(--bg-secondary);
   --sidebar-foreground: var(--text-primary);
   --sidebar-primary: var(--accent-primary);
   --sidebar-primary-foreground: var(--bg-primary);
-  --sidebar-accent: var(--bg-secondary);
+  --sidebar-accent: var(--border);
   --sidebar-accent-foreground: var(--text-primary);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--accent-primary);
@@ -389,6 +406,7 @@
 }
 
 @layer utilities {
+
   /* Custom Link & Accent Glows */
   .text-glow-accent-primary {
     text-shadow:
@@ -479,6 +497,7 @@
 }
 
 @keyframes blink-caret {
+
   0%,
   50% {
     opacity: 1;
@@ -498,6 +517,7 @@
 }
 
 @keyframes pulse-dot {
+
   0%,
   100% {
     opacity: 1;
@@ -703,6 +723,7 @@
     clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
     filter: brightness(2) contrast(1.5) sepia(0.5) hue-rotate(-50deg);
   }
+
   100% {
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
     filter: brightness(1) contrast(1) sepia(0) hue-rotate(0deg);
@@ -714,6 +735,7 @@
     clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
     filter: brightness(2) sepia(1) hue-rotate(50deg);
   }
+
   100% {
     clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
     filter: brightness(1) sepia(0) hue-rotate(0deg);
@@ -721,10 +743,26 @@
 }
 
 @keyframes fade-out-glitch {
-  0% { opacity: 1; filter: contrast(1); }
-  30% { transform: scale(1.01) translateX(2px); filter: contrast(1.5); }
-  60% { opacity: 0.8; transform: scale(0.99) translateX(-2px); filter: contrast(2) hue-rotate(90deg); }
-  100% { opacity: 0; filter: blur(5px); }
+  0% {
+    opacity: 1;
+    filter: contrast(1);
+  }
+
+  30% {
+    transform: scale(1.01) translateX(2px);
+    filter: contrast(1.5);
+  }
+
+  60% {
+    opacity: 0.8;
+    transform: scale(0.99) translateX(-2px);
+    filter: contrast(2) hue-rotate(90deg);
+  }
+
+  100% {
+    opacity: 0;
+    filter: blur(5px);
+  }
 }
 
 .theme-transition,
@@ -739,15 +777,17 @@
 .cheatsheet-card-hover {
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .cheatsheet-card-hover:hover {
   transform: translateY(-2px);
   border-color: rgba(52, 211, 153, 0.35);
   box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5), 0 0 15px -3px rgba(52, 211, 153, 0.15);
 }
+
 .cheatsheet-pill {
   transition: all 0.15s ease-in-out;
 }
+
 .cheatsheet-pill:hover {
   transform: translateY(-1px);
 }
-

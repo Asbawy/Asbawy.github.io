@@ -77,7 +77,7 @@ export const Route = createFileRoute("/writeups/$slug")({
 
   notFoundComponent: () => (
     <CyberLayout>
-      <div className="p-10 font-mono text-sm text-muted-foreground">
+      <div className="p-10 font-sans text-sm text-muted-foreground">
         // writeup not found —{" "}
         <Link to="/writeups" className="text-foreground hover:text-foreground/80 transition-colors">
           return to feed
@@ -88,7 +88,7 @@ export const Route = createFileRoute("/writeups/$slug")({
 
   errorComponent: ({ error }) => (
     <CyberLayout>
-      <div className="p-10 font-mono text-sm text-threat-high">// {error.message}</div>
+      <div className="p-10 font-sans text-sm text-threat-high">// {error.message}</div>
     </CyberLayout>
   ),
   component: WriteupPage,
@@ -164,7 +164,6 @@ function WriteupPage() {
   } = useArticleToc("article", [2], writeup.slug);
 
   const config = platformConfig[writeup.platform] || platformConfig.Other;
-  const PlatformIcon = config.icon;
 
   const components = useSharedMdxComponents(setLightboxSrc);
 
@@ -194,7 +193,7 @@ function WriteupPage() {
       <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
         <Link
           to="/writeups"
-          className="inline-flex items-center gap-2 font-mono text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-6"
+          className="inline-flex items-center gap-2 font-sans text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> cd ../writeups
         </Link>
@@ -206,7 +205,7 @@ function WriteupPage() {
             <div className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] p-6 mb-10 shadow-[0_0_15px_rgba(0,0,0,0.2)] relative overflow-hidden group">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-foreground/20 to-transparent opacity-50"></div>
               
-              <div className="font-mono text-[11px] flex flex-wrap items-center gap-3 mb-4 tracking-wider">
+              <div className="font-sans text-[11px] flex flex-wrap items-center gap-3 mb-4 tracking-wider">
                 <span className="text-muted-foreground">{writeup.date}</span>
                 <span className="text-foreground/20">·</span>
                 <span className={`flex items-center gap-1.5 ${config.color}`}>
@@ -225,26 +224,26 @@ function WriteupPage() {
 
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 <span
-                  className={`font-mono text-[11px] px-2.5 py-1 rounded border ${difficultyBg(
+                  className={`font-sans text-[11px] px-2.5 py-1 rounded border ${difficultyBg(
                     writeup.difficulty,
                   )} ${difficultyColor(writeup.difficulty)} uppercase font-bold tracking-widest`}
                 >
                   {writeup.difficulty}
                 </span>
                 {writeup.category && (
-                  <span className="flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300 uppercase font-bold tracking-widest">
+                  <span className="flex items-center gap-1.5 font-sans text-[11px] px-2.5 py-1 rounded border border-purple-500/30 bg-purple-500/10 text-purple-300 uppercase font-bold tracking-widest">
                     <CategoryIcon category={writeup.category} className="h-3.5 w-3.5" />
                     {writeup.category}
                   </span>
                 )}
                 {writeup.os && (
-                  <span className="flex items-center gap-1.5 font-mono text-[11px] px-2.5 py-1 rounded border border-white/10 bg-white/5 text-muted-foreground uppercase font-bold tracking-widest">
+                  <span className="flex items-center gap-1.5 font-sans text-[11px] px-2.5 py-1 rounded border border-white/10 bg-white/5 text-muted-foreground uppercase font-bold tracking-widest">
                     {osIcon(writeup.os)} {writeup.os}
                   </span>
                 )}
                 {writeup.retired !== undefined && (
                   <span
-                    className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase font-bold tracking-widest ${
+                    className={`font-sans text-[10px] px-2 py-0.5 rounded border uppercase font-bold tracking-widest ${
                       writeup.retired
                         ? "border-foreground/10 text-muted-foreground bg-white/5"
                         : "border-[#9FEF00]/20 text-[#9FEF00] bg-[#9FEF00]/5"
@@ -281,7 +280,7 @@ function WriteupPage() {
             <div className="w-full text-[16px]">
               <Suspense
                 fallback={
-                  <div className="animate-pulse text-foreground/60 font-mono flex flex-col gap-4">
+                  <div className="animate-pulse text-foreground/60 font-sans flex flex-col gap-4">
                     <div className="h-4 bg-white/10 rounded w-3/4"></div>
                     <div className="h-4 bg-white/10 rounded w-full"></div>
                     <div className="h-4 bg-white/10 rounded w-5/6"></div>
@@ -300,7 +299,7 @@ function WriteupPage() {
 
             <AuthorBio />
 
-            <div className="mt-10 border-t border-panel-border pt-6 font-mono text-[11px] text-muted-foreground">
+            <div className="mt-10 border-t border-panel-border pt-6 font-sans text-[11px] text-muted-foreground">
               // end of writeup —{" "}
               <Link
                 to="/writeups"
@@ -327,7 +326,7 @@ function WriteupPage() {
                 </div>
 
                 {headings.length > 0 && (
-                  <ol className="space-y-1.5 font-mono text-xs">
+                  <ol className="space-y-1.5 font-sans text-xs">
                     {headings.map((s) => {
                       const isActive = activeHeading === s.id;
                       return (
@@ -354,7 +353,7 @@ function WriteupPage() {
 
               {/* Machine Info Panel */}
               <Panel title="machine_info" className="mt-4">
-                <div className="space-y-2 font-mono text-xs">
+                <div className="space-y-2 font-sans text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">platform</span>
                     <span className={config.color}>{writeup.platform}</span>

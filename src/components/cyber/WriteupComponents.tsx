@@ -75,7 +75,7 @@ export function SpoilerFlag({ flag, label = "Flag" }: { flag: string; label?: st
   };
 
   return (
-    <div className="my-3 rounded-lg border border-border bg-card/80 p-3 font-mono backdrop-blur-sm shadow-sm">
+    <div className="my-3 rounded-lg border border-border bg-card/80 p-3 font-sans backdrop-blur-sm shadow-sm">
       <div className="flex items-center justify-between gap-3 text-xs mb-1.5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Key className="h-3.5 w-3.5 text-accent-primary" />
@@ -104,7 +104,7 @@ export function SpoilerFlag({ flag, label = "Flag" }: { flag: string; label?: st
       </div>
       <div
         onClick={() => !revealed && setRevealed(true)}
-        className={`relative select-none rounded bg-muted/80 px-2.5 py-1.5 text-xs font-mono transition-all duration-300 ${
+        className={`relative select-none rounded bg-muted/80 px-2.5 py-1.5 text-xs font-sans transition-all duration-300 ${
           revealed
             ? "text-accent-primary font-bold select-text"
             : "cursor-pointer blur-sm hover:blur-[2px] text-muted-foreground"
@@ -114,7 +114,7 @@ export function SpoilerFlag({ flag, label = "Flag" }: { flag: string; label?: st
           {revealed ? flag : flag.replace(/./g, "•")}
         </span>
         {!revealed && (
-          <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] text-foreground/80 tracking-wider uppercase bg-background/60 backdrop-blur-[2px] rounded">
+          <span className="absolute inset-0 flex items-center justify-center font-sans text-[10px] text-foreground/80 tracking-wider uppercase bg-background/60 backdrop-blur-[2px] rounded">
             [ Click to reveal flag ]
           </span>
         )}
@@ -205,7 +205,7 @@ function getPhaseConfig(phase: string): PhaseConfig {
 
 export function KillChain({ steps }: { steps: KillChainStep[] }) {
   return (
-    <div className="my-5 rounded-xl border border-border bg-card/80 overflow-hidden shadow-md font-mono">
+    <div className="my-5 rounded-xl border border-border bg-card/80 overflow-hidden shadow-md font-sans">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-muted/40">
         <div className="flex items-center gap-2.5">
@@ -255,7 +255,7 @@ export function KillChain({ steps }: { steps: KillChainStep[] }) {
                 {/* Card header */}
                 <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-border/40 bg-muted/20">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="text-[10px] font-mono text-muted-foreground/50 shrink-0">
+                    <span className="text-[10px] font-sans text-muted-foreground/50 shrink-0">
                       {String(idx + 1).padStart(2, "0")}
                     </span>
                     <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 shrink-0" />
@@ -325,7 +325,7 @@ export interface SkillItem {
 
 export function SkillMatrix({ skills }: { skills: SkillItem[] }) {
   return (
-    <div className="my-5 rounded-xl border border-border bg-card/80 p-4 font-mono shadow-sm">
+    <div className="my-5 rounded-xl border border-border bg-card/80 p-4 font-sans shadow-sm">
       <div className="flex items-center gap-2 mb-3 border-b border-border/50 pb-2">
         <Activity className="h-4 w-4 text-accent-primary" />
         <span className="text-xs font-bold uppercase tracking-wider text-foreground">

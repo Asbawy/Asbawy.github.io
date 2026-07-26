@@ -1,11 +1,10 @@
-import { useEffect, useState, MouseEvent } from "react";
+import { useEffect, useState } from "react";
 import { Sun, Moon } from "lucide-react";
 
 export function ThemeToggle() {
   const [isLight, setIsLight] = useState(false);
 
   useEffect(() => {
-    // Check local storage or system preference on mount
     const savedTheme = localStorage.getItem("theme");
     const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
 
@@ -18,46 +17,30 @@ export function ThemeToggle() {
     }
   }, []);
 
-  const toggleTheme = (e: MouseEvent<HTMLButtonElement>) => {
+  const toggleTheme = () => {
     const newTheme = !isLight;
-
-    const applyTheme = () => {
-      setIsLight(newTheme);
-      if (newTheme) {
-        document.documentElement.classList.add("light");
-        localStorage.setItem("theme", "light");
-      } else {
-        document.documentElement.classList.remove("light");
-        localStorage.setItem("theme", "dark");
-      }
-    };
-
-    if (!document.startViewTransition) {
-      document.documentElement.classList.add("theme-transition");
-      applyTheme();
-      setTimeout(() => {
-        document.documentElement.classList.remove("theme-transition");
-      }, 500);
-      return;
+    setIsLight(newTheme);
+    if (newTheme) {
+      document.documentElement.classList.add("light");
+      localStorage.setItem("theme", "light");
+    } else {
+      document.documentElement.classList.remove("light");
+      localStorage.setItem("theme", "dark");
     }
-
-    document.startViewTransition(() => {
-      applyTheme();
-    });
   };
 
   return (
     <button
       onClick={toggleTheme}
-      className="flex items-center gap-2 rounded-md px-3 py-2 border border-panel-border transition-colors text-xs w-full text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/20 relative overflow-hidden group"
+      className="p-2 rounded-lg border border-glass-border bg-white/[0.02] hover:border-emerald-400/40 text-muted-foreground hover:text-foreground transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400 shrink-0"
       title={`Switch to ${isLight ? "dark" : "light"} mode`}
+      aria-label="Toggle theme"
     >
       {isLight ? (
-        <Moon className="h-4 w-4 text-accent-secondary transition-transform group-hover:-rotate-12" />
+        <Moon className="h-4 w-4 text-purple-400 transition-transform hover:-rotate-12" />
       ) : (
-        <Sun className="h-4 w-4 text-accent-primary transition-transform group-hover:rotate-45" />
+        <Sun className="h-4 w-4 text-emerald-400 transition-transform hover:rotate-45" />
       )}
-      <span className="font-mono">{isLight ? "dark_mode" : "light_mode"}</span>
     </button>
   );
 }

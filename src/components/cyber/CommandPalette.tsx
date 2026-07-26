@@ -34,13 +34,13 @@ export function CommandPalette() {
 
   const pages = useMemo(
     () => [
-      { label: "/home", to: "/", icon: Home },
-      { label: "/writeups", to: "/writeups", icon: Swords },
-      { label: "/cheatsheet", to: "/cheatsheet", icon: BookOpen },
-      { label: "/logs", to: "/logs", icon: FileTerminal },
-      { label: "/tools", to: "/tools", icon: Wrench },
-      { label: "/stats", to: "/stats", icon: Activity },
-      { label: "/about", to: "/about", icon: User },
+      { label: "Home", to: "/", icon: Home },
+      { label: "Writeups", to: "/writeups", icon: Swords },
+      { label: "Cheatsheets", to: "/cheatsheet", icon: BookOpen },
+      { label: "Logs", to: "/logs", icon: FileTerminal },
+      { label: "Tools", to: "/tools", icon: Wrench },
+      { label: "Stats", to: "/stats", icon: Activity },
+      { label: "About", to: "/about", icon: User },
     ],
     [],
   );
@@ -53,42 +53,42 @@ export function CommandPalette() {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-background/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity animate-in fade-in duration-200"
         onClick={() => setOpen(false)}
       />
 
       {/* Dialog */}
       <Command
-        className="relative w-full max-w-xl rounded-xl border border-panel-border bg-panel/95 backdrop-blur-xl shadow-[0_0_80px_rgba(0,255,136,0.06),0_25px_50px_rgba(0,0,0,0.5)] overflow-hidden font-mono"
-        label="Command Palette"
+        className="relative w-full max-w-xl rounded-2xl border border-glass-border bg-card text-foreground shadow-[0_20px_60px_rgba(0,0,0,0.6)] overflow-hidden font-sans animate-in zoom-in-95 duration-200"
+        label="Global Search Modal"
       >
         {/* Input */}
-        <div className="flex items-center gap-3 border-b border-panel-border px-4">
-          <Search className="h-4 w-4 shrink-0 text-foreground" />
+        <div className="flex items-center gap-3 border-b border-glass-border px-5 py-3.5">
+          <Search className="h-4 w-4 shrink-0 text-emerald-400" />
           <Command.Input
-            placeholder="Type to search posts, cheatsheets, or pages…"
-            className="flex-1 bg-transparent py-3.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+            placeholder="Search writeups, cheatsheets, logs, or tools..."
+            className="flex-1 bg-transparent py-1 text-base text-foreground placeholder:text-muted-foreground/60 focus:outline-none font-sans"
             autoFocus
           />
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-panel-border bg-background/60 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded-md border border-glass-border bg-white/[0.05] px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
             ESC
           </kbd>
         </div>
 
-        {/* Results */}
-        <Command.List className="max-h-[50vh] overflow-y-auto p-2 scrollbar-thin">
-          <Command.Empty className="py-8 text-center text-xs text-muted-foreground">
-            // no results found
+        {/* Results List */}
+        <Command.List className="max-h-[55vh] overflow-y-auto p-2.5 scrollbar-thin">
+          <Command.Empty className="py-12 text-center text-sm text-muted-foreground font-sans">
+            No search results found.
           </Command.Empty>
 
           {/* Pages */}
           <Command.Group
             heading={
-              <span className="px-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
-                Pages
+              <span className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 font-mono">
+                Navigation Pages
               </span>
             }
           >
@@ -97,36 +97,38 @@ export function CommandPalette() {
                 key={p.to}
                 value={p.label}
                 onSelect={() => go(p.to)}
-                className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground transition-colors"
+                className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-emerald-500/10 data-[selected=true]:text-emerald-400 transition-colors my-0.5 font-sans"
               >
                 <p.icon className="h-4 w-4 shrink-0" />
-                <span className="flex-1">{p.label}</span>
-                <CornerDownLeft className="h-3 w-3 opacity-0 data-[selected=true]:opacity-100 shrink-0 text-foreground/60" />
+                <span className="flex-1 font-medium">{p.label}</span>
+                <CornerDownLeft className="h-3.5 w-3.5 opacity-0 data-[selected=true]:opacity-100 shrink-0 text-emerald-400" />
               </Command.Item>
             ))}
           </Command.Group>
 
-          {/* Posts */}
-          {postsMeta.length > 0 && (
+          {/* Writeups */}
+          {writeupsMeta.length > 0 && (
             <Command.Group
               heading={
-                <span className="px-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
-                  Posts
+                <span className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 font-mono mt-3 block">
+                  Writeups
                 </span>
               }
             >
-              {postsMeta.map((p) => (
+              {writeupsMeta.map((w) => (
                 <Command.Item
-                  key={p.slug}
-                  value={`${p.title} ${p.tags.join(" ")} ${p.category}`}
-                  onSelect={() => go(`/logs/${p.slug}`)}
-                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground transition-colors"
+                  key={w.slug}
+                  value={`${w.title} ${w.tags.join(" ")} ${w.platform} ${w.difficulty}`}
+                  onSelect={() => go(`/writeups/${w.slug}`)}
+                  className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-emerald-500/10 data-[selected=true]:text-emerald-400 transition-colors my-0.5 font-sans"
                 >
-                  <FileTerminal className="h-4 w-4 shrink-0" />
+                  <Swords className="h-4 w-4 shrink-0 text-emerald-400" />
                   <div className="flex-1 min-w-0">
-                    <div className="truncate">{p.title}</div>
-                    <div className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
-                      {p.date} · {p.category.toLowerCase()}
+                    <div className="truncate font-semibold text-foreground">{w.title}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                      <span className="text-emerald-400/90 font-medium">{w.platform}</span>
+                      <span>·</span>
+                      <span>{w.difficulty}</span>
                     </div>
                   </div>
                 </Command.Item>
@@ -138,7 +140,7 @@ export function CommandPalette() {
           {cheatsheetFiles.length > 0 && (
             <Command.Group
               heading={
-                <span className="px-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
+                <span className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 font-mono mt-3 block">
                   Cheatsheets
                 </span>
               }
@@ -148,13 +150,15 @@ export function CommandPalette() {
                   key={c.path}
                   value={`${c.meta.title || c.path} ${c.path}`}
                   onSelect={() => go(`/cheatsheet/${c.path}`)}
-                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground transition-colors"
+                  className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-emerald-500/10 data-[selected=true]:text-emerald-400 transition-colors my-0.5 font-sans"
                 >
-                  <BookOpen className="h-4 w-4 shrink-0" />
+                  <BookOpen className="h-4 w-4 shrink-0 text-fuchsia-400" />
                   <div className="flex-1 min-w-0">
-                    <div className="truncate">{c.meta.title || c.path}</div>
-                    <div className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
-                      ~/{c.path}.mdx
+                    <div className="truncate font-semibold text-foreground">
+                      {c.meta.title || c.path}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
+                      {c.meta.category || "Reference"} · {c.meta.readTime || "Quick ref"}
                     </div>
                   </div>
                 </Command.Item>
@@ -162,27 +166,29 @@ export function CommandPalette() {
             </Command.Group>
           )}
 
-          {/* Writeups */}
-          {writeupsMeta.length > 0 && (
+          {/* Logs */}
+          {postsMeta.length > 0 && (
             <Command.Group
               heading={
-                <span className="px-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/70">
-                  Writeups
+                <span className="px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 font-mono mt-3 block">
+                  Research Logs
                 </span>
               }
             >
-              {writeupsMeta.map((w) => (
+              {postsMeta.map((p) => (
                 <Command.Item
-                  key={w.slug}
-                  value={`${w.title} ${w.tags.join(" ")} ${w.platform} ${w.difficulty}`}
-                  onSelect={() => go(`/writeups/${w.slug}`)}
-                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-foreground/10 data-[selected=true]:text-foreground transition-colors"
+                  key={p.slug}
+                  value={`${p.title} ${p.tags.join(" ")} ${p.category}`}
+                  onSelect={() => go(`/logs/${p.slug}`)}
+                  className="flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm text-muted-foreground cursor-pointer data-[selected=true]:bg-emerald-500/10 data-[selected=true]:text-emerald-400 transition-colors my-0.5 font-sans"
                 >
-                  <Swords className="h-4 w-4 shrink-0" />
+                  <FileTerminal className="h-4 w-4 shrink-0 text-cyan-400" />
                   <div className="flex-1 min-w-0">
-                    <div className="truncate">{w.title}</div>
-                    <div className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
-                      {w.platform} · {w.difficulty.toLowerCase()} · {w.os || w.type}
+                    <div className="truncate font-semibold text-foreground">{p.title}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                      <span>{p.date}</span>
+                      <span>·</span>
+                      <span className="text-cyan-400/90">{p.category}</span>
                     </div>
                   </div>
                 </Command.Item>
@@ -191,19 +197,23 @@ export function CommandPalette() {
           )}
         </Command.List>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-panel-border px-4 py-2 text-[10px] text-muted-foreground/60">
-          <span>
-            <kbd className="rounded border border-panel-border bg-background/60 px-1 py-0.5">
-              ↑↓
-            </kbd>{" "}
-            navigate{" "}
-            <kbd className="rounded border border-panel-border bg-background/60 px-1 py-0.5 ml-1">
-              ↵
-            </kbd>{" "}
-            select
-          </span>
-          <span className="text-foreground/40">cmd_palette v1</span>
+        {/* Modal Footer */}
+        <div className="flex items-center justify-between border-t border-glass-border px-5 py-2.5 text-xs text-muted-foreground font-sans bg-white/[0.01]">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-glass-border bg-white/[0.05] px-1.5 py-0.5 font-mono text-[10px]">
+                ↑↓
+              </kbd>{" "}
+              navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="rounded border border-glass-border bg-white/[0.05] px-1.5 py-0.5 font-mono text-[10px]">
+                ↵
+              </kbd>{" "}
+              open
+            </span>
+          </div>
+          <span className="text-muted-foreground/60 text-[11px]">Asbawy Search</span>
         </div>
       </Command>
     </div>

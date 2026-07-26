@@ -175,11 +175,10 @@ export function Tag({
 
   return (
     <span
-      className={`custom-tag ${
-        onClick
+      className={`custom-tag ${onClick
           ? "cursor-pointer hover:brightness-125 hover:-translate-y-[1px] transition-all duration-150"
           : ""
-      }`}
+        }`}
       style={style}
       onClick={onClick}
     >

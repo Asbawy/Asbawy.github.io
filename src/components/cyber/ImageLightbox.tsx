@@ -53,11 +53,9 @@ export function ImageLightbox({
         centerOnInit={true}
         limitToBounds={true}
         panning={{
-          lockToContainerBoundary: true,
           velocityDisabled: false,
         }}
         wheel={{
-          smoothStep: 0.005,
           step: 0.1,
         }}
         pinch={{

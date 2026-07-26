@@ -32,7 +32,7 @@ export const Route = createFileRoute("/cheatsheet")({
 function CheatsheetLayout() {
   return (
     <CyberLayout>
-      <div className="min-h-full bg-[#0d0d0d] text-[#e0e0e0]">
+      <div className="min-h-full bg-background text-foreground">
         <Outlet />
       </div>
     </CyberLayout>
