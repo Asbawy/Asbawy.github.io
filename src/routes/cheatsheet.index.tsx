@@ -281,8 +281,8 @@ function CheatsheetIndex() {
                   to="/cheatsheet/$"
                   params={{ _splat: file.path }}
                   className="
-                    group flex flex-col justify-between rounded-xl bg-card border border-border p-6
-                    hover:-translate-y-1 hover:border-[#4ec9b0]/40 hover:shadow-[0_12px_36px_rgba(0,0,0,0.5)]
+                    group flex flex-col justify-between rounded-xl bg-card border border-border p-6 shadow-sm
+                    hover:-translate-y-1 hover:border-[#4ec9b0]/40 hover:shadow-xl
                     transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]
                   "
                 >

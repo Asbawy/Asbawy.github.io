@@ -93,7 +93,7 @@ function PostPage() {
   const navigate = useNavigate();
   const { post } = Route.useLoaderData();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const { headings, activeId: activeHeading, progress } = useArticleToc("article", [2], post.slug);
+  const { headings, activeId: activeHeading, progress } = useArticleToc("article", [2, 3], post.slug);
   const components = useSharedMdxComponents(setLightboxSrc);
 
   const MDXContent = MdxComponents[post.slug] || (() => <div>Component not found</div>);

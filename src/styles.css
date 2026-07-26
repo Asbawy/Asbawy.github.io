@@ -119,9 +119,9 @@
   /* Custom Tag Styling Variables */
   --tag-bg-opacity: 0.12;
   --tag-border-opacity: 0.25;
-  --tag-radius: 4px;
-  --tag-padding: 3px 10px;
-  --tag-font-size: 11px;
+  --tag-radius: 6px;
+  --tag-padding: 4px 10px;
+  --tag-font-size: 12px;
   --tag-font-weight: 600;
   --tag-text-transform: uppercase;
   --tag-letter-spacing: 0.5px;
@@ -225,9 +225,9 @@
 
   --tag-bg-opacity: 0.12;
   --tag-border-opacity: 0.25;
-  --tag-radius: 4px;
-  --tag-padding: 3px 10px;
-  --tag-font-size: 11px;
+  --tag-radius: 6px;
+  --tag-padding: 4px 10px;
+  --tag-font-size: 12px;
   --tag-font-weight: 600;
   --tag-text-transform: uppercase;
   --tag-letter-spacing: 0.5px;

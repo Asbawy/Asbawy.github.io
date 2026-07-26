@@ -78,7 +78,7 @@ export function GithubTools() {
           return (
             <div
               key={repo.name}
-              className="group flex flex-col justify-between p-5 rounded-xl border border-border bg-card hover:-translate-y-1 hover:shadow-lg hover:border-emerald-500/40 transition-all duration-300"
+              className="group flex flex-col justify-between p-5 rounded-xl border border-border bg-card shadow-sm hover:-translate-y-1 hover:shadow-xl hover:border-emerald-500/40 transition-all duration-300"
             >
               <div>
                 <div className="flex items-start justify-between mb-3">

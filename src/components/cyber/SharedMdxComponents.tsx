@@ -25,14 +25,18 @@ function getNodeText(node: React.ReactNode): string {
 /**
  * Robust heading ID generation for TOC linking and anchor scroll.
  */
-function getHeadingId(id?: string, children?: React.ReactNode): string | undefined {
+function getHeadingId(id?: string, children?: React.ReactNode, seen?: Map<string, number>): string | undefined {
   if (id) return id;
   const text = getNodeText(children);
   if (!text || !text.trim()) return undefined;
-  return text
+  const base = text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+  if (!seen) return base;
+  const count = (seen.get(base) || 0) + 1;
+  seen.set(base, count);
+  return count > 1 ? `${base}-${count}` : base;
 }
 
 /**
@@ -129,8 +133,11 @@ function InteractiveTab({
 export function useSharedMdxComponents(
   setLightboxSrc?: (src: string) => void
 ) {
+  const seenIds = useMemo(() => new Map<string, number>(), []);
   return useMemo(
-    () => ({
+    () => {
+      seenIds.clear();
+      return {
       h1: (props: any) => (
         <div className="mt-16 mb-10 max-w-[75ch] border border-accent-primary/30 bg-accent-primary/[0.03] p-6 md:p-8 rounded-lg shadow-[0_0_20px_rgba(var(--color-accent-primary-rgb),0.05)] relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-accent-primary/50" />
@@ -142,7 +149,7 @@ export function useSharedMdxComponents(
         </div>
       ),
       h2: (props: any) => {
-        const generatedId = getHeadingId(props.id, props.children);
+        const generatedId = getHeadingId(props.id, props.children, seenIds);
         return (
           <div className="mt-16 mb-8 max-w-[75ch]">
             <div className="flex items-center gap-3 border-b border-foreground/15 pb-4">
@@ -157,7 +164,7 @@ export function useSharedMdxComponents(
         );
       },
       h3: (props: any) => {
-        const generatedId = getHeadingId(props.id, props.children);
+        const generatedId = getHeadingId(props.id, props.children, seenIds);
         return (
           <h3
             id={generatedId}
@@ -169,7 +176,7 @@ export function useSharedMdxComponents(
         );
       },
       h4: (props: any) => {
-        const generatedId = getHeadingId(props.id, props.children);
+        const generatedId = getHeadingId(props.id, props.children, seenIds);
         return (
           <h4
             id={generatedId}
@@ -180,12 +187,12 @@ export function useSharedMdxComponents(
           </h4>
         );
       },
-      p: (props: any) => <p className="my-6 text-[16px] md:text-[17px] leading-[1.8] text-foreground/80 max-w-[75ch] tracking-wide" {...props} />,
+      p: (props: any) => <p className="my-6 text-[16px] md:text-[17px] leading-[1.8] text-foreground/80 max-w-[80ch] tracking-wide" {...props} />,
       ul: (props: any) => (
-        <ul className="my-6 space-y-3 text-[16px] md:text-[17px] leading-[1.8] text-foreground/80 list-none max-w-[75ch]" {...props} />
+        <ul className="my-6 space-y-3 text-[16px] md:text-[17px] leading-[1.8] text-foreground/80 list-none max-w-[80ch]" {...props} />
       ),
       ol: (props: any) => (
-        <ol className="my-6 space-y-3 text-[16px] md:text-[17px] leading-[1.8] text-foreground/80 list-decimal ml-6 max-w-[75ch] font-mono marker:text-accent-primary marker:font-bold" {...props} />
+        <ol className="my-6 space-y-3 text-[16px] md:text-[17px] leading-[1.8] text-foreground/80 list-decimal ml-6 max-w-[80ch] font-sans marker:text-accent-primary marker:font-bold" {...props} />
       ),
       li: (props: any) => {
         const isListNone = props.className?.includes('list-none') ?? true;
@@ -197,7 +204,7 @@ export function useSharedMdxComponents(
         );
       },
       hr: (props: any) => (
-        <div className="my-14 max-w-[75ch] flex items-center gap-4 opacity-70">
+        <div className="my-14 max-w-[80ch] flex items-center gap-4 opacity-70">
           <div className="h-px bg-foreground/10 flex-1" />
           <div className="flex gap-1">
             <span className="w-1 h-1 rounded-full bg-foreground/30" />
@@ -238,37 +245,37 @@ export function useSharedMdxComponents(
       },
       pre: (props: any) => <>{props.children}</>,
       img: (props: any) => (
-        <figure className="my-10 max-w-[75ch] group cursor-zoom-in" onClick={() => setLightboxSrc?.(props.src)}>
-          <div className="relative rounded-lg border border-foreground/10 bg-background overflow-hidden shadow-md">
+        <figure className="my-10 max-w-[80ch] group cursor-zoom-in" onClick={() => setLightboxSrc?.(props.src)}>
+          <div className="relative rounded-lg border border-border bg-card overflow-hidden shadow-md">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none"></div>
               <img
                 {...props}
-                className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-105"
+                className="w-full h-auto object-cover rounded-lg transition-transform duration-500 group-hover:scale-[1.02]"
                 loading="lazy"
+                decoding="async"
               />
-              <div className="absolute inset-0 border border-foreground/5 z-20 pointer-events-none group-hover:border-accent-primary/40 transition-colors duration-300"></div>
+              <div className="absolute inset-0 border border-border/50 rounded-lg z-20 pointer-events-none group-hover:border-accent-primary/40 transition-colors duration-300"></div>
             </div>
           </div>
           {props.alt && (
-            <figcaption className="mt-4 text-center font-mono text-[11px] text-muted-foreground">
-              <span className="text-accent-primary opacity-60 mr-2">_img:</span>
+            <figcaption className="mt-3 text-center font-sans text-xs text-muted-foreground">
               {props.alt}
             </figcaption>
           )}
         </figure>
       ),
       table: (props: any) => (
-        <div className="my-8 overflow-x-auto rounded-lg border border-white/[0.08] bg-background/80 shadow-md max-w-[75ch]">
-          <table className="w-full text-left border-collapse font-mono text-[12.5px]" {...props} />
+        <div className="my-8 overflow-x-auto rounded-lg border border-border bg-card shadow-md max-w-[80ch]">
+          <table className="w-full text-left border-collapse font-sans text-[13.5px] md:text-[14px]" {...props} />
         </div>
       ),
       thead: (props: any) => (
-        <thead className="bg-white/[0.04] border-b border-white/[0.1] text-foreground/90 uppercase tracking-wider text-[11px]" {...props} />
+        <thead className="bg-muted border-b border-border text-foreground uppercase tracking-wider text-[11.5px] font-bold" {...props} />
       ),
       tr: (props: any) => (
         <tr
-          className="border-b border-white/[0.04] last:border-0 even:bg-white/[0.015] hover:bg-white/[0.04] transition-colors duration-150"
+          className="border-b border-border/50 last:border-0 even:bg-muted/30 hover:bg-muted/60 transition-colors duration-150"
           {...props}
         />
       ),
@@ -279,9 +286,9 @@ export function useSharedMdxComponents(
         <td className="px-4 py-3.5 text-foreground/80 align-top leading-relaxed" {...props} />
       ),
       blockquote: (props: any) => (
-        <div className="my-10 max-w-[75ch] relative group">
+        <div className="my-10 max-w-[80ch] relative group">
           <div className="absolute -left-4 top-0 bottom-0 w-1 bg-accent-secondary/50 rounded-full transition-all group-hover:bg-accent-secondary group-hover:shadow-[0_0_10px_rgba(var(--color-accent-secondary-rgb),0.5)]" />
-          <blockquote className="bg-foreground/[0.02] border border-foreground/5 rounded-r-lg p-6 font-mono text-[14px] text-foreground/70 italic shadow-sm leading-relaxed" {...props} />
+          <blockquote className="bg-muted/30 border border-border rounded-r-lg p-6 font-sans text-[14px] text-foreground/80 italic shadow-sm leading-relaxed" {...props} />
         </div>
       ),
       // Custom specialized components
@@ -379,8 +386,9 @@ export function useSharedMdxComponents(
       Tab: ({ label, children }: any) => {
         return <InteractiveTab label={label}>{children}</InteractiveTab>;
       },
-    }),
-    [setLightboxSrc]
+    };
+    },
+    [setLightboxSrc, seenIds]
   );
 }
 

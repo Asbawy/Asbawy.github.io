@@ -72,6 +72,7 @@ export default defineConfig({
         autoStaticPathsDiscovery: true,
         crawlLinks: true,
         autoSubfolderIndex: false,
+        concurrency: 4,
       },
       pages: getPrerenderPages(),
     }),

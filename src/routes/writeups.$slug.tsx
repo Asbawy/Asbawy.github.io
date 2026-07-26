@@ -161,7 +161,7 @@ function WriteupPage() {
     headings,
     activeId: activeHeading,
     progress,
-  } = useArticleToc("article", [2], writeup.slug);
+  } = useArticleToc("article", [2, 3], writeup.slug);
 
   const config = platformConfig[writeup.platform] || platformConfig.Other;
 

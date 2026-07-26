@@ -283,7 +283,7 @@ export function TerminalCode({
             className={`p-1 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30 ${
               showLineNumbers
                 ? "text-foreground bg-foreground/10"
-                : "text-[#999999] hover:text-[#E8E8E8] hover:bg-[#1A1A1A] light:text-[#666666] light:hover:text-[#222222] light:hover:bg-black/5"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
             }`}
             title="Toggle line numbers"
           >
@@ -296,7 +296,7 @@ export function TerminalCode({
             className={`p-1 rounded transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/30 ${
               isWrapped
                 ? "text-foreground bg-foreground/10"
-                : "text-[#999999] hover:text-[#E8E8E8] hover:bg-[#1A1A1A] light:text-[#666666] light:hover:text-[#222222] light:hover:bg-black/5"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
             }`}
             title="Toggle line wrapping"
           >
@@ -306,7 +306,7 @@ export function TerminalCode({
           {/* Copy Button */}
           <button
             onClick={handleCopy}
-            className="text-[#999999] hover:text-[#E8E8E8] hover:bg-[#1A1A1A] light:text-[#666666] light:hover:text-[#222222] light:hover:bg-black/5 transition-colors p-1 rounded cursor-pointer focus-visible:outline-none"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors p-1 rounded cursor-pointer focus-visible:outline-none"
             title="Copy code"
           >
             {copied ? (

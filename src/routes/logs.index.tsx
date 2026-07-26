@@ -157,7 +157,7 @@ function LogsPage() {
                   key={p.slug}
                   to="/logs/$slug"
                   params={{ slug: p.slug }}
-                  className="group flex flex-col md:flex-row md:items-start justify-between gap-6 rounded-xl bg-card border border-border p-6 hover:-translate-y-0.5 hover:border-cyan-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-200"
+                  className="group flex flex-col md:flex-row md:items-start justify-between gap-6 rounded-xl bg-card border border-border p-6 shadow-sm hover:-translate-y-0.5 hover:border-cyan-500/40 hover:shadow-xl transition-all duration-200"
                 >
                   <div className="space-y-3 flex-1">
                     {/* Top Row Badges */}
