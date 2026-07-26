@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link, useNavigate, getRouteApi } from "@tanstack/react-router";
-import { Lock, Zap, Terminal, FolderOpen, ChevronRight, BookOpen } from "lucide-react";
-import { useMemo, useEffect } from "react";
+import { Search, X, Clock, ArrowRight, Tag as TagIcon, BookOpen } from "lucide-react";
+import { useMemo, useEffect, useState } from "react";
 import { cheatsheetFiles } from "@/data/cheatsheets";
-import { Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
 
 const cheatsheetRoute = getRouteApi("/cheatsheet");
 
@@ -10,210 +10,363 @@ export const Route = createFileRoute("/cheatsheet/")({
   component: CheatsheetIndex,
 });
 
+function getCategoryBadgeColor(cat?: string) {
+  const c = (cat || "").toLowerCase();
+  if (c.includes("active directory") || c === "ad") {
+    return "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30";
+  }
+  if (c.includes("linux")) {
+    return "bg-teal-500/15 text-teal-400 border border-teal-500/30";
+  }
+  if (c.includes("tool")) {
+    return "bg-purple-500/15 text-purple-400 border border-purple-500/30";
+  }
+  if (c.includes("windows")) {
+    return "bg-blue-500/15 text-blue-400 border border-blue-500/30";
+  }
+  return "bg-[#4ec9b0]/15 text-[#4ec9b0] border border-[#4ec9b0]/30";
+}
+
+function getDifficultyBadgeColor(diff?: string) {
+  const d = (diff || "Intermediate").toLowerCase();
+  if (d === "advanced") {
+    return "bg-rose-500/10 text-rose-400 border border-rose-500/20";
+  }
+  if (d === "beginner") {
+    return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+  }
+  return "bg-amber-500/10 text-amber-400 border border-amber-500/20";
+}
+
 function CheatsheetIndex() {
   const navigate = useNavigate();
-  const search = cheatsheetRoute.useSearch();
+  const search = cheatsheetRoute.useSearch() as {
+    q?: string;
+    tag?: string;
+    cat?: string;
+  };
   const q = (search.q || "").toLowerCase().trim();
+  const activeTagParam = (search.tag || "").toLowerCase().trim();
 
-  // Filter cheatsheet files based on search
-  const displayedFiles = useMemo(() => {
-    if (!q) return cheatsheetFiles;
-    return cheatsheetFiles.filter(
-      (file) =>
-        file.path.toLowerCase().includes(q) ||
-        file.meta.title?.toLowerCase().includes(q) ||
-        file.meta.category?.toLowerCase().includes(q) ||
-        file.meta.tags?.some((t) => t.toLowerCase().includes(q)),
-    );
-  }, [q]);
+  const [selectedCategory, setSelectedCategory] = useState<string>(search.cat || "All");
+  const [activeTag, setActiveTag] = useState<string>(activeTagParam);
 
-  // Auto-navigate if exactly 1 match
   useEffect(() => {
-    if (q && displayedFiles.length === 1) {
+    if (search.cat) setSelectedCategory(search.cat);
+    if (search.tag !== undefined) setActiveTag(search.tag.toLowerCase().trim());
+  }, [search.cat, search.tag]);
+
+  // All categories with counts
+  const categories = useMemo(() => {
+    const cats: Record<string, number> = { All: cheatsheetFiles.length };
+    for (const file of cheatsheetFiles) {
+      const cat = file.meta.category || "General";
+      cats[cat] = (cats[cat] || 0) + 1;
+    }
+    return Object.entries(cats).map(([name, count]) => ({ name, count }));
+  }, []);
+
+  // Top unique tags across all cheatsheets
+  const topTags = useMemo(() => {
+    const tagCounts: Record<string, number> = {};
+    for (const file of cheatsheetFiles) {
+      for (const t of file.meta.tags || []) {
+        tagCounts[t] = (tagCounts[t] || 0) + 1;
+      }
+    }
+    return Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 16)
+      .map(([name, count]) => ({ name, count }));
+  }, []);
+
+  // Filtered cheatsheet files
+  const displayedFiles = useMemo(() => {
+    return cheatsheetFiles.filter((file) => {
+      // Category filter
+      if (selectedCategory !== "All" && file.meta.category !== selectedCategory) {
+        return false;
+      }
+      // Tag filter
+      if (activeTag && !file.meta.tags?.some((t) => t.toLowerCase() === activeTag)) {
+        return false;
+      }
+      // Query filter
+      if (q) {
+        const matchesQ =
+          file.path.toLowerCase().includes(q) ||
+          file.meta.title?.toLowerCase().includes(q) ||
+          file.meta.category?.toLowerCase().includes(q) ||
+          file.meta.excerpt?.toLowerCase().includes(q) ||
+          file.meta.tags?.some((t) => t.toLowerCase().includes(q));
+        if (!matchesQ) return false;
+      }
+      return true;
+    });
+  }, [q, selectedCategory, activeTag]);
+
+  const handleCategorySelect = (catName: string) => {
+    setSelectedCategory(catName);
+    if (catName === "All") {
       navigate({
-        to: "/cheatsheet/$",
-        params: { _splat: displayedFiles[0].path },
-        search: { q },
+        from: Route.fullPath,
+        search: (old: any) => ({ ...old, cat: undefined }),
+        replace: true,
+      });
+    } else {
+      navigate({
+        from: Route.fullPath,
+        search: (old: any) => ({ ...old, cat: catName }),
         replace: true,
       });
     }
-  }, [q, displayedFiles, navigate]);
+  };
 
-  // Group cheatsheets by category
-  const categories = useMemo(() => {
-    const cats: Record<string, { count: number; firstPath: string }> = {};
-    for (const file of cheatsheetFiles) {
-      const cat = file.meta.category || "General";
-      if (!cats[cat]) {
-        cats[cat] = { count: 0, firstPath: file.path };
-      }
-      cats[cat].count++;
+  const handleTagToggle = (tagName: string) => {
+    const norm = tagName.toLowerCase();
+    if (activeTag === norm) {
+      setActiveTag("");
+      navigate({
+        from: Route.fullPath,
+        search: (old: any) => ({ ...old, tag: undefined }),
+        replace: true,
+      });
+    } else {
+      setActiveTag(norm);
+      navigate({
+        from: Route.fullPath,
+        search: (old: any) => ({ ...old, tag: tagName }),
+        replace: true,
+      });
     }
-    return Object.entries(cats).map(([name, data]) => ({
-      name,
-      ...data,
-    }));
-  }, []);
+  };
+
+  const handleSearchChange = (val: string) => {
+    navigate({
+      from: Route.fullPath,
+      search: (old: any) => ({ ...old, q: val || undefined }),
+      replace: true,
+    });
+  };
+
+  const clearFilters = () => {
+    setSelectedCategory("All");
+    setActiveTag("");
+    navigate({
+      from: Route.fullPath,
+      search: () => ({ q: undefined, tag: undefined, cat: undefined }),
+      replace: true,
+    });
+  };
+
+  const hasActiveFilters = Boolean(q || selectedCategory !== "All" || activeTag);
 
   return (
-    <div className="h-full overflow-y-auto p-6 md:p-10 scrollbar-thin">
-      <div className="mx-auto max-w-3xl">
-        <div className="text-center mb-8">
-          <div className="relative">
-            {/* Icon cluster */}
-            <div className="relative mb-4 inline-flex">
-              <div className="relative flex items-center gap-4">
-                <Lock className="h-5 w-5 text-foreground opacity-60 animate-pulse" />
-                <Terminal className="h-7 w-7 text-foreground " />
-                <Zap className="h-5 w-5 text-threat-mid opacity-60" />
-              </div>
-            </div>
+    <div className="w-full min-h-full bg-[#0d0d0d] text-[#e0e0e0] py-12 px-6 md:px-12 lg:px-16">
+      <div className="mx-auto max-w-7xl space-y-10">
+        {/* Simple Page Header — Blog Style */}
+        <div className="space-y-3">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white font-sans">
+            Cheatsheets
+          </h1>
+          <p className="text-base md:text-lg text-[#888] font-sans max-w-2xl">
+            Security cheatsheets, command references, and tactical field notes.
+          </p>
+        </div>
 
-            {/* Main message */}
-            <h2 className="font-mono text-lg md:text-xl text-foreground mb-2">
-              <span className="inline-block cyber-glitch font-bold">[ SELECT A REFERENCE ]</span>
-            </h2>
-            <p className="font-mono text-xs text-muted-foreground mb-6">
-              <FolderOpen className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-              Browse the directory or search to view command lists
-            </p>
-
-            {/* Decorative terminal info */}
-            <div className="relative mx-auto max-w-sm mb-10">
-              <div className="text-left rounded-xl glass-panel p-5 font-mono text-[12px] text-muted-foreground space-y-2 relative z-10 transition-all">
-                <div>
-                  <span className="text-foreground font-bold">$</span>{" "}
-                  <span className="text-foreground/90">
-                    loading cheatsheets
-                    <span className="loading-dots" />
+        {/* Category Filter Bar + Search Input — Horizontal Toolbar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#222] pb-6">
+          {/* Category Pill Tabs */}
+          <div className="flex flex-wrap items-center gap-2">
+            {categories.map((c) => {
+              const isActive = selectedCategory === c.name;
+              return (
+                <button
+                  key={c.name}
+                  onClick={() => handleCategorySelect(c.name)}
+                  className={`
+                    px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer font-sans
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]/50
+                    ${
+                      isActive
+                        ? "bg-[#4ec9b0]/15 text-[#4ec9b0] border border-[#4ec9b0]/40 font-semibold shadow-[0_0_15px_rgba(78,201,176,0.12)]"
+                        : "text-[#888] hover:text-[#e0e0e0] hover:bg-[#1a1a1a] border border-transparent"
+                    }
+                  `}
+                >
+                  {c.name}{" "}
+                  <span className={`ml-1 text-xs ${isActive ? "text-[#4ec9b0]/80" : "text-[#666]"}`}>
+                    ({c.count})
                   </span>
-                </div>
-                <div>
-                  <span className="text-foreground font-bold">[info]</span> modules queued: Active
-                  Directory, Linux, Tools
-                </div>
-                <div>
-                  <span className="text-threat-mid font-bold">[warn]</span> terminal ready, select
-                  module to load
-                </div>
-                <div className="flex items-center gap-2 pt-2">
-                  <span className="text-foreground font-bold">$</span>
-                  <span className="caret" />
-                </div>
-              </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search Bar + Reset Filters */}
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <div className="relative flex-1 md:w-72">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666] pointer-events-none" />
+              <input
+                type="text"
+                value={search.q || ""}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search cheatsheets..."
+                className="w-full bg-[#1a1a1a] border border-[#333] text-[#e0e0e0] placeholder:text-[#666] rounded-lg pl-10 pr-9 py-2 text-sm font-sans focus:outline-none focus:border-[#4ec9b0] focus:ring-1 focus:ring-[#4ec9b0] transition-colors"
+              />
+              {q && (
+                <button
+                  onClick={() => handleSearchChange("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666] hover:text-[#e0e0e0] cursor-pointer"
+                  title="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-colors cursor-pointer whitespace-nowrap font-sans"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Categories Grid - hide when searching */}
-        {!q && (
-          <div className="mb-10">
-            <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
-              <span className="text-foreground">▸</span> select_by_category
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {categories.map((c) => (
-                <Link
-                  key={c.name}
-                  to="/cheatsheet/$"
-                  params={{ _splat: c.firstPath }}
-                  className="group flex flex-col justify-between p-4 rounded-lg glass-panel glass-panel-hover transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/50 cursor-pointer"
+        {/* Quick Tag Pills Row (Blog-Style) */}
+        {topTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-[#666] mr-1 flex items-center gap-1 font-sans">
+              <TagIcon className="w-3.5 h-3.5 text-[#4ec9b0]" />
+              Tags:
+            </span>
+            {topTags.map((t) => {
+              const isTagActive = activeTag === t.name.toLowerCase();
+              return (
+                <button
+                  key={t.name}
+                  onClick={() => handleTagToggle(t.name)}
+                  className={`
+                    px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer font-sans border
+                    focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4ec9b0]/50
+                    ${
+                      isTagActive
+                        ? "bg-[#4ec9b0]/20 text-[#4ec9b0] border-[#4ec9b0]/50 shadow-[0_0_12px_rgba(78,201,176,0.15)]"
+                        : "bg-[#161616] text-[#888] hover:text-[#e0e0e0] border-[#262626] hover:border-[#383838]"
+                    }
+                  `}
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">
-                        {c.name.toLowerCase()}
-                      </span>
-                      <BookOpen className="h-4 w-4 text-foreground/40 group-hover:text-foreground transition-colors" />
-                    </div>
-                    <h4 className="font-mono text-base font-semibold text-foreground group-hover: transition-all">
-                      {c.name}
-                    </h4>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-                    <span>
-                      {c.count} {c.count === 1 ? "file" : "files"}
-                    </span>
-                    <span className="flex items-center text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                      load <ChevronRight className="h-3 w-3" />
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
+                  #{t.name}
+                </button>
+              );
+            })}
           </div>
         )}
 
-        {/* Available Cheatsheets Feed */}
-        <div className="text-left">
-          <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4 flex items-center gap-2">
-            <span className="text-foreground">▸</span>{" "}
-            {q ? "search_results" : "all_available_cheatsheets"}
-          </h3>
-          <div className="grid grid-cols-1 gap-4">
-            {displayedFiles.length > 0 ? (
-              displayedFiles.map((file) => (
+        {/* Blog-Style Card Grid (3-Col Desktop, 2-Col Tablet, 1-Col Mobile) */}
+        {displayedFiles.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {displayedFiles.map((file) => {
+              const categoryName = file.meta.category || "General";
+              const categoryColor = getCategoryBadgeColor(categoryName);
+              const readTime = file.meta.readTime || "5 min";
+              const difficulty = file.meta.difficulty || "Intermediate";
+              const difficultyColor = getDifficultyBadgeColor(difficulty);
+
+              return (
                 <Link
                   key={file.path}
                   to="/cheatsheet/$"
                   params={{ _splat: file.path }}
-                  className="group block rounded-lg glass-panel glass-panel-hover p-4 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/50"
+                  className="
+                    group flex flex-col justify-between rounded-xl bg-[#181818] border border-[#262626] p-6
+                    hover:-translate-y-1 hover:border-[#4ec9b0]/40 hover:shadow-[0_12px_36px_rgba(0,0,0,0.5)]
+                    transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]
+                  "
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2.5 font-mono text-[10px] text-muted-foreground">
-                        <span className="text-foreground">{file.meta.category}</span>
-                        <span>·</span>
-                        <span>{file.meta.readTime || "5 mins"}</span>
-                        <span>·</span>
-                        <span
-                          className={
-                            file.meta.difficulty === "Advanced"
-                              ? "text-threat-high"
-                              : file.meta.difficulty === "Intermediate"
-                                ? "text-threat-mid"
-                                : "text-foreground"
-                          }
-                        >
-                          {file.meta.difficulty?.toLowerCase()}
-                        </span>
-                      </div>
-                      <h4 className="mt-1 font-mono text-sm font-semibold text-foreground group-hover:text-foreground transition-colors">
-                        {file.meta.title || file.path.split("/").pop()}
-                      </h4>
-                      {file.meta.excerpt && (
-                        <p className="mt-1 text-xs text-muted-foreground/80 line-clamp-1">
-                          {file.meta.excerpt}
-                        </p>
-                      )}
+                  <div className="space-y-4">
+                    {/* Top Row: Category Badge */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${categoryColor}`}
+                      >
+                        {categoryName}
+                      </span>
                     </div>
-                    <div className="flex flex-wrap gap-1 mt-2 sm:mt-0 sm:justify-end shrink-0 max-w-[280px]">
+
+                    {/* Title */}
+                    <h2 className="text-xl font-bold text-[#e0e0e0] group-hover:text-[#4ec9b0] transition-colors font-sans leading-snug">
+                      {file.meta.title || file.path.split("/").pop()}
+                    </h2>
+
+                    {/* Description */}
+                    {file.meta.excerpt && (
+                      <p className="text-sm text-[#888] font-sans leading-relaxed line-clamp-3">
+                        {file.meta.excerpt}
+                      </p>
+                    )}
+
+                    {/* Metadata Row: Reading Time + Difficulty Level */}
+                    <div className="flex items-center gap-2.5 pt-1 text-xs font-sans">
+                      <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[#202020] text-[#a0a0a0] border border-[#2d2d2d]">
+                        <Clock className="w-3.5 h-3.5 text-[#888]" />
+                        {readTime}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-md font-medium ${difficultyColor}`}
+                      >
+                        {difficulty}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Tags + Hover Action Arrow */}
+                  <div className="mt-6 pt-4 border-t border-[#242424] flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {file.meta.tags?.slice(0, 3).map((tag) => (
-                        <Tag
+                        <span
                           key={tag}
-                          variant={tagVariantFor(tag)}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleTagClick(tag, navigate);
-                          }}
+                          className="text-xs text-[#777] bg-[#141414] border border-[#262626] px-2.5 py-0.5 rounded-full font-sans"
                         >
-                          {tag}
-                        </Tag>
+                          #{tag}
+                        </span>
                       ))}
+                    </div>
+
+                    <div className="flex items-center gap-1 text-xs font-medium text-[#4ec9b0] opacity-0 group-hover:opacity-100 transition-opacity font-sans shrink-0">
+                      <span>Read</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
                 </Link>
-              ))
-            ) : (
-              <div className="p-8 text-center glass-panel glass-panel-hover rounded-lg border-dashed">
-                <span className="font-mono text-sm text-muted-foreground">
-                  No cheatsheets match your search.
-                </span>
-              </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Empty State */
+          <div className="py-20 text-center rounded-2xl border border-dashed border-[#282828] bg-[#141414] space-y-4">
+            <BookOpen className="w-12 h-12 text-[#444] mx-auto" />
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-[#e0e0e0] font-sans">No cheatsheets found</h3>
+              <p className="text-sm text-[#888] font-sans max-w-md mx-auto">
+                No cheatsheets matched your search query or selected category and tags.
+              </p>
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-[#4ec9b0] bg-[#4ec9b0]/15 border border-[#4ec9b0]/30 hover:bg-[#4ec9b0]/20 transition-colors cursor-pointer font-sans"
+              >
+                <X className="w-4 h-4" />
+                <span>Clear all filters</span>
+              </button>
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

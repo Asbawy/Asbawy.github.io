@@ -49,7 +49,8 @@ function LogsPage() {
   const handleSearchChange = (val: string) => {
     setQ(val);
     navigate({
-      search: (old) => ({ ...old, q: val || undefined, tag: undefined }),
+      from: Route.fullPath,
+      search: (old: any) => ({ ...old, q: val || undefined, tag: undefined }),
       replace: true,
     });
   };

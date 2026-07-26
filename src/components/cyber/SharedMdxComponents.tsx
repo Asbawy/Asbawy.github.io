@@ -1,7 +1,130 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { TerminalCode } from "@/components/cyber/TerminalCode";
 import { Mermaid } from "@/components/cyber/Mermaid";
 import { SpoilerFlag, KillChain, SkillMatrix, CategoryIcon } from "@/components/cyber/WriteupComponents";
+
+/**
+ * Recursively extracts plain text from React nodes/children.
+ */
+function getNodeText(node: React.ReactNode): string {
+  if (node === null || node === undefined || typeof node === "boolean") {
+    return "";
+  }
+  if (typeof node === "string" || typeof node === "number") {
+    return String(node);
+  }
+  if (Array.isArray(node)) {
+    return node.map(getNodeText).join("");
+  }
+  if (React.isValidElement(node)) {
+    return getNodeText((node.props as { children?: React.ReactNode }).children);
+  }
+  return "";
+}
+
+/**
+ * Robust heading ID generation for TOC linking and anchor scroll.
+ */
+function getHeadingId(id?: string, children?: React.ReactNode): string | undefined {
+  if (id) return id;
+  const text = getNodeText(children);
+  if (!text || !text.trim()) return undefined;
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+/**
+ * Interactive client-side Tabs component for cheatsheets.
+ */
+function InteractiveTabs({
+  children,
+  className = "",
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  const tabs = React.Children.toArray(children).filter(
+    (child): child is React.ReactElement<{ label?: string; children?: React.ReactNode }> =>
+      React.isValidElement(child),
+  );
+
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  if (tabs.length === 0) {
+    return null;
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      setActiveIdx((prev) => (prev + 1) % tabs.length);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      setActiveIdx((prev) => (prev - 1 + tabs.length) % tabs.length);
+    }
+  };
+
+  return (
+    <div
+      className={`my-8 rounded-lg border border-white/[0.08] bg-background/60 shadow-lg overflow-hidden max-w-[75ch] ${className}`}
+    >
+      {/* Tab Header Bar */}
+      <div
+        role="tablist"
+        aria-label="Cheatsheet command tabs"
+        className="flex flex-wrap items-center gap-1.5 px-3 py-2 border-b border-white/[0.08] bg-white/[0.02]"
+      >
+        {tabs.map((tab, idx) => {
+          const label = tab.props.label || `Tab ${idx + 1}`;
+          const isActive = idx === activeIdx;
+          return (
+            <button
+              key={idx}
+              role="tab"
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => setActiveIdx(idx)}
+              onKeyDown={(e) => handleKeyDown(e, idx)}
+              className={`
+                px-3 py-1.5 rounded-md font-mono text-xs font-semibold transition-all duration-150 cursor-pointer
+                focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-foreground/50
+                ${
+                  isActive
+                    ? "bg-accent-primary/15 text-accent-primary border border-accent-primary/30 shadow-[0_0_10px_rgba(52,211,153,0.1)]"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04] border border-transparent"
+                }
+              `}
+            >
+              <span className="flex items-center gap-1.5">
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-primary animate-pulse" />
+                )}
+                {label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active Tab Panel */}
+      <div role="tabpanel" className="p-5 text-foreground/90 space-y-4">
+        {tabs[activeIdx]?.props.children}
+      </div>
+    </div>
+  );
+}
+
+function InteractiveTab({
+  label,
+  children,
+}: {
+  label?: string;
+  children?: React.ReactNode;
+}) {
+  return <div>{children}</div>;
+}
 
 export function useSharedMdxComponents(
   setLightboxSrc?: (src: string) => void
@@ -19,15 +142,13 @@ export function useSharedMdxComponents(
         </div>
       ),
       h2: (props: any) => {
-        const generatedId = typeof props.children === "string"
-          ? props.children.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
-          : undefined;
+        const generatedId = getHeadingId(props.id, props.children);
         return (
           <div className="mt-16 mb-8 max-w-[75ch]">
             <div className="flex items-center gap-3 border-b border-foreground/15 pb-4">
               <span className="bg-accent-secondary/20 text-accent-secondary px-2 py-0.5 rounded text-sm font-mono font-bold">_</span>
               <h2
-                id={props.id || generatedId}
+                id={generatedId}
                 className="scroll-mt-24 font-mono text-2xl md:text-3xl font-bold text-foreground"
                 {...props}
               />
@@ -36,12 +157,10 @@ export function useSharedMdxComponents(
         );
       },
       h3: (props: any) => {
-        const generatedId = typeof props.children === "string"
-          ? props.children.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
-          : undefined;
+        const generatedId = getHeadingId(props.id, props.children);
         return (
           <h3
-            id={props.id || generatedId}
+            id={generatedId}
             className="scroll-mt-24 mt-12 mb-5 font-mono text-xl font-bold text-foreground flex items-center gap-2.5"
           >
             <span className="text-threat-mid font-bold text-lg animate-pulse">::</span>
@@ -49,12 +168,18 @@ export function useSharedMdxComponents(
           </h3>
         );
       },
-      h4: (props: any) => (
-        <h4 className="mt-10 mb-4 font-mono text-lg font-bold text-foreground/80 flex items-center gap-2">
-          <span className="text-foreground/40 text-sm">{'>'}</span>
-          <span {...props} />
-        </h4>
-      ),
+      h4: (props: any) => {
+        const generatedId = getHeadingId(props.id, props.children);
+        return (
+          <h4
+            id={generatedId}
+            className="scroll-mt-24 mt-10 mb-4 font-mono text-lg font-bold text-foreground/80 flex items-center gap-2"
+          >
+            <span className="text-foreground/40 text-sm">{'>'}</span>
+            <span {...props} />
+          </h4>
+        );
+      },
       p: (props: any) => <p className="my-6 text-[16px] md:text-[17px] leading-[1.8] text-foreground/80 max-w-[75ch] tracking-wide" {...props} />,
       ul: (props: any) => (
         <ul className="my-6 space-y-3 text-[16px] md:text-[17px] leading-[1.8] text-foreground/80 list-none max-w-[75ch]" {...props} />
@@ -134,14 +259,25 @@ export function useSharedMdxComponents(
         </figure>
       ),
       table: (props: any) => (
-        <div className="my-8 overflow-x-auto rounded-lg border border-foreground/10 bg-background shadow-sm max-w-[75ch]">
-          <table className="w-full text-left border-collapse font-mono text-[13px]" {...props} />
+        <div className="my-8 overflow-x-auto rounded-lg border border-white/[0.08] bg-background/80 shadow-md max-w-[75ch]">
+          <table className="w-full text-left border-collapse font-mono text-[12.5px]" {...props} />
         </div>
       ),
-      thead: (props: any) => <thead className="bg-foreground/5 border-b-2 border-foreground/10 text-foreground/90 uppercase tracking-wider text-xs" {...props} />,
-      tr: (props: any) => <tr className="border-b border-foreground/5 hover:bg-foreground/[0.03] transition-colors" {...props} />,
-      th: (props: any) => <th className="px-5 py-4 font-bold text-foreground" {...props} />,
-      td: (props: any) => <td className="px-5 py-4 text-foreground/80 align-top" {...props} />,
+      thead: (props: any) => (
+        <thead className="bg-white/[0.04] border-b border-white/[0.1] text-foreground/90 uppercase tracking-wider text-[11px]" {...props} />
+      ),
+      tr: (props: any) => (
+        <tr
+          className="border-b border-white/[0.04] last:border-0 even:bg-white/[0.015] hover:bg-white/[0.04] transition-colors duration-150"
+          {...props}
+        />
+      ),
+      th: (props: any) => (
+        <th className="px-4 py-3.5 font-bold text-foreground tracking-wide whitespace-nowrap" {...props} />
+      ),
+      td: (props: any) => (
+        <td className="px-4 py-3.5 text-foreground/80 align-top leading-relaxed" {...props} />
+      ),
       blockquote: (props: any) => (
         <div className="my-10 max-w-[75ch] relative group">
           <div className="absolute -left-4 top-0 bottom-0 w-1 bg-accent-secondary/50 rounded-full transition-all group-hover:bg-accent-secondary group-hover:shadow-[0_0_10px_rgba(var(--color-accent-secondary-rgb),0.5)]" />
@@ -154,51 +290,71 @@ export function useSharedMdxComponents(
       SkillMatrix,
       CategoryIcon,
       Callout: ({ type, title, children }: any) => {
-        const isDanger = type === "danger" || type === "warning";
-        const isSuccess = type === "success";
-        
-        // Tailwind string building safe approach
+        const t = (type || "info").toLowerCase();
         let colorTheme = {
-          border: "border-accent-secondary/30",
-          bg: "bg-accent-secondary/10",
-          text: "text-accent-secondary",
-          badge: "bg-accent-secondary",
-          icon: "i"
+          border: "border-accent-link/30",
+          bg: "bg-accent-link/10",
+          text: "text-accent-link",
+          badge: "bg-accent-link",
+          icon: "ℹ",
+          defaultTitle: "SYS.INFO",
         };
-        
-        if (isDanger) {
+
+        if (t === "danger" || t === "error") {
           colorTheme = {
             border: "border-threat-high/30",
             bg: "bg-threat-high/10",
             text: "text-threat-high",
             badge: "bg-threat-high",
-            icon: "!"
+            icon: "✕",
+            defaultTitle: "SYS.CRITICAL",
           };
-        } else if (isSuccess) {
+        } else if (t === "warning" || t === "warn") {
+          colorTheme = {
+            border: "border-yellow-400/30",
+            bg: "bg-yellow-400/10",
+            text: "text-yellow-400",
+            badge: "bg-yellow-400",
+            icon: "▲",
+            defaultTitle: "SYS.WARNING",
+          };
+        } else if (t === "success") {
           colorTheme = {
             border: "border-accent-primary/30",
             bg: "bg-accent-primary/10",
             text: "text-accent-primary",
             badge: "bg-accent-primary",
-            icon: "✓"
+            icon: "✓",
+            defaultTitle: "SYS.SUCCESS",
+          };
+        } else if (t === "tip") {
+          colorTheme = {
+            border: "border-accent-secondary/30",
+            bg: "bg-accent-secondary/10",
+            text: "text-accent-secondary",
+            badge: "bg-accent-secondary",
+            icon: "⚡",
+            defaultTitle: "SYS.TIP",
           };
         }
 
         return (
-          <div className={`my-10 max-w-[75ch] rounded-lg border ${colorTheme.border} bg-background overflow-hidden shadow-lg`}>
+          <div className={`my-8 max-w-[75ch] rounded-lg border ${colorTheme.border} bg-background/90 overflow-hidden shadow-md`}>
             {/* Callout Top Bar */}
             <div className={`${colorTheme.bg} border-b ${colorTheme.border} px-4 py-2 flex items-center justify-between`}>
               <div className={`flex items-center gap-2 font-mono text-[11px] font-bold uppercase tracking-wider ${colorTheme.text}`}>
-                <span className={`flex items-center justify-center w-4 h-4 rounded-full border border-current text-[10px]`}>{colorTheme.icon}</span>
-                <span>{title || (isDanger ? "SYS.WARNING" : isSuccess ? "SYS.SUCCESS" : "SYS.INFO")}</span>
+                <span className="flex items-center justify-center w-4 h-4 rounded-full border border-current text-[10px]">
+                  {colorTheme.icon}
+                </span>
+                <span>{title || colorTheme.defaultTitle}</span>
               </div>
-              <div className={`flex gap-1.5 opacity-50`}>
-                <span className={`w-2.5 h-2.5 rounded-full ${colorTheme.badge} animate-pulse`} />
-                <span className={`w-2.5 h-2.5 rounded-full ${colorTheme.badge} opacity-40`} />
+              <div className="flex gap-1.5 opacity-50">
+                <span className={`w-2 h-2 rounded-full ${colorTheme.badge} animate-pulse`} />
+                <span className={`w-2 h-2 rounded-full ${colorTheme.badge} opacity-40`} />
               </div>
             </div>
             {/* Content */}
-            <div className={`p-5 text-[15px] text-foreground/90 leading-relaxed font-sans`}>
+            <div className="p-5 text-[14.5px] text-foreground/90 leading-relaxed font-sans">
               {children}
             </div>
           </div>
@@ -217,24 +373,14 @@ export function useSharedMdxComponents(
           </div>
         );
       },
-      Tabs: ({ children }: any) => {
-        return (
-          <div className="my-8 border border-foreground/10 bg-foreground/[0.02] rounded-md p-5 space-y-6 max-w-[75ch]">
-            {children}
-          </div>
-        );
+      Tabs: ({ children, className }: any) => {
+        return <InteractiveTabs className={className}>{children}</InteractiveTabs>;
       },
       Tab: ({ label, children }: any) => {
-        return (
-          <div>
-            <div className="text-foreground/90 font-mono text-xs uppercase mb-4 pb-1.5 border-b border-foreground/10 inline-block tracking-wider">
-              {label}
-            </div>
-            {children}
-          </div>
-        );
+        return <InteractiveTab label={label}>{children}</InteractiveTab>;
       },
     }),
     [setLightboxSrc]
   );
 }
+
