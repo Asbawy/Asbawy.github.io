@@ -23,6 +23,7 @@ export type WriteupMeta = {
   readTime: string;
   retired?: boolean;
   rating?: number;
+  hasAutoScript?: boolean;
   url?: string;
 };
 

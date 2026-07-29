@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { TerminalCode } from "@/components/cyber/TerminalCode";
 import { Mermaid } from "@/components/cyber/Mermaid";
 import { SpoilerFlag, KillChain, SkillMatrix, CategoryIcon } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
 
 /**
  * Recursively extracts plain text from React nodes/children.
@@ -296,6 +297,7 @@ export function useSharedMdxComponents(
       KillChain,
       SkillMatrix,
       CategoryIcon,
+      TerminalReplay,
       Callout: ({ type, title, children }: any) => {
         const t = (type || "info").toLowerCase();
         let colorTheme = {

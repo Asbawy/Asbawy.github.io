@@ -19,6 +19,7 @@ import {
   Globe,
   Wrench,
   FileCode2,
+  Cloud,
 } from "lucide-react";
 
 /* ── Platform Logos (SVG) ────────────────────────────── */
@@ -104,11 +105,10 @@ export function SpoilerFlag({ flag, label = "Flag" }: { flag: string; label?: st
       </div>
       <div
         onClick={() => !revealed && setRevealed(true)}
-        className={`relative select-none rounded bg-muted/80 px-2.5 py-1.5 text-xs font-sans transition-all duration-300 ${
-          revealed
+        className={`relative select-none rounded bg-muted/80 px-2.5 py-1.5 text-xs font-sans transition-all duration-300 ${revealed
             ? "text-accent-primary font-bold select-text"
             : "cursor-pointer blur-sm hover:blur-[2px] text-muted-foreground"
-        }`}
+          }`}
       >
         <span className={revealed ? "" : "opacity-30"}>
           {revealed ? flag : flag.replace(/./g, "•")}
@@ -372,6 +372,48 @@ export function CategoryIcon({
   if (c.includes("pwn") || c.includes("binary")) return <Skull className={className} />;
   if (c.includes("forensic")) return <Search className={className} />;
   if (c.includes("hardware")) return <Wrench className={className} />;
+  if (c.includes("cloud")) return <Cloud className={className} />;
   return <FileCode2 className={className} />;
+}
+
+/* ── Auto Script Badge ───────────────────────────────── */
+
+export function AutoScriptBadge({ size = "sm" }: { size?: "sm" | "md" }) {
+  const isMd = size === "md";
+
+  return (
+    <span
+      className={`
+        relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border
+        border-cyan-400/40 bg-gradient-to-r from-cyan-950/60 via-cyan-900/40 to-emerald-950/60
+        font-mono font-bold uppercase tracking-wider cursor-default select-none shrink-0
+        shadow-[0_0_14px_rgba(34,211,238,0.2)] hover:shadow-[0_0_18px_rgba(34,211,238,0.35)]
+        transition-all duration-300
+        ${isMd ? "px-3 py-1 text-[11px]" : "px-2.5 py-0.5 text-[10px]"}
+      `}
+      title="This writeup includes a full automated exploit script"
+    >
+      {/* Animated shimmer sweep */}
+      <span className="absolute inset-0 -translate-x-full animate-[auto-shine_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-cyan-300/[0.18] to-transparent pointer-events-none" />
+
+      {/* Pulse beacon dot */}
+      <span className="relative flex h-2 w-2 items-center justify-center">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.9)]" />
+      </span>
+
+      {/* Terminal Icon */}
+      <Terminal
+        className={`shrink-0 text-cyan-300 animate-[auto-terminal_2.5s_ease-in-out_infinite] ${
+          isMd ? "h-3.5 w-3.5" : "h-3 w-3"
+        }`}
+      />
+
+      {/* Label */}
+      <span className="tracking-widest font-extrabold text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">
+        AUTO
+      </span>
+    </span>
+  );
 }
 

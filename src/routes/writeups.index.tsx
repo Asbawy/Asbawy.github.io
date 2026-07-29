@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { writeupsMeta, getPlatformStats } from "@/data/writeups";
-import { CategoryIcon } from "@/components/cyber/WriteupComponents";
+import { CategoryIcon, AutoScriptBadge } from "@/components/cyber/WriteupComponents";
 
 export const Route = createFileRoute("/writeups/")({
   head: () => ({
@@ -161,7 +161,7 @@ function WriteupsIndex() {
         <div className="mx-auto max-w-7xl space-y-8">
           {/* Header */}
           <div className="space-y-3">
-            
+
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
               Writeups
             </h1>
@@ -175,8 +175,8 @@ function WriteupsIndex() {
             <button
               onClick={() => setPlatformFilter(null)}
               className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all cursor-pointer ${!platformFilter
-                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(52,211,153,0.1)]"
-                  : "bg-card text-foreground border-border hover:border-border"
+                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(52,211,153,0.1)]"
+                : "bg-card text-foreground border-border hover:border-border"
                 }`}
             >
               <div>
@@ -196,8 +196,8 @@ function WriteupsIndex() {
                   key={platform}
                   onClick={() => setPlatformFilter(isActive ? null : platform)}
                   className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all cursor-pointer ${isActive
-                      ? `${cfg.bg} ${cfg.border} ${cfg.color} shadow-md`
-                      : "bg-card text-foreground border-border hover:border-border"
+                    ? `${cfg.bg} ${cfg.border} ${cfg.color} shadow-md`
+                    : "bg-card text-foreground border-border hover:border-border"
                     }`}
                 >
                   <div>
@@ -219,8 +219,8 @@ function WriteupsIndex() {
               <button
                 onClick={() => setTypeFilter(null)}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${!typeFilter
-                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
                   }`}
               >
                 All ({writeupsMeta.length})
@@ -228,8 +228,8 @@ function WriteupsIndex() {
               <button
                 onClick={() => setTypeFilter(typeFilter === "Machine" ? null : "Machine")}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${typeFilter === "Machine"
-                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
                   }`}
               >
                 Machines ({machineCount})
@@ -237,8 +237,8 @@ function WriteupsIndex() {
               <button
                 onClick={() => setTypeFilter(typeFilter === "Challenge" ? null : "Challenge")}
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${typeFilter === "Challenge"
-                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
                   }`}
               >
                 Challenges ({challengeCount})
@@ -288,8 +288,8 @@ function WriteupsIndex() {
                   key={d}
                   onClick={() => setDifficultyFilter(isActive ? null : d)}
                   className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${isActive
-                      ? difficultyBg(d) + " font-semibold shadow-sm"
-                      : "bg-muted text-muted-foreground border-border hover:text-foreground"
+                    ? difficultyBg(d) + " font-semibold shadow-sm"
+                    : "bg-muted text-muted-foreground border-border hover:text-foreground"
                     }`}
                 >
                   {d}
@@ -313,18 +313,22 @@ function WriteupsIndex() {
                     <div className="space-y-4">
                       {/* Top Row: Badges */}
                       <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.color} ${cfg.border} border`}
-                        >
-                          <cfg.icon className="w-3.5 h-3.5" />
-                          {w.platform}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${cfg.bg} ${cfg.color} ${cfg.border} border`}
+                          >
+                            <cfg.icon className="w-3.5 h-3.5" />
+                            {w.platform}
+                          </span>
 
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${difficultyBg(w.difficulty)}`}
-                        >
-                          {w.difficulty}
-                        </span>
+                          <span
+                            className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium border ${difficultyBg(w.difficulty)}`}
+                          >
+                            {w.difficulty}
+                          </span>
+                        </div>
+
+                        {w.hasAutoScript && <AutoScriptBadge size="sm" />}
                       </div>
 
                       {/* Title */}

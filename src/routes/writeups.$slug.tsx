@@ -12,7 +12,7 @@ import {
 } from "@/data/writeups";
 import { Suspense } from "react";
 import { ArrowLeft, Swords, Flag, Server, Globe, Terminal, Cpu, Shield } from "lucide-react";
-import { PlatformIcon, SpoilerFlag, KillChain, SkillMatrix, CategoryIcon } from "@/components/cyber/WriteupComponents";
+import { PlatformIcon, SpoilerFlag, KillChain, SkillMatrix, CategoryIcon, AutoScriptBadge } from "@/components/cyber/WriteupComponents";
 import { ImageLightbox } from "@/components/cyber/ImageLightbox";
 import { ShareButtons } from "@/components/cyber/ShareButtons";
 import { AuthorBio } from "@/components/cyber/AuthorBio";
@@ -252,6 +252,7 @@ function WriteupPage() {
                     {writeup.retired ? "retired" : "active"}
                   </span>
                 )}
+                {writeup.hasAutoScript && <AutoScriptBadge size="md" />}
               </div>
 
               <div className="flex flex-wrap gap-2">
