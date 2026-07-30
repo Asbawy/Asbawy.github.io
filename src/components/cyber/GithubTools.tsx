@@ -6,7 +6,7 @@ const REPOS = [
     name: "pharaohound",
     description: "A lightweight, CLI-first Active Directory & Azure analysis engine that stream-parses raw BloodHound JSON data to instantly map attack paths and generate copy-paste-ready exploitation commands.",
     url: "https://github.com/Asbawy/pharaohound",
-    language: "Go",
+    language: "Python",
   },
   {
     name: "dedjs",
@@ -52,7 +52,7 @@ export function GithubTools() {
     <div className="space-y-6 font-sans">
       {/* Language Filter */}
       <div className="flex flex-wrap gap-2">
-        {["All", "Python", "Go", "Shell"].map((lang) => (
+        {["All", "Python", "Shell"].map((lang) => (
           <button
             key={lang}
             onClick={() => setLangFilter(lang)}
