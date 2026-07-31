@@ -5,6 +5,17 @@
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 # Author: Asbawy (https://asbawy.github.io)
 # Repository: https://github.com/Asbawy/Asbawy.github.io
+#
+# ── EXECUTION INSTRUCTIONS ────────────────────────────────────────────────────
+# Prerequisites:
+#   - Python 3.8+
+#   - Standard Python library (no pip dependencies required)
+#
+# Usage:
+#   1. Place your challenge packet capture (traffic.pcapng) in your working directory.
+#   2. Execute the solver script:
+#        python3 thm_packed_light_solve.py --pcap traffic.pcapng
+# ──────────────────────────────────────────────────────────────────────────────
 
 import argparse
 import base64
