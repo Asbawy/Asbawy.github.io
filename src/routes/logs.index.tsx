@@ -86,7 +86,6 @@ function LogsPage() {
         <div className="mx-auto max-w-7xl space-y-8">
           {/* Header */}
           <div className="space-y-3">
-            
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
               Logs
             </h1>
@@ -105,10 +104,11 @@ function LogsPage() {
                   <button
                     key={c}
                     onClick={() => setCat(c)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${isActive
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                      isActive
                         ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/40 font-semibold shadow-[0_0_15px_rgba(34,211,238,0.12)]"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
-                      }`}
+                    }`}
                   >
                     {c}
                   </button>

@@ -24,7 +24,10 @@ export function useArticleToc(rootSelector: string, levels: number[] = [2], depe
         .filter((n) => n.id)
         .map((n) => ({
           id: n.id,
-          title: n.textContent?.replace("▸", "").trim() || "",
+          title: (n.textContent || "")
+            .replace(/^[:\s_#▸▹>]+/, "")
+            .replace(/\s+/g, " ")
+            .trim(),
           level: Number(n.tagName.replace("H", "")),
         }));
 

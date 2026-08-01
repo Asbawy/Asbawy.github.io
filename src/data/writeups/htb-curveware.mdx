@@ -38,21 +38,23 @@ Our objective is to reverse-engineer the cryptographic scheme, exploit partial n
 ## Binary Analysis & File Structure
 
 Static analysis with Ghidra reveals:
+
 - **Crypto Engine**: Statically linked against **libecc** (ANSSI's Elliptic Curve library) using **NIST P-256 (`secp256r1`)**.
 - **Key Generation**: Uses `CryptGenRandom` to generate a single 32-byte secret key $d$, serving as both the **AES-256-CBC key** and the **ECDSA private key**.
 - **Nonce Leakage**: The 10-character hex extension suffix (e.g., `.vlny0742e9337a`) exposes the lower **40 bits** of the ephemeral nonce (`k = SHA256(plaintext)`).
 
 ### Encrypted File Layout
 
-| Component | Offset / Range | Size | Description |
-| :--- | :--- | :--- | :--- |
-| **Signature $r$** | `0x00` – `0x1F` | 32 Bytes | ECDSA signature component $r$ |
-| **Signature $s$** | `0x20` – `0x3F` | 32 Bytes | ECDSA signature component $s$ |
-| **AES IV** | `0x40` – `0x4F` | 16 Bytes | AES-256-CBC Initialization Vector |
-| **AES Ciphertext** | `0x50` – EOF | Variable | Encrypted file payload |
+| Component          | Offset / Range  | Size     | Description                       |
+| :----------------- | :-------------- | :------- | :-------------------------------- |
+| **Signature $r$**  | `0x00` – `0x1F` | 32 Bytes | ECDSA signature component $r$     |
+| **Signature $s$**  | `0x20` – `0x3F` | 32 Bytes | ECDSA signature component $s$     |
+| **AES IV**         | `0x40` – `0x4F` | 16 Bytes | AES-256-CBC Initialization Vector |
+| **AES Ciphertext** | `0x50` – EOF    | Variable | Encrypted file payload            |
 
 <Callout type="info">
-  To decrypt any file, strip the first 64 bytes (signature) and next 16 bytes (IV), then decrypt the payload using AES-256-CBC with the key $d$.
+  To decrypt any file, strip the first 64 bytes (signature) and next 16 bytes (IV), then decrypt the
+  payload using AES-256-CBC with the key $d$.
 </Callout>
 
 ---
@@ -60,11 +62,13 @@ Static analysis with Ghidra reveals:
 ## Cryptographic Vulnerability: Hidden Number Problem (HNP)
 
 The binary computes signatures as:
+
 ```text
 k ≡ r + s·d (mod n)
 ```
 
 Since the lower 40 bits of `k` are exposed in the filename extension (`leak`), we express `k` as:
+
 ```text
 k = leak + 2⁴⁰ · x  (where x < 2²¹⁶)
 ```
@@ -74,6 +78,7 @@ k = leak + 2⁴⁰ · x  (where x < 2²¹⁶)
 Substituting `k` into the signature equation:
 
 1. **Substitute `k`:**
+
    ```text
    leak + 2⁴⁰ · x ≡ r + s·d (mod n)
    ```
@@ -96,10 +101,9 @@ sudo apt update && sudo apt install sagemath -y
 ```
 
 <Callout type="info">
-  **Note:** SageMath is not available on Ubuntu 22.04 LTS. You can install it by adding the
-  EPEL repository to your APT sources.
+  **Note:** SageMath is not available on Ubuntu 22.04 LTS. You can install it by adding the EPEL
+  repository to your APT sources.
 </Callout>
-
 
 ```python
 from pathlib import Path
@@ -108,8 +112,8 @@ from Crypto.Util.Padding import unpad
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 n = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551
-B = 2^40     
-Binv = pow(B, -1, n)                   
+B = 2^40
+Binv = pow(B, -1, n)
 
 root  = Path('business-ctf-2025-dev')
 files = sorted(root.rglob('*.vlny*'))
@@ -148,6 +152,7 @@ key = long_to_bytes(d)
 ```bash
 sage solve.sage
 ```
+
 **Recovered Private Key:** `0xc5120eda0305ce74a125b5bd727e4fee5a24457ab376b69578c179f8440881e0`
 
 ---
@@ -165,7 +170,7 @@ from Crypto.Util.Padding import unpad
 def solve(target: str = None, port: int = None) -> str:
     key = bytes.fromhex('c5120eda0305ce74a125b5bd727e4fee5a24457ab376b69578c179f8440881e0')
     flag_file = Path('business-ctf-2025-dev/crypto/curveware/flag.txt.vlny0742e9337a')
-    
+
     blob = flag_file.read_bytes()
     payload = blob[64:]
     iv = payload[-16:]
@@ -188,7 +193,7 @@ if __name__ == "__main__":
 
 ## References
 
-1. **Hidden Number Problem (HNP)**: D. Boneh and R. Venkatesan, *"Hardness of Computing the Most Significant Bits of Secret Keys in Diffie-Hellman and Related Schemes"*, CRYPTO '96.
-2. **ECDSA Nonce Attacks**: N. Smart, *"The Exact Security of ECDSA of Small Nonces"*, 2001.
+1. **Hidden Number Problem (HNP)**: D. Boneh and R. Venkatesan, _"Hardness of Computing the Most Significant Bits of Secret Keys in Diffie-Hellman and Related Schemes"_, CRYPTO '96.
+2. **ECDSA Nonce Attacks**: N. Smart, _"The Exact Security of ECDSA of Small Nonces"_, 2001.
 3. **libecc Library**: ANSSI Open Source Elliptic Curve Cryptography Library — [GitHub Repository](https://github.com/ANSSI-FR/libecc).
 4. **SageMath LLL Reduction**: SageMath Documentation on [Integer Lattices and LLL Reduction](https://doc.sagemath.org/html/en/reference/matrices/sage/matrix/matrix_integer_dense.html#sage.matrix.matrix_integer_dense.Matrix_integer_dense.LLL).

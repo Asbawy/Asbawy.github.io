@@ -70,14 +70,18 @@ export function SideNav() {
             <Link
               key={to}
               to={to}
-              className={`group flex items-center gap-3 rounded-lg px-3.5 py-2.5 font-sans text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${active
+              className={`group flex items-center gap-3 rounded-lg px-3.5 py-2.5 font-sans text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50 ${
+                active
                   ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-l-2 border-emerald-500 dark:border-emerald-400 font-semibold shadow-[0_0_15px_rgba(52,211,153,0.12)]"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border-l-2 border-transparent"
-                }`}
+              }`}
             >
               <Icon
-                className={`h-4 w-4 transition-colors ${active ? "text-emerald-500 dark:text-emerald-400" : "text-muted-foreground group-hover:text-foreground"
-                  }`}
+                className={`h-4 w-4 transition-colors ${
+                  active
+                    ? "text-emerald-500 dark:text-emerald-400"
+                    : "text-muted-foreground group-hover:text-foreground"
+                }`}
               />
               <span>{label}</span>
             </Link>
@@ -187,10 +191,11 @@ export function TopBar() {
                 key={to}
                 to={to}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${active
+                className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                  active
                     ? "bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 font-semibold border-l-2 border-emerald-500 dark:border-emerald-400"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
+                }`}
               >
                 <Icon className="h-4 w-4" />
                 <span>{label}</span>

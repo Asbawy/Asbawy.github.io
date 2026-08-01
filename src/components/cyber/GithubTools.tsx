@@ -4,13 +4,15 @@ import { ExternalLink, Github, Code } from "lucide-react";
 const REPOS = [
   {
     name: "pharaohound",
-    description: "A lightweight, CLI-first Active Directory & Azure analysis engine that stream-parses raw BloodHound JSON data to instantly map attack paths and generate copy-paste-ready exploitation commands.",
+    description:
+      "A lightweight, CLI-first Active Directory & Azure analysis engine that stream-parses raw BloodHound JSON data to instantly map attack paths and generate copy-paste-ready exploitation commands.",
     url: "https://github.com/Asbawy/pharaohound",
     language: "Python",
   },
   {
     name: "dedjs",
-    description: "Context-aware JavaScript static analysis tool designed for bug bounty and pentesting. Reduces false positives by correlating user-controlled sources with dangerous sinks.",
+    description:
+      "Context-aware JavaScript static analysis tool designed for bug bounty and pentesting. Reduces false positives by correlating user-controlled sources with dangerous sinks.",
     url: "https://github.com/Asbawy/dedjs",
     language: "Python",
   },
@@ -37,15 +39,15 @@ const REPOS = [
     description: "Simple Automation script for juniper cve-2023-36845.",
     url: "https://github.com/Asbawy/Automation-for-Juniper-cve-2023-36845",
     language: "Shell",
-  }
+  },
 ];
 
 export function GithubTools() {
   const [langFilter, setLangFilter] = useState<string>("All");
-  
+
   const filteredRepos = useMemo(() => {
     if (langFilter === "All") return REPOS;
-    return REPOS.filter(r => r.language === langFilter);
+    return REPOS.filter((r) => r.language === langFilter);
   }, [langFilter]);
 
   return (
@@ -71,9 +73,11 @@ export function GithubTools() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredRepos.map((repo) => {
           let langColor = "bg-slate-500/10 text-slate-400 border-slate-500/20";
-          if (repo.language === "Python") langColor = "bg-blue-500/10 text-blue-400 border-blue-500/20";
+          if (repo.language === "Python")
+            langColor = "bg-blue-500/10 text-blue-400 border-blue-500/20";
           if (repo.language === "Go") langColor = "bg-cyan-500/10 text-cyan-400 border-cyan-500/20";
-          if (repo.language === "Shell") langColor = "bg-green-500/10 text-green-400 border-green-500/20";
+          if (repo.language === "Shell")
+            langColor = "bg-green-500/10 text-green-400 border-green-500/20";
 
           return (
             <div
@@ -90,7 +94,9 @@ export function GithubTools() {
                       {repo.name}
                     </h3>
                   </div>
-                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${langColor}`}>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${langColor}`}
+                  >
                     {repo.language}
                   </span>
                 </div>
@@ -98,7 +104,7 @@ export function GithubTools() {
                   {repo.description}
                 </p>
               </div>
-              
+
               <div>
                 <a
                   href={repo.url}

@@ -17,6 +17,7 @@ import {
 import { useSharedMdxComponents } from "@/components/cyber/SharedMdxComponents";
 import { cheatsheetFiles, CheatsheetMdxComponents } from "@/data/cheatsheets";
 import { useArticleToc } from "@/hooks/use-article-toc";
+import { TableOfContents } from "@/components/cyber/TableOfContents";
 import { getRelatedCheatsheets } from "@/lib/related-cheatsheets";
 import { Panel, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
 
@@ -174,7 +175,9 @@ function CheatsheetViewer() {
             {breadcrumbs.map((segment, i) => (
               <span key={i} className="flex items-center gap-1.5 truncate">
                 <ChevronRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                <span className={i === breadcrumbs.length - 1 ? "text-foreground font-semibold" : ""}>
+                <span
+                  className={i === breadcrumbs.length - 1 ? "text-foreground font-semibold" : ""}
+                >
                   {i === breadcrumbs.length - 1 ? `${segment}.mdx` : segment}
                 </span>
               </span>
@@ -410,42 +413,9 @@ function CheatsheetViewer() {
             <aside className="hidden lg:block">
               <div className="sticky top-16 space-y-5">
                 {/* TOC Panel */}
-                <Panel title="table of contents">
-                  <div className="mb-4 h-1 w-full overflow-hidden rounded-sm bg-secondary/60">
-                    <div
-                      className="h-full bg-accent-primary transition-all duration-150"
-                      style={{ width: `${progress}%`, boxShadow: "0 0 10px rgba(52,211,153,0.8)" }}
-                    />
-                  </div>
-
-                  {headings.length > 0 ? (
-                    <ol className="space-y-1.5 font-sans text-xs">
-                      {headings.map((s) => {
-                        const isActive = activeId === s.id;
-                        const isH3 = s.level === 3;
-                        return (
-                          <li key={s.id} className={isH3 ? "pl-3.5" : ""}>
-                            <a
-                              href={`#${s.id}`}
-                              className={`flex items-center gap-1.5 rounded px-2.5 py-1.5 transition-all ${
-                                isActive
-                                  ? "text-accent-primary bg-accent-primary/10 border border-accent-primary/30 font-bold shadow-[0_0_10px_rgba(52,211,153,0.1)]"
-                                  : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
-                              }`}
-                            >
-                              <span className="shrink-0">{isActive ? "▸" : "·"}</span>
-                              <span className="truncate">{s.title}</span>
-                            </a>
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  ) : (
-                    <span className="font-sans text-[11px] text-muted-foreground/50 italic">
-                      // no sections found
-                    </span>
-                  )}
-                </Panel>
+                <div className="glass-panel p-4 rounded-xl border border-white/[0.08] shadow-[0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden">
+                  <TableOfContents headings={headings} activeId={activeId} progress={progress} />
+                </div>
 
                 {/* Related Cheatsheets Sidebar Cards */}
                 {related.length > 0 && (

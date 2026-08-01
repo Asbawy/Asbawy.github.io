@@ -103,20 +103,19 @@ Service Info: Host:  mail.filepath.lab; OS: Linux; CPE: cpe:/o:linux:linux_kerne
 
 The scan reveals a Linux machine acting as a mail server and hosting two web applications:
 
-| Port | Service | Version | Notes |
-|------|---------|---------|-------|
-| **22** | SSH | OpenSSH 8.2p1 | Standard SSH service |
-| **25** | SMTP | Postfix smtpd | Mail server (`mail.filepath.lab`) |
-| **110, 143, 993, 995** | POP3/IMAP | Dovecot | Standard mail retrieval services |
-| **4000** | HTTP | Node.js (Express) | "Sign In" page |
-| **50000** | HTTP | Apache 2.4.41 | "System Monitoring Portal" (PHP) |
+| Port                   | Service   | Version           | Notes                             |
+| ---------------------- | --------- | ----------------- | --------------------------------- |
+| **22**                 | SSH       | OpenSSH 8.2p1     | Standard SSH service              |
+| **25**                 | SMTP      | Postfix smtpd     | Mail server (`mail.filepath.lab`) |
+| **110, 143, 993, 995** | POP3/IMAP | Dovecot           | Standard mail retrieval services  |
+| **4000**               | HTTP      | Node.js (Express) | "Sign In" page                    |
+| **50000**              | HTTP      | Apache 2.4.41     | "System Monitoring Portal" (PHP)  |
 
 <Callout type="info">
-  The machine has a full mail stack running (Postfix + Dovecot). There are two
-  web applications — port **4000** is a Node.js login page, and port **50000** is an
-  Apache server running PHP (indicated by the `PHPSESSID` cookie). Given the
-  machine's name is "Include", port 50000 is the prime target for File Inclusion
-  attacks.
+  The machine has a full mail stack running (Postfix + Dovecot). There are two web applications —
+  port **4000** is a Node.js login page, and port **50000** is an Apache server running PHP
+  (indicated by the `PHPSESSID` cookie). Given the machine's name is "Include", port 50000 is the
+  prime target for File Inclusion attacks.
 </Callout>
 
 ### Initial Web Exploration
@@ -182,10 +181,9 @@ It works — our age is updated to 1000.
 ![Age updated via activity feature](https://i.imgur.com/zfow2lI.png)
 
 <Callout type="warning">
-  **Broken Object Property Level Authorization (BOPLA):** The API blindly
-  accepts any property name via the `activityType` parameter and writes it
-  directly to the user object. There is no allowlist or authorization check to
-  prevent modification of sensitive properties like `isAdmin`.
+  **Broken Object Property Level Authorization (BOPLA):** The API blindly accepts any property name
+  via the `activityType` parameter and writes it directly to the user object. There is no allowlist
+  or authorization check to prevent modification of sensitive properties like `isAdmin`.
 </Callout>
 
 ### Escalating to Admin
@@ -201,11 +199,10 @@ activityType=isAdmin&activityName=true
 ![Admin panel accessible after BOPLA escalation](https://i.imgur.com/24U8H43.png)
 
 <Callout type="info">
-  **BOPLA vs Prototype Pollution:** This vulnerability is distinct from
-  prototype pollution. Here, the API directly writes attacker-controlled
-  key-value pairs onto the user object — no `__proto__` chain manipulation is
-  needed. OWASP classifies this as
-  [API3:2023 — Broken Object Property Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/).
+  **BOPLA vs Prototype Pollution:** This vulnerability is distinct from prototype pollution. Here,
+  the API directly writes attacker-controlled key-value pairs onto the user object — no `__proto__`
+  chain manipulation is needed. OWASP classifies this as [API3:2023 — Broken Object Property Level
+  Authorization](https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/).
 </Callout>
 
 ---
@@ -274,10 +271,9 @@ echo 'eyJSZXZpZXdBcHBVc2VybmFtZSI6ImFkbWluIiwiUmV2aWV3QXBwUGFzc3dvcmQiOiJhZG1pbk
 ```
 
 <Callout type="warning">
-  **Two sets of credentials recovered:** The `ReviewApp` credentials are for
-  the Node.js app (port 4000), and the `SysMonApp` credentials are for the
-  System Monitoring Portal (port 50000). The SysMonApp credentials are our
-  ticket in.
+  **Two sets of credentials recovered:** The `ReviewApp` credentials are for the Node.js app (port
+  4000), and the `SysMonApp` credentials are for the System Monitoring Portal (port 50000). The
+  SysMonApp credentials are our ticket in.
 </Callout>
 
 ---
@@ -338,10 +334,10 @@ The results flood in — the `....//` traversal variant (which bypasses simple `
 ```
 
 <Callout type="info">
-  **Why `....//` instead of `../`?** The server likely has a filter that removes
-  `../` sequences from the input. The `....//` pattern exploits this — after the
-  filter strips the inner `../`, what remains is `../`, which the filesystem
-  interprets as a valid traversal. This is a classic filter bypass technique.
+  **Why `....//` instead of `../`?** The server likely has a filter that removes `../` sequences
+  from the input. The `....//` pattern exploits this — after the filter strips the inner `../`, what
+  remains is `../`, which the filesystem interprets as a valid traversal. This is a classic filter
+  bypass technique.
 </Callout>
 
 ### Reading `/etc/passwd`
@@ -356,18 +352,17 @@ http://10.113.170.46:50000/profile.php?img=....//....//....//....//....//....//e
 
 Filtering for users with a login shell reveals five candidates:
 
-| Username | UID | Home Directory | Shell |
-|----------|-----|----------------|-------|
-| `root` | 0 | `/root` | `/bin/bash` |
-| `ubuntu` | 1000 | `/home/ubuntu` | `/bin/bash` |
+| Username    | UID  | Home Directory    | Shell       |
+| ----------- | ---- | ----------------- | ----------- |
+| `root`      | 0    | `/root`           | `/bin/bash` |
+| `ubuntu`    | 1000 | `/home/ubuntu`    | `/bin/bash` |
 | `tryhackme` | 1001 | `/home/tryhackme` | `/bin/bash` |
-| `joshua` | 1002 | `/home/joshua` | `/bin/bash` |
-| `charles` | 1003 | `/home/charles` | `/bin/bash` |
+| `joshua`    | 1002 | `/home/joshua`    | `/bin/bash` |
+| `charles`   | 1003 | `/home/charles`   | `/bin/bash` |
 
 <Callout type="warning">
-  **Target Users Identified:** `joshua` and `charles` are non-default users
-  likely created for this challenge. They are our primary targets for SSH brute
-  forcing.
+  **Target Users Identified:** `joshua` and `charles` are non-default users likely created for this
+  challenge. They are our primary targets for SSH brute forcing.
 </Callout>
 
 ---
@@ -391,8 +386,7 @@ Hydra cracks both target accounts quickly:
 ```
 
 <Callout type="warning">
-  Both `joshua` and `charles` use the password `123456` — the most common
-  password in history.
+  Both `joshua` and `charles` use the password `123456` — the most common password in history.
 </Callout>
 
 ### SSH Login & Flag Hunt

@@ -64,7 +64,10 @@ function AnimatedCount({ target, suffix = "" }: { target: number; suffix?: strin
   }, [target]);
 
   return (
-    <span ref={ref} className="text-3xl md:text-4xl font-extrabold font-sans text-foreground tracking-tight">
+    <span
+      ref={ref}
+      className="text-3xl md:text-4xl font-extrabold font-sans text-foreground tracking-tight"
+    >
       {count}
       {suffix}
     </span>
@@ -72,7 +75,15 @@ function AnimatedCount({ target, suffix = "" }: { target: number; suffix?: strin
 }
 
 /* ── Segmented Skill Bar ── */
-function SegmentedSkillBar({ label, level, icon: Icon }: { label: string; level: number; icon: any }) {
+function SegmentedSkillBar({
+  label,
+  level,
+  icon: Icon,
+}: {
+  label: string;
+  level: number;
+  icon: any;
+}) {
   const [activeBlocks, setActiveBlocks] = useState(0);
   const totalBlocks = 20;
   const targetBlocks = Math.round((level / 100) * totalBlocks);
@@ -86,7 +97,7 @@ function SegmentedSkillBar({ label, level, icon: Icon }: { label: string; level:
           observer.disconnect();
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.3 },
     );
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
@@ -107,10 +118,9 @@ function SegmentedSkillBar({ label, level, icon: Icon }: { label: string; level:
           return (
             <div
               key={i}
-              className={`h-2.5 w-full rounded-sm transition-all duration-300 ${isActive
-                  ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]"
-                  : "bg-muted"
-                }`}
+              className={`h-2.5 w-full rounded-sm transition-all duration-300 ${
+                isActive ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" : "bg-muted"
+              }`}
               style={{ transitionDelay: `${i * 20}ms` }}
             />
           );
@@ -137,14 +147,29 @@ function AboutPage() {
   const hallOfFame = ["Vimeo", "AT&T", "Elisa Oyj", "Mezmo", "Atlassian", "Doximity", "KnowBe4"];
 
   const certs = [
-    { name: "Advanced Penetration Testing", issuer: "Cybrary", code: "SYS_AUTH", color: "text-emerald-400" },
+    {
+      name: "Advanced Penetration Testing",
+      issuer: "Cybrary",
+      code: "SYS_AUTH",
+      color: "text-emerald-400",
+    },
     { name: "Penetration Tester", issuer: "Cybrary", code: "SYS_AUTH", color: "text-emerald-400" },
     { name: "AI for Red Teams", issuer: "Cybrary", code: "AI_MODULE", color: "text-fuchsia-400" },
     { name: "Offensive Security Ops", issuer: "Cybrary", code: "OP_SEC", color: "text-amber-400" },
     { name: "Cybersecurity Training", issuer: "Cisco", code: "NET_INFRA", color: "text-cyan-400" },
-    { name: "CompTIA PenTest+ Path", issuer: "TryHackMe", code: "PTH_CERT", color: "text-purple-400" },
+    {
+      name: "CompTIA PenTest+ Path",
+      issuer: "TryHackMe",
+      code: "PTH_CERT",
+      color: "text-purple-400",
+    },
     { name: "CyberOps Associate", issuer: "Cisco", code: "NET_INFRA", color: "text-cyan-400" },
-    { name: "Cybersecurity Job Simulation", issuer: "Mastercard", code: "FIN_SEC", color: "text-amber-400" },
+    {
+      name: "Cybersecurity Job Simulation",
+      issuer: "Mastercard",
+      code: "FIN_SEC",
+      color: "text-amber-400",
+    },
     { name: "Reversing .NET with dnSpy", issuer: "Udemy", code: "REV_ENG", color: "text-rose-400" },
     { name: "Android Hacking", issuer: "Udemy", code: "MOB_SEC", color: "text-emerald-400" },
   ];
@@ -152,7 +177,11 @@ function AboutPage() {
   const socials = [
     { icon: Github, label: "github.com/Asbawy", href: "https://github.com/Asbawy" },
     { icon: BookOpen, label: "asbawy.medium.com", href: "https://asbawy.medium.com" },
-    { icon: Linkedin, label: "linkedin.com/in/mhmmdashraf", href: "https://linkedin.com/in/mhmmdashraf" },
+    {
+      icon: Linkedin,
+      label: "linkedin.com/in/mhmmdashraf",
+      href: "https://linkedin.com/in/mhmmdashraf",
+    },
     { icon: Mail, label: "eng.mhmmd@yahoo.com", href: "mailto:eng.mhmmd@yahoo.com" },
   ];
 
@@ -160,8 +189,6 @@ function AboutPage() {
     <CyberLayout>
       <div className="w-full min-h-full bg-background text-foreground py-12 px-6 md:px-12 lg:px-16 font-sans space-y-10">
         <div className="mx-auto max-w-6xl space-y-10">
-
-
           {/* Profile Hero Card */}
           <div className="rounded-2xl border border-border bg-card p-8 md:p-10 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
@@ -178,9 +205,7 @@ function AboutPage() {
                   <h2 className="text-3xl md:text-4xl font-extrabold text-foreground">
                     Mohammed Al-Kasabi
                   </h2>
-                  <p className="text-base font-medium text-emerald-400">
-                    Alias: Asbawy · Egypt
-                  </p>
+                  <p className="text-base font-medium text-emerald-400">Alias: Asbawy · Egypt</p>
                 </div>
 
                 {/* Roles Badges */}
@@ -201,7 +226,10 @@ function AboutPage() {
 
                 {/* Description */}
                 <p className="text-sm md:text-base text-muted-foreground leading-relaxed max-w-2xl pt-2">
-                  Red Team operator specializing in web, mobile, network, and Active Directory penetration testing. Recognized by Atlassian, Doximity, Canva, Mezmo, and 50+ organizations worldwide. Graduated with a B.Eng in Electronics & Communications from Mansoura University.
+                  Red Team operator specializing in web, mobile, network, and Active Directory
+                  penetration testing. Recognized by Atlassian, Doximity, Canva, Mezmo, and 50+
+                  organizations worldwide. Graduated with a B.Eng in Electronics & Communications
+                  from Mansoura University.
                 </p>
               </div>
             </div>
@@ -291,7 +319,9 @@ function AboutPage() {
           <div className="rounded-xl border border-border bg-card p-6 space-y-4">
             <div className="flex items-center gap-2 border-b border-border pb-3">
               <Crosshair className="w-5 h-5 text-amber-400" />
-              <h2 className="text-lg font-bold text-foreground">Bounty Board — Neutralized Targets</h2>
+              <h2 className="text-lg font-bold text-foreground">
+                Bounty Board — Neutralized Targets
+              </h2>
             </div>
             <p className="text-xs text-muted-foreground flex items-center gap-2">
               <Unlock className="w-3.5 h-3.5 text-amber-400" />
@@ -303,7 +333,9 @@ function AboutPage() {
                   key={org}
                   className="rounded-lg border border-border bg-muted p-3 text-center hover:border-amber-500/40 transition-colors"
                 >
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider">Target</div>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider">
+                    Target
+                  </div>
                   <div className="text-sm font-bold text-foreground mt-0.5">{org}</div>
                 </div>
               ))}

@@ -1,13 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Swords,
-  BookOpen,
-  FileTerminal,
-  Search,
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-} from "lucide-react";
+import { Swords, BookOpen, FileTerminal, Search, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
 import { cheatsheetFiles } from "@/data/cheatsheets";
@@ -54,7 +46,6 @@ function Index() {
           {/* Hero Section */}
           <div className="rounded-2xl border border-border bg-card p-8 md:p-10 font-sans shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300">
             {/* Subtle Terminal Prompt Header */}
-            
 
             {/* Title & Subtitle */}
             <div className="space-y-2">
@@ -128,7 +119,9 @@ function Index() {
 
             <div className="rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 hover:border-fuchsia-500/40">
               <BookOpen className="w-5 h-5 text-fuchsia-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">{cheatsheetFiles.length}</div>
+              <div className="text-3xl font-extrabold text-foreground">
+                {cheatsheetFiles.length}
+              </div>
               <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
                 Cheatsheets
               </div>
@@ -198,7 +191,10 @@ function Index() {
                   <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
                     <div className="flex flex-wrap gap-1.5">
                       {p.tags.slice(0, 3).map((t) => (
-                        <span key={t} className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border">
+                        <span
+                          key={t}
+                          className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
+                        >
                           #{t}
                         </span>
                       ))}
@@ -249,7 +245,9 @@ function Index() {
                         <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold">
                           {w.platform}
                         </span>
-                        <span className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium ${diffColor}`}>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium ${diffColor}`}
+                        >
                           {w.difficulty}
                         </span>
                       </div>
@@ -266,7 +264,10 @@ function Index() {
                     <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
                       <div className="flex flex-wrap gap-1.5">
                         {w.tags.slice(0, 3).map((t) => (
-                          <span key={t} className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border">
+                          <span
+                            key={t}
+                            className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
+                          >
                             #{t}
                           </span>
                         ))}
@@ -325,7 +326,10 @@ function Index() {
                   <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
                     <div className="flex flex-wrap gap-1.5">
                       {file.meta.tags?.slice(0, 3).map((t) => (
-                        <span key={t} className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border">
+                        <span
+                          key={t}
+                          className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
+                        >
                           #{t}
                         </span>
                       ))}

@@ -98,10 +98,7 @@ function WriteupsIndex() {
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const machineCount = useMemo(
-    () => writeupsMeta.filter((w) => w.type === "Machine").length,
-    [],
-  );
+  const machineCount = useMemo(() => writeupsMeta.filter((w) => w.type === "Machine").length, []);
   const challengeCount = useMemo(
     () => writeupsMeta.filter((w) => w.type === "Challenge").length,
     [],
@@ -161,7 +158,6 @@ function WriteupsIndex() {
         <div className="mx-auto max-w-7xl space-y-8">
           {/* Header */}
           <div className="space-y-3">
-
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
               Writeups
             </h1>
@@ -174,10 +170,11 @@ function WriteupsIndex() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
               onClick={() => setPlatformFilter(null)}
-              className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all cursor-pointer ${!platformFilter
-                ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(52,211,153,0.1)]"
-                : "bg-card text-foreground border-border hover:border-border"
-                }`}
+              className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                !platformFilter
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_15px_rgba(52,211,153,0.1)]"
+                  : "bg-card text-foreground border-border hover:border-border"
+              }`}
             >
               <div>
                 <div className="text-2xl font-bold">{stats.total}</div>
@@ -195,10 +192,11 @@ function WriteupsIndex() {
                 <button
                   key={platform}
                   onClick={() => setPlatformFilter(isActive ? null : platform)}
-                  className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all cursor-pointer ${isActive
-                    ? `${cfg.bg} ${cfg.border} ${cfg.color} shadow-md`
-                    : "bg-card text-foreground border-border hover:border-border"
-                    }`}
+                  className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all cursor-pointer ${
+                    isActive
+                      ? `${cfg.bg} ${cfg.border} ${cfg.color} shadow-md`
+                      : "bg-card text-foreground border-border hover:border-border"
+                  }`}
                 >
                   <div>
                     <div className="text-2xl font-bold">{count}</div>
@@ -218,28 +216,31 @@ function WriteupsIndex() {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setTypeFilter(null)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${!typeFilter
-                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
-                  }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                  !typeFilter
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
+                }`}
               >
                 All ({writeupsMeta.length})
               </button>
               <button
                 onClick={() => setTypeFilter(typeFilter === "Machine" ? null : "Machine")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${typeFilter === "Machine"
-                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
-                  }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                  typeFilter === "Machine"
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
+                }`}
               >
                 Machines ({machineCount})
               </button>
               <button
                 onClick={() => setTypeFilter(typeFilter === "Challenge" ? null : "Challenge")}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${typeFilter === "Challenge"
-                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
-                  }`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                  typeFilter === "Challenge"
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
+                }`}
               >
                 Challenges ({challengeCount})
               </button>
@@ -287,10 +288,11 @@ function WriteupsIndex() {
                 <button
                   key={d}
                   onClick={() => setDifficultyFilter(isActive ? null : d)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${isActive
-                    ? difficultyBg(d) + " font-semibold shadow-sm"
-                    : "bg-muted text-muted-foreground border-border hover:text-foreground"
-                    }`}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+                    isActive
+                      ? difficultyBg(d) + " font-semibold shadow-sm"
+                      : "bg-muted text-muted-foreground border-border hover:text-foreground"
+                  }`}
                 >
                   {d}
                 </button>

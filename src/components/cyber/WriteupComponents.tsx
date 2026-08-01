@@ -105,10 +105,11 @@ export function SpoilerFlag({ flag, label = "Flag" }: { flag: string; label?: st
       </div>
       <div
         onClick={() => !revealed && setRevealed(true)}
-        className={`relative select-none rounded bg-muted/80 px-2.5 py-1.5 text-xs font-sans transition-all duration-300 ${revealed
+        className={`relative select-none rounded bg-muted/80 px-2.5 py-1.5 text-xs font-sans transition-all duration-300 ${
+          revealed
             ? "text-accent-primary font-bold select-text"
             : "cursor-pointer blur-sm hover:blur-[2px] text-muted-foreground"
-          }`}
+        }`}
       >
         <span className={revealed ? "" : "opacity-30"}>
           {revealed ? flag : flag.replace(/./g, "•")}
@@ -416,4 +417,3 @@ export function AutoScriptBadge({ size = "sm" }: { size?: "sm" | "md" }) {
     </span>
   );
 }
-

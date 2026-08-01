@@ -100,7 +100,6 @@ function StatsPage() {
         <div className="mx-auto max-w-7xl space-y-8">
           {/* Header */}
           <div className="space-y-3">
-            
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
               Stats & Analytics
             </h1>

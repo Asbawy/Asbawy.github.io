@@ -25,7 +25,6 @@ url: "https://asbawy.github.io/writeups/htb-spooky-pass"
 import { Callout } from "@/components/Callout";
 import { SpoilerFlag } from "@/components/cyber/WriteupComponents";
 
-
 ## Initial Inspection
 
 We start by extracting the challenge package provided by Hack The Box (the default zip archive password is usually `hackthebox`).
@@ -41,7 +40,9 @@ pass: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, i
 ```
 
 <Callout type="info">
-  **Key Observation:** The binary is **not stripped**. This means symbol names, function signatures (such as `main`), and global variables remain intact in the symbol table, making static analysis substantially easier.
+  **Key Observation:** The binary is **not stripped**. This means symbol names, function signatures
+  (such as `main`), and global variables remain intact in the symbol table, making static analysis
+  substantially easier.
 </Callout>
 
 ## Extracting Plaintext Credentials
@@ -57,14 +58,16 @@ strings pass | grep -C 3 "password"
 **Output:**
 
 ```text
-Enter the spooky password: 
-Access Granted! Here is your flag: 
+Enter the spooky password:
+Access Granted! Here is your flag:
 Access Denied! Wrong password.
 s3cr3t_p455_f0r_gh05t5_4nd_gh0ul5
 ```
 
 <Callout type="warning">
-  **Vulnerability Concept:** Storing plaintext credentials or authentication tokens directly in binary read-only data sections (`.rodata`) allows attackers to extract them instantaneously using simple string scanning utilities without executing the code.
+  **Vulnerability Concept:** Storing plaintext credentials or authentication tokens directly in
+  binary read-only data sections (`.rodata`) allows attackers to extract them instantaneously using
+  simple string scanning utilities without executing the code.
 </Callout>
 
 ---

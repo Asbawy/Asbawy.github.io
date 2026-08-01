@@ -76,7 +76,7 @@ Open 10.113.175.15:8080
 
 PORT     STATE SERVICE  REASON         VERSION
 22/tcp   open  ssh      syn-ack ttl 64 OpenSSH 8.2p1 Ubuntu 4ubuntu0.13 (Ubuntu Linux; protocol 2.0)
-| ssh-hostkey: 
+| ssh-hostkey:
 |   3072 f9:8f:b2:5c:f1:90:f8:5c:72:e2:68:0a:2c:63:d7:fd (RSA)
 | ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDARRakHVhp553UG6jPMsFm6Yq/DpMErkzqfgJxb9Elm9ZC1vd1ba+cWiwbhZT01XieMa01axfSv//Ifig7ExdGEzVrd3atsw8Oog7lOVNQuhH6BdeCPMhow4UduGWXwCiA+kOwnzgHgXap2WlxYtEEzxu7DTS0PHRmCOtHM+hNsDzaa2ER+TvaROwR05hCIirAfBZCzetPFdpm5wLEAifkUs+43R7NcJgVTgY8P7NHyxtAenIzpw+o45NVQq/hRIGrJEElDNG3qzzHMn8/4IoS7LH0S6zLAWW0Lwhjio0h9GKwxNugA4iKiVffkRRV3t1Vlk165ydENMRAvWfI2Gk6FKVZMaNsYbmJAl5N+hHDPJCjpOs7QLdzHkIr2T71eWot/bdInIPP3Lsp0nkP7eyph5GeDr1NbRmGnnO6zENxSoOxY6hJw5kNCFUCeSd4xCOBPwbf6L/DLcqrJwLBMa8lU/b82ETCGcaR5akrJsMusIfSxw7zWPBpNy878VmE8tc=
 |   256 8c:49:93:4a:df:d4:78:04:89:84:1c:3e:c2:99:00:35 (ECDSA)
@@ -86,10 +86,10 @@ PORT     STATE SERVICE  REASON         VERSION
 80/tcp   open  ssl/http syn-ack ttl 63 El Bandito Server
 |_ssl-date: TLS randomness does not represent time
 |_http-title: Site doesn't have a title (text/html; charset=utf-8).
-| http-methods: 
+| http-methods:
 |_  Supported Methods: POST GET HEAD OPTIONS
-| fingerprint-strings: 
-|   FourOhFourRequest: 
+| fingerprint-strings:
+|   FourOhFourRequest:
 |     HTTP/1.1 404 NOT FOUND
 |     Date: Thu, 23 Jul 2026 03:08:38 GMT
 |     Content-Type: text/html; charset=utf-8
@@ -107,7 +107,7 @@ PORT     STATE SERVICE  REASON         VERSION
 |     <title>404 Not Found</title>
 |     <h1>Not Found</h1>
 |     <p>The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.</p>
-|   GetRequest: 
+|   GetRequest:
 |     HTTP/1.1 200 OK
 |     Date: Thu, 23 Jul 2026 03:07:48 GMT
 |     Content-Type: text/html; charset=utf-8
@@ -122,7 +122,7 @@ PORT     STATE SERVICE  REASON         VERSION
 |     Accept-Ranges: bytes
 |     Connection: close
 |     nothing to see <script src='/static/messages.js'></script>
-|   HTTPOptions: 
+|   HTTPOptions:
 |     HTTP/1.1 200 OK
 |     Date: Thu, 23 Jul 2026 03:07:48 GMT
 |     Content-Type: text/html; charset=utf-8
@@ -137,7 +137,7 @@ PORT     STATE SERVICE  REASON         VERSION
 |     Server: El Bandito Server
 |     Accept-Ranges: bytes
 |     Connection: close
-|   RTSPRequest: 
+|   RTSPRequest:
 |_    HTTP/1.1 400 Bad Request
 |_http-server-header: El Bandito Server
 | ssl-cert: Subject: commonName=localhost
@@ -171,7 +171,7 @@ PORT     STATE SERVICE  REASON         VERSION
 631/tcp  open  ipp      syn-ack ttl 64 CUPS 2.4
 |_http-server-header: CUPS/2.4 IPP/2.1
 |_http-title: Bad Request - CUPS v2.4.12
-| http-methods: 
+| http-methods:
 |_  Supported Methods: GET HEAD POST OPTIONS
 8080/tcp open  http     syn-ack ttl 63 nginx
 |_http-title: Site doesn't have a title (application/json;charset=UTF-8).
@@ -225,8 +225,9 @@ PORT     STATE SERVICE VERSION
 ```
 
 <Callout type="info">
-  **Recon Notes:**
-  Two main web servers are running. Port 80 hosts an Nginx reverse proxy, while port 8080 runs a Java Spring Boot application. We will begin enumeration on port 8080 to identify exposed Actuator endpoints.
+  **Recon Notes:** Two main web servers are running. Port 80 hosts an Nginx reverse proxy, while
+  port 8080 runs a Java Spring Boot application. We will begin enumeration on port 8080 to identify
+  exposed Actuator endpoints.
 </Callout>
 
 ---
@@ -313,15 +314,14 @@ On the "/Services" page, there is an online status checker that makes requests t
 
 ![SSRF Testing](https://i.imgur.com/nFgrtXe.png)
 
-
 ### Bypassing Nginx via WebSocket Upgrade
 
 To bypass the proxy restrictions on the Spring Actuator endpoints, we can use **WebSocket Request Smuggling**. We need to trick Nginx into believing a WebSocket connection has been established. Nginx looks for an `HTTP 101 Switching Protocols` response from the backend.
 
-
 We can achieve this by hosting a rogue server that always responds with `101 Switching Protocols` and pointing the SSRF to our attacker IP.
 
 **1. Start the Server (Python):**
+
 ```python
 #!/usr/bin/env python3
 import socket
@@ -400,7 +400,8 @@ python3 server.py 9090
 In Burp Suite Repeater, we modify the original request to point the SSRF to our server, effectively creating a blind tunnel to smuggle our HTTP requests to the restricted endpoints.
 
 <Callout type="warning">
-  **Important:** Don't forget to disable **'Update Content-Length'** in Burp Suite Repeater settings, otherwise this request will fail.
+  **Important:** Don't forget to disable **'Update Content-Length'** in Burp Suite Repeater
+  settings, otherwise this request will fail.
 </Callout>
 
 ```http
@@ -427,6 +428,7 @@ Host: 10.113.175.15:8080
 ### Extracting Credentials and Flag 1
 
 With the tunnel established, we can bypass the proxy and query the restricted `/trace` actuator endpoint. The trace logs reveal two highly sensitive, custom directories:
+
 - `/admin-creds`
 - `/admin-flag`
 
@@ -449,12 +451,9 @@ Host: 10.113.175.15:8080
 
 ```
 
-
 By smuggling requests to these endpoints, we can retrieve a set of credentials and the first flag!
 
-<Callout type="warning">
-  **Credentials Found:** `hAckLIEN:YouCanCatchUsInYourDreams404`
-</Callout>
+<Callout type="warning">**Credentials Found:** `hAckLIEN:YouCanCatchUsInYourDreams404`</Callout>
 
 <SpoilerFlag label="Admin Flag (Flag 1)" flag="THM{:::MY_DECLINATION:+62°_14'_31.4'':::}" />
 
@@ -466,7 +465,7 @@ By smuggling requests to these endpoints, we can retrieve a set of credentials a
 
 Moving back to port 80, the main page appears empty, but checking the source code reveals a script at `/static/messages.js`. Navigating to `/access` presents a login panel.
 
-Using the credentials harvested from port 8080 (`hAckLIEN:YouCanCatchUsInYourDreams404`), we log into a chat application interface. 
+Using the credentials harvested from port 8080 (`hAckLIEN:YouCanCatchUsInYourDreams404`), we log into a chat application interface.
 
 ![Chat Application](https://i.imgur.com/H3GuouC.png)
 
@@ -494,8 +493,10 @@ Content-Type: application/x-www-form-urlencoded
 
 data=
 ```
+
 <Callout type="warning">
-  **Important:** Make sure to disable **'Update Content-Length'** in Burp Suite Repeater settings, and set the `Content-Length` manually to a high range (e.g., 900).
+  **Important:** Make sure to disable **'Update Content-Length'** in Burp Suite Repeater settings,
+  and set the `Content-Length` manually to a high range (e.g., 900).
 </Callout>
 
 ![Burp Suite Request Smuggling](https://i.imgur.com/IhNjs2I.png)
@@ -511,6 +512,7 @@ Once the bot processes the smuggled request, the hijacked cookie appears in our 
 ## Summary & Key Takeaways
 
 El Bandito is an excellent deep-dive into advanced proxy bypass and request smuggling techniques:
+
 1. **WebSocket Request Smuggling:** Combining an SSRF with a rogue 101 response server allows attackers to bypass reverse proxy restrictions and access protected backend administrative endpoints (Spring Boot Actuators).
 2. **HTTP Request Smuggling:** Exploiting desyncs between frontend proxies and backend servers can lead to critical session hijacking and data exfiltration.
 

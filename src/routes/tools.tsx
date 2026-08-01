@@ -11,7 +11,8 @@ export const Route = createFileRoute("/tools")({
       { title: "Tools — Browser Utilities & GitHub Repositories" },
       {
         name: "description",
-        content: "Browser-only utilities — JWT decoder, payload encoder, and GitHub tools by Asbawy.",
+        content:
+          "Browser-only utilities — JWT decoder, payload encoder, and GitHub tools by Asbawy.",
       },
     ],
   }),
@@ -33,7 +34,6 @@ function ToolsPage() {
         <div className="mx-auto max-w-6xl space-y-8">
           {/* Header */}
           <div className="space-y-3">
-            
             <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
               Tools
             </h1>
@@ -51,10 +51,11 @@ function ToolsPage() {
                 <button
                   key={t.id}
                   onClick={() => setTab(t.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${isActive
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                    isActive
                       ? "bg-amber-500/15 text-amber-400 border border-amber-500/40 font-semibold shadow-[0_0_15px_rgba(245,158,11,0.12)]"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
-                    }`}
+                  }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{t.label}</span>

@@ -187,14 +187,17 @@ function CheatsheetIndex() {
                   className={`
                     px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer font-sans
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]/50
-                    ${isActive
-                      ? "bg-[#4ec9b0]/15 text-[#4ec9b0] border border-[#4ec9b0]/40 font-semibold shadow-[0_0_15px_rgba(78,201,176,0.12)]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
+                    ${
+                      isActive
+                        ? "bg-[#4ec9b0]/15 text-[#4ec9b0] border border-[#4ec9b0]/40 font-semibold shadow-[0_0_15px_rgba(78,201,176,0.12)]"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
                     }
                   `}
                 >
                   {c.name}{" "}
-                  <span className={`ml-1 text-xs ${isActive ? "text-[#4ec9b0]/80" : "text-muted-foreground"}`}>
+                  <span
+                    className={`ml-1 text-xs ${isActive ? "text-[#4ec9b0]/80" : "text-muted-foreground"}`}
+                  >
                     ({c.count})
                   </span>
                 </button>
@@ -252,9 +255,10 @@ function CheatsheetIndex() {
                   className={`
                     px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer font-sans border
                     focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4ec9b0]/50
-                    ${isTagActive
-                      ? "bg-[#4ec9b0]/20 text-[#4ec9b0] border-[#4ec9b0]/50 shadow-[0_0_12px_rgba(78,201,176,0.15)]"
-                      : "bg-muted text-muted-foreground hover:text-foreground border-border hover:border-border"
+                    ${
+                      isTagActive
+                        ? "bg-[#4ec9b0]/20 text-[#4ec9b0] border-[#4ec9b0]/50 shadow-[0_0_12px_rgba(78,201,176,0.15)]"
+                        : "bg-muted text-muted-foreground hover:text-foreground border-border hover:border-border"
                     }
                   `}
                 >

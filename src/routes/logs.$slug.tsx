@@ -12,6 +12,7 @@ import { ShareButtons } from "@/components/cyber/ShareButtons";
 import { AuthorBio } from "@/components/cyber/AuthorBio";
 import { getRelatedPosts } from "@/lib/related-posts";
 import { useArticleToc } from "@/hooks/use-article-toc";
+import { TableOfContents } from "@/components/cyber/TableOfContents";
 import { useSharedMdxComponents } from "@/components/cyber/SharedMdxComponents";
 
 export const Route = createFileRoute("/logs/$slug")({
@@ -29,43 +30,43 @@ export const Route = createFileRoute("/logs/$slug")({
     return {
       meta: p
         ? [
-          { title: `${p.title} — Asbawy Blog` },
-          { name: "description", content: p.excerpt },
-          { property: "og:title", content: p.title },
-          { property: "og:description", content: p.excerpt },
-          { property: "og:type", content: "article" },
-          { property: "og:url", content: url },
-          { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
-          { name: "twitter:card", content: "summary_large_image" },
-          { name: "twitter:image", content: "https://asbawy.github.io/eye-of-ra.png" },
-        ]
+            { title: `${p.title} — Asbawy Blog` },
+            { name: "description", content: p.excerpt },
+            { property: "og:title", content: p.title },
+            { property: "og:description", content: p.excerpt },
+            { property: "og:type", content: "article" },
+            { property: "og:url", content: url },
+            { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
+            { name: "twitter:card", content: "summary_large_image" },
+            { name: "twitter:image", content: "https://asbawy.github.io/eye-of-ra.png" },
+          ]
         : [{ title: "Asbawy Blog" }],
       links: [{ rel: "canonical", href: url }],
       scripts: p
         ? [
-          {
-            type: "application/ld+json",
-            children: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "BlogPosting",
-              headline: p.title,
-              description: p.excerpt,
-              datePublished: p.date,
-              author: {
-                "@type": "Person",
-                name: "Asbawy",
-                url: "https://asbawy.github.io",
-              },
-              publisher: {
-                "@type": "Person",
-                name: "Asbawy",
-              },
-              url,
-              mainEntityOfPage: { "@type": "WebPage", "@id": url },
-              keywords: p.tags.join(", "),
-            }),
-          },
-        ]
+            {
+              type: "application/ld+json",
+              children: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "BlogPosting",
+                headline: p.title,
+                description: p.excerpt,
+                datePublished: p.date,
+                author: {
+                  "@type": "Person",
+                  name: "Asbawy",
+                  url: "https://asbawy.github.io",
+                },
+                publisher: {
+                  "@type": "Person",
+                  name: "Asbawy",
+                },
+                url,
+                mainEntityOfPage: { "@type": "WebPage", "@id": url },
+                keywords: p.tags.join(", "),
+              }),
+            },
+          ]
         : [],
     };
   },
@@ -93,7 +94,11 @@ function PostPage() {
   const navigate = useNavigate();
   const { post } = Route.useLoaderData();
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const { headings, activeId: activeHeading, progress } = useArticleToc("article", [2, 3], post.slug);
+  const {
+    headings,
+    activeId: activeHeading,
+    progress,
+  } = useArticleToc("article", [2, 3], post.slug);
   const components = useSharedMdxComponents(setLightboxSrc);
 
   const MDXContent = MdxComponents[post.slug] || (() => <div>Component not found</div>);
@@ -196,36 +201,9 @@ function PostPage() {
           <aside className="hidden lg:block">
             <div className="sticky top-6">
               {/* Reading progress bar and TOC */}
-              <Panel title="table of contents">
-                <div className="mb-4 h-1 w-full overflow-hidden rounded-sm bg-secondary/60">
-                  <div
-                    className="h-full bg-foreground/60"
-                    style={{ width: `${progress}%`, boxShadow: "0 0 10px currentColor" }}
-                  />
-                </div>
-
-                {headings.length > 0 && (
-                  <ol className="space-y-1 font-sans text-xs">
-                    {headings.map((s) => {
-                      const isActive = activeHeading === s.id;
-                      return (
-                        <li key={s.id}>
-                          <a
-                            href={`#${s.id}`}
-                            className={`flex items-center gap-2 rounded px-2 py-1.5 transition-colors ${isActive
-                                ? "text-foreground bg-white/[0.05]"
-                                : "text-muted-foreground hover:text-foreground"
-                              }`}
-                          >
-                            <span>{isActive ? "▸" : "·"}</span>
-                            <span className="truncate">{s.title}</span>
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
-              </Panel>
+              <div className="glass-panel p-4 rounded-xl border border-white/[0.08] shadow-[0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden">
+                <TableOfContents headings={headings} activeId={activeHeading} progress={progress} />
+              </div>
 
               {getRelatedPosts(post, postsMeta).length > 0 && (
                 <Panel title="related" className="mt-4">

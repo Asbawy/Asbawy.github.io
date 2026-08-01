@@ -44,7 +44,9 @@ async function main() {
   const writeupsDir = join(process.cwd(), "src/data/writeups");
   let writeupPages: any[] = [];
   try {
-    const writeupFiles = readdirSync(writeupsDir).filter((f) => typeof f === "string" && f.endsWith(".mdx"));
+    const writeupFiles = readdirSync(writeupsDir).filter(
+      (f) => typeof f === "string" && f.endsWith(".mdx"),
+    );
     writeupPages = writeupFiles.map((f) => ({
       path: `/writeups/${(f as string).replace(/\.mdx$/, "")}`,
       changefreq: "monthly",

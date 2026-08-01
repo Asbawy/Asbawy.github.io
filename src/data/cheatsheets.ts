@@ -28,7 +28,7 @@ const mdxModules = import.meta.glob<CheatsheetMeta>("./cheatsheets/**/*.mdx", {
 // Eager glob for actual React components to remove loading delay
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: CheatsheetMeta }>(
   "./cheatsheets/**/*.mdx",
-  { eager: true }
+  { eager: true },
 );
 
 export const cheatsheetFiles = Object.entries(mdxModules).map(([path, mod]) => {

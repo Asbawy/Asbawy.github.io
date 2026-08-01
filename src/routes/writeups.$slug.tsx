@@ -12,12 +12,20 @@ import {
 } from "@/data/writeups";
 import { Suspense } from "react";
 import { ArrowLeft, Swords, Flag, Server, Globe, Terminal, Cpu, Shield } from "lucide-react";
-import { PlatformIcon, SpoilerFlag, KillChain, SkillMatrix, CategoryIcon, AutoScriptBadge } from "@/components/cyber/WriteupComponents";
+import {
+  PlatformIcon,
+  SpoilerFlag,
+  KillChain,
+  SkillMatrix,
+  CategoryIcon,
+  AutoScriptBadge,
+} from "@/components/cyber/WriteupComponents";
 import { ImageLightbox } from "@/components/cyber/ImageLightbox";
 import { ShareButtons } from "@/components/cyber/ShareButtons";
 import { AuthorBio } from "@/components/cyber/AuthorBio";
 import { useSharedMdxComponents } from "@/components/cyber/SharedMdxComponents";
 import { useArticleToc } from "@/hooks/use-article-toc";
+import { TableOfContents } from "@/components/cyber/TableOfContents";
 
 export const Route = createFileRoute("/writeups/$slug")({
   loader: async ({ params }) => {
@@ -184,7 +192,7 @@ function WriteupPage() {
     <CyberLayout>
       {/* Global Scroll Progress Bar */}
       <div className="fixed top-0 left-0 h-1 z-50 w-full bg-transparent">
-        <div 
+        <div
           className="h-full bg-foreground/80 transition-all duration-100 ease-out shadow-[0_0_10px_rgba(255,255,255,0.5)]"
           style={{ width: `${progress}%` }}
         />
@@ -200,11 +208,10 @@ function WriteupPage() {
 
         <div className="mt-2 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-12">
           <div className="min-w-0 flex flex-col items-start">
-            
             {/* Mission Briefing Card */}
             <div className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] p-6 mb-10 shadow-[0_0_15px_rgba(0,0,0,0.2)] relative overflow-hidden group">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-foreground/20 to-transparent opacity-50"></div>
-              
+
               <div className="font-sans text-[11px] flex flex-wrap items-center gap-3 mb-4 tracking-wider">
                 <span className="text-muted-foreground">{writeup.date}</span>
                 <span className="text-foreground/20">·</span>
@@ -315,42 +322,9 @@ function WriteupPage() {
           <aside className="hidden lg:block">
             <div className="sticky top-6">
               {/* Reading progress bar and TOC */}
-              <Panel title="table of contents">
-                <div className="mb-4 h-1 w-full overflow-hidden rounded-sm bg-secondary/60">
-                  <div
-                    className="h-full bg-foreground/60"
-                    style={{
-                      width: `${progress}%`,
-                      boxShadow: "0 0 10px currentColor",
-                    }}
-                  />
-                </div>
-
-                {headings.length > 0 && (
-                  <ol className="space-y-1.5 font-sans text-xs">
-                    {headings.map((s) => {
-                      const isActive = activeHeading === s.id;
-                      return (
-                        <li key={s.id}>
-                          <a
-                            href={`#${s.id}`}
-                            className={`flex items-center gap-2 rounded px-2.5 py-1.5 transition-all duration-300 ${
-                              isActive
-                                ? "text-foreground bg-white/[0.08] shadow-[inset_2px_0_0_0_currentColor]"
-                                : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
-                            }`}
-                          >
-                            <span className={isActive ? "opacity-100 text-foreground" : "opacity-40"}>
-                              {isActive ? "▸" : "·"}
-                            </span>
-                            <span className="truncate">{s.title}</span>
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ol>
-                )}
-              </Panel>
+              <div className="glass-panel p-4 rounded-xl border border-white/[0.08] shadow-[0_0_20px_rgba(0,0,0,0.3)] relative overflow-hidden">
+                <TableOfContents headings={headings} activeId={activeHeading} progress={progress} />
+              </div>
 
               {/* Machine Info Panel */}
               <Panel title="machine_info" className="mt-4">

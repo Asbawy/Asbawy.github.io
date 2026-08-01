@@ -82,7 +82,7 @@ This room contains **six flags** scattered across the attack path, testing enume
 A full TCP port scan reveals four listening services:
 
 ```bash
-nmap -sC -sV -p- -T4 10.114.156.245 
+nmap -sC -sV -p- -T4 10.114.156.245
 
 PORT     STATE SERVICE VERSION
 22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.13 (Ubuntu Linux; protocol 2.0)
@@ -105,8 +105,8 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
 <Callout type="info">
   Four ports are open. Apache on port 80 and Nginx on port 8000 both return **403 Forbidden**. The
-  Werkzeug/Python server on port 8080 is a Flask application — this will be our primary attack surface.
-  Nmap also detected a `robots.txt` on port 8000 with interesting disallowed extensions.
+  Werkzeug/Python server on port 8080 is a Flask application — this will be our primary attack
+  surface. Nmap also detected a `robots.txt` on port 8000 with interesting disallowed extensions.
 </Callout>
 
 ---
@@ -187,13 +187,14 @@ lnk = hashlib.sha1(lnk.encode("utf-8")).hexdigest()
 ```
 
 <Callout type="warning">
-  **Critical Vulnerability:** The password reset token is derived from `SHA-1(server_timestamp + username)`.
-  Since the timestamp is predictable (obtained from the HTTP response `Date` header) and the username is
-  known, an attacker can reconstruct the exact token by brute-forcing only the millisecond component
-  (0–99 range after truncation).
+  **Critical Vulnerability:** The password reset token is derived from `SHA-1(server_timestamp +
+  username)`. Since the timestamp is predictable (obtained from the HTTP response `Date` header) and
+  the username is known, an attacker can reconstruct the exact token by brute-forcing only the
+  millisecond component (0–99 range after truncation).
 </Callout>
 
 **5. Password Reset Flow:**
+
 - `POST /forgot_password` — accepts a `username` parameter, generates a token, and stores it in the database.
 - `GET /password_reset?token=<TOKEN>` — validates the token and allows the user to set a new password.
 
@@ -209,8 +210,8 @@ Send a password reset request for the `administrator` account and capture the se
 
 <Callout type="info">
   The server's `Date` response header provides the base timestamp. The token generation uses
-  `datetime.datetime.now()` with microsecond precision, but the code truncates the last 4 characters,
-  leaving only 2 significant digits of sub-second precision to brute-force.
+  `datetime.datetime.now()` with microsecond precision, but the code truncates the last 4
+  characters, leaving only 2 significant digits of sub-second precision to brute-force.
 </Callout>
 
 ### Step 2: Generate Candidate Tokens

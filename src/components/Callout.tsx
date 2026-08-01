@@ -3,7 +3,17 @@ import { AlertTriangle, Info, CheckCircle, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CalloutProps {
-  type?: "default" | "info" | "warning" | "danger" | "success" | "tip" | "note" | "warn" | "error" | string;
+  type?:
+    | "default"
+    | "info"
+    | "warning"
+    | "danger"
+    | "success"
+    | "tip"
+    | "note"
+    | "warn"
+    | "error"
+    | string;
   title?: string;
   children: React.ReactNode;
 }
@@ -11,17 +21,18 @@ interface CalloutProps {
 export function Callout({ type = "default", title, children }: CalloutProps) {
   const normalizedType = (type || "default").toLowerCase();
 
-  const Icon = {
-    default: Info,
-    info: Info,
-    note: Info,
-    warning: AlertTriangle,
-    warn: AlertTriangle,
-    danger: XCircle,
-    error: XCircle,
-    success: CheckCircle,
-    tip: Info,
-  }[normalizedType] || Info;
+  const Icon =
+    {
+      default: Info,
+      info: Info,
+      note: Info,
+      warning: AlertTriangle,
+      warn: AlertTriangle,
+      danger: XCircle,
+      error: XCircle,
+      success: CheckCircle,
+      tip: Info,
+    }[normalizedType] || Info;
 
   const variantStyles: Record<string, string> = {
     default: "bg-muted text-foreground border-border",

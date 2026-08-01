@@ -22,7 +22,7 @@ const mdxModules = import.meta.glob<PostMeta>("./posts/*.mdx", {
 
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: PostMeta }>(
   "./posts/*.mdx",
-  { eager: true }
+  { eager: true },
 );
 
 export const postsMeta: PostMeta[] = Object.values(mdxModules)

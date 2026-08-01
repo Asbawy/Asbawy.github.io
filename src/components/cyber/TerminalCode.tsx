@@ -325,9 +325,7 @@ export function TerminalCode({
             isWrapped ? "overflow-x-hidden" : "overflow-x-auto"
           }`}
           style={
-            shouldCollapse
-              ? { maxHeight: "250px", overflowY: "hidden" }
-              : { maxHeight: "none" }
+            shouldCollapse ? { maxHeight: "250px", overflowY: "hidden" } : { maxHeight: "none" }
           }
         >
           {processedLines.map((lineHtml, idx) => {
@@ -362,8 +360,7 @@ export function TerminalCode({
           <div
             className="absolute bottom-0 left-0 right-0 h-20 pointer-events-none"
             style={{
-              background:
-                "linear-gradient(to bottom, transparent 0%, hsl(var(--card)) 100%)",
+              background: "linear-gradient(to bottom, transparent 0%, hsl(var(--card)) 100%)",
             }}
           />
         )}

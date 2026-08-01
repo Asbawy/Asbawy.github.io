@@ -202,17 +202,21 @@ export function TerminalReplay({
           {phase === "idle" ? (
             <div className="flex flex-col items-center justify-center py-12 gap-4 text-white/30">
               <Terminal className="h-10 w-10 opacity-30" />
-              <p className="text-sm font-sans">Click <strong className="text-emerald-400/60">Run Exploit</strong> to start the automated exploitation</p>
-              <p className="text-xs font-sans text-white/20">{steps.length} steps · fully automated</p>
+              <p className="text-sm font-sans">
+                Click <strong className="text-emerald-400/60">Run Exploit</strong> to start the
+                automated exploitation
+              </p>
+              <p className="text-xs font-sans text-white/20">
+                {steps.length} steps · fully automated
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {steps.slice(0, visibleSteps).map((step, idx) => {
                 const isCurrentStep = idx === visibleSteps - 1;
                 const isTyping = isCurrentStep && phase === "running";
-                const cmdToShow = isTyping && step.command
-                  ? step.command.slice(0, typingIdx)
-                  : (step.command || "");
+                const cmdToShow =
+                  isTyping && step.command ? step.command.slice(0, typingIdx) : step.command || "";
                 const showStepOutput = isCurrentStep ? showOutput : true;
 
                 return (
@@ -298,7 +302,11 @@ export function TerminalReplay({
             className="flex items-center gap-2 w-full px-4 py-2.5 rounded-lg border border-white/[0.08] bg-white/[0.02]
               text-xs font-mono text-white/50 hover:text-white/80 hover:bg-white/[0.04] transition-all duration-200 cursor-pointer"
           >
-            {showScript ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            {showScript ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
             <span className="uppercase tracking-widest font-bold text-[10px]">
               {showScript ? "Hide" : "View"} Full Script
             </span>
@@ -312,7 +320,11 @@ export function TerminalReplay({
                 className="flex items-center gap-1 px-2 py-0.5 rounded border border-white/10 bg-white/5
                   text-[10px] text-white/40 hover:text-white/70 transition-colors cursor-pointer"
               >
-                {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                {copied ? (
+                  <Check className="h-3 w-3 text-emerald-400" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
                 {copied ? "Copied!" : "Copy"}
               </button>
             )}
@@ -320,8 +332,10 @@ export function TerminalReplay({
 
           {showScript && (
             <div className="mt-1 rounded-lg border border-white/[0.06] bg-[#0d1117] overflow-hidden animate-in slide-in-from-top-2 duration-300">
-              <pre className="p-4 text-[12px] font-mono text-white/70 leading-relaxed overflow-x-auto max-h-[400px] overflow-y-auto
-                scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+              <pre
+                className="p-4 text-[12px] font-mono text-white/70 leading-relaxed overflow-x-auto max-h-[400px] overflow-y-auto
+                scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10"
+              >
                 {rawScript}
               </pre>
             </div>

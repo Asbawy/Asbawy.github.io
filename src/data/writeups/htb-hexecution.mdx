@@ -1,0 +1,399 @@
+---
+slug: "htb-hexecution"
+title: "Hexecution — HackTheBox Challenge Writeup"
+date: "2026-08-01"
+platform: "HackTheBox"
+type: "Challenge"
+category: "Reverse Engineering"
+os: "Linux"
+difficulty: "Hard"
+tags:
+  - "Reverse Engineering"
+  - "Custom VM"
+  - "Custom ISA"
+  - "VM Emulation"
+  - "Permutation Inverse"
+  - "Python"
+  - "Linux"
+excerpt: "Reversing a kitchen-themed custom virtual machine ('cook') on Linux, analyzing custom assembly opcodes ('recipe.asm'), reversing a two-stage permutation algorithm, and automating key recovery and VM emulation in Python."
+readTime: "12 min"
+rating: 4.9
+hasAutoScript: true
+url: "https://asbawy.github.io/writeups/htb-hexecution"
+---
+
+import { Callout } from "@/components/Callout";
+import { SpoilerFlag } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+## Challenge Overview
+
+> **Challenge Description:** My friend is always tampering with low-level things. So created something different, and going to challenge him. Before challenge him, can you try it and see if it works or not?
+
+**Hexecution** is a classic HackTheBox hard-rated Reverse Engineering challenge centered around a **custom Virtual Machine (VM)**. We are provided with two files:
+
+- `cook`: A dynamically linked 64-bit Linux executable (the VM interpreter).
+- `recipe.asm`: A custom assembly bytecode program executed by `cook`.
+
+Instead of writing flag-verification logic in standard x86-64 machine code that decompilers can solve immediately, the author implemented a kitchen-themed virtual Instruction Set Architecture (ISA). To solve the challenge, we must reverse-engineer the VM interpreter, document the custom ISA, translate the bytecode program into an algorithm, and algebraically invert that algorithm to recover the valid flag.
+
+---
+
+## Binary Analysis & Enumeration
+
+We begin our inspection by checking the binary properties and strings of the VM interpreter (`cook`):
+
+```bash
+$ file cook
+cook: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=..., for GNU/Linux 3.2.0, not stripped
+
+$ checksec --file=cook
+    Arch:     amd64-64-little
+    RELRO:    Partial RELRO
+    Stack:    No canary found
+    NX:       NX enabled
+    PIE:      No PIE (0x400000)
+```
+
+Running `strings cook` reveals the kitchen-themed custom instruction names along with prompt and success strings:
+
+- **Opcodes:** `BOIL`, `AES256`, `QUICKMAFFS`, `SPELL`, `PEPEFROG`, `GOODBYE`, `WINDOW`, `LADDER`, `ROAST`, `GRIND`, `CHAIR`, `ID`
+- **User-Facing Strings:** `"Enter the flag: "`, `"Invalid."`, `"Wrong!"`, `"Nice! The flag is HTB{YOUR_INPUT} :)"`
+
+Running the binary against `recipe.asm`:
+
+```bash
+$ ./cook recipe.asm
+Enter the flag: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Invalid.
+```
+
+<Callout type="info">
+  **GLIBC Compatibility Note:** The `cook` binary requires GLIBC `>= 2.38`. If your local Linux host runs an older version (e.g., Ubuntu 22.04 / Debian 11), execute the challenge cleanly using a container:
+  ```bash
+  docker run --rm -v "$PWD":/chall:ro -w /chall ubuntu:24.04 ./cook recipe.asm
+  ```
+</Callout>
+
+---
+
+## Reversing the VM Architecture (`cook`)
+
+Opening `cook` in Ghidra shows that the main interpreter loop tokenizes each line of `recipe.asm` using `strtok(line, " \n")` and dispatches execution based on opcode string comparison:
+
+```c
+line = read_line_from(file);          // fgets from recipe.asm
+token = strtok(line, " \n");          // extract opcode name
+if (!strcmp(token, "BOIL"))        handle_BOIL(...);
+else if (!strcmp(token, "AES256")) handle_AES256(...);
+else if (!strcmp(token, "SPELL"))  handle_SPELL(...);
+// ...
+```
+
+### VM State & Virtual Registers
+
+The VM maintains an internal stack struct and 6 global 16-bit registers located in the `.bss` segment:
+
+```c
+struct stack {
+    int   index;        // Offset 0x100 inside struct, starts at 0
+    char  data[256];    // 256-byte virtual stack array
+};
+```
+
+| Register Name | Address  | Description / Usage                       |
+| :------------ | :------- | :---------------------------------------- |
+| `VEGETABLE`   | `0x40a0` | General purpose register                  |
+| `FRUIT`       | `0x40a2` | General purpose register                  |
+| `MEAT`        | `0x40a4` | General purpose register                  |
+| `DAIRY`       | `0x40a6` | General purpose register                  |
+| `PROTEIN`     | `0x40aa` | Primary accumulator (`QUICKMAFFS` target) |
+| `CARBO`       | `0x40ac` | Base offset and index pointer register    |
+
+### Instruction Set Architecture (ISA) Reference
+
+By decompiling the handler functions, we reconstruct the complete ISA semantics:
+
+| Opcode       | Arguments  | Decompiled Implementation                               | Functional Description                            |
+| :----------- | :--------- | :------------------------------------------------------ | :------------------------------------------------ |
+| `BOIL`       | `reg, val` | `reg = strtoul(val, 0, 0)`                              | Load immediate value into register                |
+| `AES256`     | `val`      | `stack[index + CARBO] = val; index++`                   | Push single byte onto virtual stack               |
+| `SPELL`      | `1`        | `print(stack[CARBO .. PROTEIN])`                        | Print characters from stack to stdout             |
+| `SPELL`      | `0`        | `scanf("%s", &stack[CARBO]); len -> stack[CARBO+0x22]`  | Read user input; store length at `CARBO+0x22`     |
+| `QUICKMAFFS` | `idx`      | `PROTEIN = stack[idx]`                                  | Load byte from stack offset into `PROTEIN`        |
+| `WINDOW`     | `reg`      | `stack[CARBO] = reg`                                    | Store register byte into stack at offset `CARBO`  |
+| `LADDER`     | `reg`      | `reg++`                                                 | Increment register value by 1                     |
+| `ROAST`      | `r1, r2`   | `r1 ^= r2`                                              | Bitwise XOR two registers (often used to zero)    |
+| `GOODBYE`    | `dst, src` | `dst = src`                                             | Copy source register value to destination         |
+| `GRIND`      | `r1, r2`   | `if (r1 != r2) { puts("Wrong!"); exit(1); }`            | Assert equal registers (enforces input length!)   |
+| `PEPEFROG`   | `r1, r2`   | `for (i=0..31) if (stack[r1+i] != stack[r2+i]) exit(1)` | Assert 32-byte equality (final flag verification) |
+| `CHAIR`      | —          | `dump_stack_numbers()`                                  | Debug helper: print stack as decimal values       |
+| `ID`         | —          | `dump_stack_chars()`                                    | Debug helper: print stack as ASCII characters     |
+
+<Callout type="warning">
+  **Important Observation:** The instruction `GRIND` is missing from the official challenge author
+  writeup PDF. However, static analysis proves it is the exact instruction responsible for enforcing
+  the 32-character input length check
+</Callout>
+
+---
+
+## Bytecode Analysis: Translating `recipe.asm`
+
+With the ISA documented, we translate `recipe.asm` from top to bottom into structured pseudo-code:
+
+```asm
+; ---- Stage 0: Print Prompt --------------------------------------------
+BOIL CARBO, 0x0                 ; CARBO = 0
+AES256 0x45 ... AES256 0x20     ; Push "Enter the flag: " (16 bytes)
+BOIL CARBO, 0x0
+BOIL PROTEIN, 0x10              ; PROTEIN = 16
+SPELL 1                         ; Write stack[0..16] -> "Enter the flag: "
+
+; ---- Stage 1: Read User Input -----------------------------------------
+ROAST PROTEIN, PROTEIN          ; PROTEIN = 0
+ROAST CARBO, CARBO              ; CARBO = 0
+BOIL CARBO, 0x14                ; CARBO = 0x14 (20)
+SPELL 0                         ; Read input -> stack[0x14..0x33], len -> stack[0x36]
+
+; ---- Stage 2: Push Encrypted Target Buffer ---------------------------
+BOIL CARBO, 0x40                ; CARBO = 0x40 (64)
+AES256 0x35 ... AES256 0x5f     ; Push 32 bytes: "5maNcI4__U10_de5L13_Mn4U0u4trfn_"
+                                ; Lands at stack[48+64..] = stack[0x70..0x8f]
+
+; ---- Stage 3: Validate Input Length (32 chars) ------------------------
+QUICKMAFFS 0x36                 ; PROTEIN = stack[0x36] (user input length)
+BOIL VEGETABLE, 0x20            ; VEGETABLE = 32
+GRIND PROTEIN, VEGETABLE        ; if (len != 32) -> "Wrong!"
+
+; ---- Stage 4: Permutation 1 — 4-Byte Group Shuffle (3, 2, 4, 1) ------
+QUICKMAFFS 0x14 ; GOODBYE VEGETABLE, PROTEIN   ; VEGETABLE = input[0]
+QUICKMAFFS 0x15 ; GOODBYE FRUIT,    PROTEIN    ; FRUIT     = input[1]
+QUICKMAFFS 0x16 ; GOODBYE MEAT,     PROTEIN    ; MEAT      = input[2]
+QUICKMAFFS 0x17 ; GOODBYE DAIRY,    PROTEIN    ; DAIRY     = input[3]
+BOIL CARBO, 0x14 ; WINDOW MEAT                 ; stack[0x14] = input[2]  (was input[0])
+BOIL CARBO, 0x15 ; WINDOW FRUIT                ; stack[0x15] = input[1]  (was input[1])
+BOIL CARBO, 0x16 ; WINDOW DAIRY                ; stack[0x16] = input[3]  (was input[2])
+BOIL CARBO, 0x17 ; WINDOW VEGETABLE            ; stack[0x17] = input[0]  (was input[3])
+; ... repeated across all 8 4-character blocks (0x18, 0x1c, 0x20, 0x24, 0x28, 0x2c, 0x30)
+
+; ---- Stage 5: Permutation 2 — Global 32-Byte Array Reordering --------
+BOIL CARBO, 0x42                ; CARBO = 0x42 (66) — destination buffer
+QUICKMAFFS 0x14 ; WINDOW PROTEIN ; LADDER CARBO  ; stack[0x42] = shuffled[0]
+QUICKMAFFS 0x19 ; WINDOW PROTEIN ; LADDER CARBO  ; stack[0x43] = shuffled[5]
+QUICKMAFFS 0x1e ; WINDOW PROTEIN ; LADDER CARBO  ; stack[0x44] = shuffled[10]
+QUICKMAFFS 0x23 ; WINDOW PROTEIN ; LADDER CARBO  ; stack[0x45] = shuffled[15]
+; ... repeated 32 times total, reordering shuffled array with indices:
+; [0,5,10,15, 3,6,9,12, 4,1,2,7, 8,13,14,11, 16,21,26,31, 19,22,25,28, 20,17,18,23, 24,29,30,27]
+
+; ---- Stage 6: Final Verification -------------------------------------
+CHAIR                           ; Debug dump
+BOIL PROTEIN, 0x42              ; PROTEIN = 0x42 (shuffled & reordered buffer)
+BOIL CARBO, 0x70                ; CARBO = 0x70 (encrypted target string)
+PEPEFROG PROTEIN, CARBO         ; Assert stack[0x42..0x61] == stack[0x70..0x8f] -> "Nice!"
+```
+
+### VM Stack Memory Map
+
+| Hex Offset Range | Size     | Contents & Description                                         |
+| :--------------- | :------- | :------------------------------------------------------------- |
+| `0x00` – `0x0f`  | 16 Bytes | `"Enter the flag: "` prompt string                             |
+| `0x14` – `0x33`  | 32 Bytes | User input flag body (`32` ASCII characters)                   |
+| `0x36`           | 1 Byte   | User input length (`32`, written by `SPELL 0`)                 |
+| `0x42` – `0x61`  | 32 Bytes | Transformed user input after Permutation 1 & Permutation 2     |
+| `0x70` – `0x8f`  | 32 Bytes | Expected target ciphertext: `5maNcI4__U10_de5L13_Mn4U0u4trfn_` |
+
+<Callout type="tip">
+  **Why `0x70` and not `0x40`?** While `BOIL CARBO, 0x40` sets the base register before pushing the
+  encrypted target string, the `index` variable inside `struct stack` was already incremented to
+  `48` (`16` prompt bytes + `32` input chars). Thus, the target string lands at offset `48 + 64 =
+  112` (`0x70`). Always verify actual addresses in Ghidra!
+</Callout>
+
+---
+
+## Algebraic Inversion & Key Recovery
+
+The VM validates user input by evaluating:
+
+```text
+transformed[i] = reorder( group_shuffle(input) )[i] == enc_flag[i]
+```
+
+To recover the valid input, we invert both permutation stages in reverse order:
+
+1. **Invert Stage 2 (Global Reorder):**
+   Given `reordered[i] = shuffled[order[i]]`, the inverse mapping satisfies:
+
+   ```text
+   shuffled[j] = enc_flag[inv[j]]    where  inv[order[i]] = i
+   ```
+
+2. **Invert Stage 1 (4-Byte Group Shuffle):**
+   Forward permutation transforms each group `(a, b, c, d) -> (c, b, d, a)`.
+   Letting `(x0, x1, x2, x3) = (c, b, d, a)`, the inverse mapping restores the original positions:
+   ```text
+   (a, b, c, d) = (x3, x1, x0, x2)
+   ```
+
+We implement this algebraic inversion concisely in Python:
+
+```python
+enc   = "5maNcI4__U10_de5L13_Mn4U0u4trfn_"
+order = [0,5,10,15, 3,6,9,12, 4,1,2,7, 8,13,14,11,
+         16,21,26,31, 19,22,25,28, 20,17,18,23, 24,29,30,27]
+
+# Invert global reorder
+inv = [0] * 32
+for i, o in enumerate(order):
+    inv[o] = i
+shuffled = [enc[inv[j]] for j in range(32)]
+
+# Invert 4-byte group shuffles
+flag = []
+for g in range(0, 32, 4):
+    x = shuffled[g:g+4]
+    flag += [x[3], x[1], x[0], x[2]]
+
+print("HTB{" + "".join(flag) + "}")
+```
+
+Executing this inversion yields the challenge flag
+
+---
+
+## Verification & Proof of Work
+
+We verify our recovered flag using two independent methods:
+
+### 1. Pure Python VM Emulation
+
+We feed the recovered flag string into a faithful Python emulator of the `cook` VM. The final `PEPEFROG` instruction compares our transformed buffer against the target string and outputs `"Nice!"`.
+
+### 2. Runtime Execution against the Real Binary
+
+We execute the native Linux binary inside an Ubuntu 24.04 container:
+
+```bash
+$ docker run --rm -v "$PWD":/chall:ro -w /chall ubuntu:24.04 \
+    bash -c "printf 'cU510m_I54_aNd_eMuL4t10n_4r3_fUn\n' | ./cook recipe.asm"
+Enter the flag: Nice! The flag is HTB{YOUR_INPUT} :)
+```
+
+---
+
+## Flag Capture
+
+<SpoilerFlag label="HTB Challenge Flag" flag="HTB{cU510m_I54_aNd_eMuL4t10n_4r3_fUn}" />
+
+---
+
+## Automation
+
+Here is an interactive replay of `htb_hexecution_solve.py` in action:
+
+<TerminalReplay
+  title="htb_hexecution_solve.py"
+  flag="HTB{cU510m_I54_aNd_eMuL4t10n_4r3_fUn}"
+  flagSummary={[
+    "Dynamically extracted 32-byte target buffer from AES256 instructions in recipe.asm.",
+    "Algebraically inverted 2-stage permutation and confirmed verification via VM emulation.",
+  ]}
+  steps={[
+    {
+      label: "Step 1/5 — Parse & Tokenize Custom Bytecode (recipe.asm)",
+      command: "python3 htb_hexecution_solve.py recipe.asm",
+      output: [
+        {
+          text: "[*] Step 1/5: Loading and tokenizing bytecode file: recipe.asm...",
+          color: "blue",
+        },
+        { text: "[✓] Parsed 234 custom VM instructions", color: "green" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 2/5 — Extract Encrypted Target Flag Buffer",
+      output: [
+        {
+          text: "[*] Step 2/5: Extracting encrypted flag from AES256 bytecode pushes...",
+          color: "blue",
+        },
+        {
+          text: "[✓] Extracted 32 encrypted bytes: 5maNcI4__U10_de5L13_Mn4U0u4trfn_",
+          color: "green",
+        },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 3/5 — Extract Global Reordering Permutation Table",
+      output: [
+        {
+          text: "[*] Step 3/5: Extracting global reorder table from QUICKMAFFS/WINDOW dance...",
+          color: "blue",
+        },
+        {
+          text: "[✓] Extracted 32-element permutation table: [0, 5, 10, 15, 3, 6, 9, 12]...",
+          color: "green",
+        },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 4/5 — Invert 2-Stage Permutation Algorithm",
+      output: [
+        { text: "[*] Step 4/5: Inverting two-stage permutation algorithm...", color: "blue" },
+        {
+          text: "    - Stage 2 Inverse: Reconstructing shuffled array from global reorder indices",
+          color: "magenta",
+        },
+        {
+          text: "    - Stage 1 Inverse: Inverting 4-byte group shuffle (3,2,4,1) -> (4,2,1,3)",
+          color: "magenta",
+        },
+        { text: "[✓] Algebraic permutation inversion complete!", color: "green" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 5/5 — Verify Recovered Flag via VM Emulation",
+      output: [
+        {
+          text: "[*] Step 5/5: Verifying recovered flag inside Python VM emulator...",
+          color: "blue",
+        },
+        { text: "[✓] VM Emulation Verdict: Nice! (Flag accepted by custom ISA)", color: "green" },
+      ],
+      delayAfter: 800,
+    },
+  ]}
+/>
+
+<Callout type="tip">
+  **Standalone Solver Script:** View or download the complete automated Python solver and VM
+  emulator script
+  [`htb_hexecution_solve.py`](https://github.com/Asbawy/Asbawy.github.io/blob/main/autosolve/htb_hexecution_solve.py)
+  in our [`/autosolve`](https://github.com/Asbawy/Asbawy.github.io/tree/main/autosolve) directory.
+</Callout>
+
+---
+
+## Reusable Methodology for Custom VM Challenges
+
+1. **Run `strings` on the VM Interpreter:** Custom opcodes and error messages are usually stored as plaintext strings in the `.rodata` section.
+2. **Decompile the Dispatcher Loop:** Map every instruction opcode to its exact C/x86-64 semantics (pay close attention to stack index arithmetic and register sizes).
+3. **Check for Hidden Length Assertions:** Seemingly standard comparison opcodes (like `GRIND`) may hide input length requirements that aren't obvious in high-level diagrams.
+4. **Annotate Bytecode Line-by-Line:** Convert custom `.asm` files into readable C/Python comments to identify loop boundaries and data structures.
+5. **Invert Algebraically:** When dealing with permutations, XOR layers, or linear transformations, solve algebraically rather than brute-forcing.
+6. **Look for Debug Leftovers:** Opcodes like `CHAIR` and `ID` are often left by challenge authors to dump stack states, making dynamic validation trivial.
+7. **Emulate to Verify:** Writing a lightweight 50-line Python emulator for custom ISAs allows instant testing without dealing with GLIBC version mismatches or GDB attachments.
+
+---
+
+## References
+
+- [Ghidra Decompiler Documentation — Analyzing Custom VMs](https://ghidra-sre.org/)
+- [HackTricks — Reverse Engineering Virtual Machines](https://book.hacktricks.xyz/)
+- [ELF Specification & Section Anatomy](https://refspecs.linuxfoundation.org/elf/gabi4+/contents.html)
+- [Python Standard Library — `subprocess` & `pathlib`](https://docs.python.org/3/library/subprocess.html)

@@ -247,15 +247,24 @@ This entire challenge — from parsing the PCAPNG file to extracting the C2 stag
         { text: "[*] Step 2/4: Extracting C2 staging script (/temp/updates.py)...", color: "blue" },
         { text: "[✓] Extracted script (1085 bytes)", color: "green" },
         { text: "[✓] Identified C2 XOR Key: H0t3lSt@ff0NlyK3epS3cr3t!", color: "green" },
-        { text: "[!] Cryptanalysis: sendltr() encrypts characters individually.", color: "magenta" },
-        { text: "[!] Because len(data) == 1, index i=0 always -> XOR byte is key[0] ('H', 0x48)", color: "magenta" },
+        {
+          text: "[!] Cryptanalysis: sendltr() encrypts characters individually.",
+          color: "magenta",
+        },
+        {
+          text: "[!] Because len(data) == 1, index i=0 always -> XOR byte is key[0] ('H', 0x48)",
+          color: "magenta",
+        },
       ],
       delayAfter: 800,
     },
     {
       label: "Step 3/4 — Harvest Exfiltrated Cookies",
       output: [
-        { text: "[*] Step 3/4: Harvesting exfiltrated 'hotel_sess_state' cookies...", color: "blue" },
+        {
+          text: "[*] Step 3/4: Harvesting exfiltrated 'hotel_sess_state' cookies...",
+          color: "blue",
+        },
         { text: "[✓] Harvested 30 encrypted keystroke cookies", color: "green" },
         { text: "    Sample: HA==, AA==, BQ==, Mw==, Hg==, ew==...", color: "cyan" },
       ],
@@ -265,7 +274,7 @@ This entire challenge — from parsing the PCAPNG file to extracting the C2 stag
       label: "Step 4/4 — Decrypt Keystrokes & Capture Flag",
       output: [
         { text: "[*] Step 4/4: Decrypting keystroke stream...", color: "blue" },
-        { text: "[✓] Keystroke stream successfully reconstructed!", color: "green" }
+        { text: "[✓] Keystroke stream successfully reconstructed!", color: "green" },
       ],
       delayAfter: 800,
     },

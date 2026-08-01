@@ -37,7 +37,7 @@ const mdxModules = import.meta.glob<WriteupMeta>("./writeups/*.mdx", {
 
 const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: WriteupMeta }>(
   "./writeups/*.mdx",
-  { eager: true }
+  { eager: true },
 );
 
 export const writeupsMeta: WriteupMeta[] = Object.values(mdxModules)
