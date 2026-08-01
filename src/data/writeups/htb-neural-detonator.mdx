@@ -1,0 +1,336 @@
+---
+slug: "htb-neural-detonator"
+title: "Neural Detonator — HackTheBox Challenge Writeup"
+date: "2026-08-01"
+platform: "HackTheBox"
+type: "Challenge"
+category: "Machine Learning"
+os: "Linux"
+difficulty: "Hard"
+tags:
+  - "Machine Learning"
+  - "Keras Model"
+  - "Lambda Layer"
+  - "Python Bytecode"
+  - "Marshal"
+  - "XOR Decryption"
+  - "Weights"
+  - "Python"
+excerpt: "Reversing a malicious Keras model ('mlcious.keras') that hides a two-stage Python payload: a Lambda layer embedding a base64+marshal trampoline, a weight-derived XOR key, and an encrypted flag steganographically stored in a Dense layer's bias."
+readTime: "14 min"
+rating: 4.8
+hasAutoScript: true
+url: "https://asbawy.github.io/writeups/htb-neural-detonator"
+---
+
+import { Callout } from "@/components/Callout";
+import { SpoilerFlag } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+## Challenge Overview
+
+> **Challenge Description:** A standalone machine learning file surfaced on Volnaya's firmware staging server. No docs. No entrypoint. No task. Just quiet intent. It's waiting for something. So are we.
+
+**Neural Detonator** is a hard-rated HackTheBox **Machine Learning** challenge. We are given a single file:
+
+- `mlcious.keras`: A (supposedly) standard Keras model archive.
+
+The twist: the model is _malicious_. Its architecture is a perfectly normal image-classifier stack (Conv2D + BatchNorm + ReLU blocks over a `(32, 32, 3)`-ish input), but buried at the end are two layers that don't belong: a `payload_dense` Dense layer whose bias stores the **encrypted flag**, and an `activation_adapter` **Lambda** layer whose `config.json` entry contains a **base64-encoded, marshal-serialized Python code object** — a trampoline that decrypts and executes a second-stage payload at runtime.
+
+To solve the challenge we must: unpack the archive, extract and disassemble the Lambda's hidden Python bytecode, derive the XOR key from the model's own weights, decrypt the embedded payload, and finally decrypt the flag hidden in the Dense bias — all without ever running the model.
+
+---
+
+## Binary Analysis & Enumeration
+
+A `.keras` file is not a binary — it's a **ZIP archive** with a standard layout. We unpack it and inspect the layer topology:
+
+```bash
+$ file mlcious.keras
+mlcious.keras: Zip archive data, at least v2.0 to extract, compression method=deflate
+
+$ unzip -o mlcious.keras
+metadata.json
+config.json
+model.weights.h5
+```
+
+`config.json` holds the full model architecture as JSON. Dumping the layer classes and names reveals the suspicious tail of the network:
+
+```python
+from tensorflow import keras
+model = keras.models.load_model("mlcious.keras", safe_mode=False, compile=False)
+for l in model.layers:
+    print(l.name, l.__class__.__name__)
+```
+
+```
+input_layer_1          InputLayer
+conv2d_15 .. re_lu_23  Conv2D / BatchNormalization / ReLU / Add blocks...
+global_average_pooling2d_1  GlobalAveragePooling2D
+seed_dense             Dense          <-- feeds the key derivation
+payload_dense          Dense          <-- stores the encrypted flag
+dense_1                Dense
+activation_adapter     Lambda         <-- hidden executable code!
+```
+
+<Callout type="warning">
+  **Why `payload_dense` and `activation_adapter` are red flags:** a real classifier ends in a
+  softmax Dense layer. Here we have two extra Dense layers plus a Lambda — and Lambda layers exist
+  precisely so authors can embed **arbitrary Python code** inside a model. Keras stores Lambda logic
+  as a serialized code object in `config.json`, which makes it the perfect smuggling channel for a
+  hidden payload.
+</Callout>
+
+---
+
+## Reversing the Hidden Lambda (`activation_adapter`)
+
+### Extracting the Embedded Code
+
+Keras serializes Lambda functions as a JSON list whose first element is a **base64 string** wrapping a `marshal`-serialized Python code object. We decode it and disassemble:
+
+```python
+import json, base64, marshal, dis
+
+cfg = json.load(open("config.json"))
+lambda_fn = next(l["config"]["function"] for l in cfg["config"]["layers"]
+                 if l["class_name"] == "Lambda")
+encoded = lambda_fn[0]                     # base64 string
+code = marshal.loads(base64.b64decode(encoded))
+dis.dis(code)
+```
+
+The outer module simply defines a nested function `trampoline`:
+
+```python
+import marshal, tensorflow as tf, random, struct, hashlib
+
+def trampoline(x, _):          # <-- the actual Lambda body
+    ...
+```
+
+### Disassembling the Trampoline
+
+Disassembling `trampoline` with `dis.dis(code.co_consts[2])` reconstructs the full logic. The key operations, bytecode instruction by instruction:
+
+| Bytecode Region                                                          | Semantics Reconstructed                                    |
+| :----------------------------------------------------------------------- | :--------------------------------------------------------- |
+| `global_variables()` + listcomp `'seed_dense/kernel' in v.name`          | Collect every TF variable named `seed_dense/kernel` → `v1` |
+| `global_variables()` + listcomp `'seed_dense/bias' in v.name`            | Collect every variable named `seed_dense/bias` → `v2`      |
+| `tf.keras.backend.get_value(v1)`, `get_value(v2)`                        | Read raw weight tensors into `d1`, `d2`                    |
+| `struct.unpack("<I", sha1(d1.tobytes() + d2.tobytes()).digest()[:4])[0]` | **Derive seed** from the SHA-1 of kernel+bias bytes        |
+| `random.Random(seed).randbytes(32)`                                      | **Derive 32-byte XOR key** from the seeded PRNG            |
+| `bytes(c ^ key[i % 32] for i, c in enumerate(<big tuple>))`              | XOR-decrypt the embedded 2909-byte blob                    |
+| `exec(marshal.loads(decrypted), ns)` then `ns['payload'](x, _)`          | Load the stage-2 payload and call it                       |
+
+```python
+seed = struct.unpack("<I", hashlib.sha1(d1.tobytes() + d2.tobytes()).digest()[:4])[0]
+key  = random.Random(seed).randbytes(32)
+code = bytes(c ^ key[i % 32] for i, c in enumerate(embedded_blob))
+exec(marshal.loads(code), ns)   # -> defines ns['payload']
+return ns['payload'](x, _)
+```
+
+<Callout type="tip">
+  **Why this is called a *trampoline*:** the Lambda's own body does nothing useful to the tensor —
+  it decrypts and *executes a second, independent payload function*, then forwards its arguments.
+  The first stage is just a springboard. This is a classic two-stage malware pattern: stage 1
+  reveals only the decryption mechanics; the real logic is encrypted until you derive the key.
+</Callout>
+
+### Where Are the Weights in the H5?
+
+An important gotcha: the weight file does **not** use the friendly layer names from `config.json`. The H5 paths are positional:
+
+```
+layers/dense/vars/0   -> seed_dense/kernel   (64, 64) float32
+layers/dense/vars/1   -> seed_dense/bias     (64,)
+layers/dense_1/vars/1 -> payload_dense/bias  (32,)
+layers/dense_2/vars/0 -> dense_1/kernel
+```
+
+We map them by **Dense-layer order** in `config.json` — the _n_-th Dense layer in the config is `layers/dense{_n}` in the H5. This lets us read the weights with plain `h5py`, no TensorFlow install needed.
+
+---
+
+## Key Derivation & Decrypting the Stage-2 Payload
+
+With the weights in hand, we reproduce the trampoline's derivation exactly:
+
+```python
+import struct, hashlib, random, h5py
+
+kernel = h5["layers/dense/vars/0"][:]      # seed_dense/kernel
+bias   = h5["layers/dense/vars/1"][:]      # seed_dense/bias
+
+digest = hashlib.sha1(kernel.tobytes() + bias.tobytes()).digest()
+seed   = struct.unpack("<I", digest[:4])[0]
+key    = random.Random(seed).randbytes(32)
+
+print(hex(seed))
+print(list(key))
+```
+
+```
+seed = 0x2e07104b
+key  = [121, 49, 123, 80, 247, 242, 45, 15, 160, 40, 105, 188, 87, 121, 50, 60,
+        95, 160, 39, 116, 89, 133, 130, 236, 99, 229, 88, 196, 140, 82, 130, 137]
+```
+
+XORing the embedded blob with this key and `marshal.loads`-ing the result yields the **stage-2 payload** — a new code object we disassemble to confirm its behavior:
+
+```
+payload:
+  bias   = get_value(vars named 'payload_dense/bias')
+  enc    = tf.cast(bias[:22] * 255.0, tf.uint8).numpy().tobytes()
+  # ... re-derives seed_dense key identically ...
+  flag   = bytes(c ^ key[i % 32] for i, c in enumerate(enc))
+  return x
+```
+
+---
+
+## Flag Extraction & Key Recovery
+
+The stage-2 payload reveals where the flag lives: the **bias of `payload_dense`**. The first 22 float values are flag bytes scaled into `[0, 1]`; multiplying by 255 and casting to `uint8` recovers the raw ciphertext:
+
+```python
+pay_bias = h5["layers/dense_1/vars/1"][:]      # payload_dense/bias (32,)
+cipher   = (pay_bias[:22] * 255).astype("uint8")
+print(list(cipher))
+```
+
+```
+[49, 101, 57, 43, 147, 193, 30, 127, 255, 68, 93, 197, 100, 11, 109, 88, 108, 212, 23, 26, 97, 248]
+```
+
+The ciphertext is XORed with the same weight-derived key:
+
+```python
+flag = bytes(c ^ key[i % 32] for i, c in enumerate(cipher))
+print(flag.decode())
+```
+
+---
+
+## Verification & Proof of Work
+
+The recovered flag is verified by two independent properties of the pipeline:
+
+1. **Marshal magic check (stage 1):** the decrypted trampoline blob begins with bytes `63 00 00 00 00 00` — `0x63` is the marshal type code for a Python code object. If the key derivation were wrong by a single bit, `marshal.loads` would raise. It succeeds, proving the seed → key → XOR chain is exact.
+2. **Stage-2 structural check:** the decrypted payload disassembles cleanly and its constants reference exactly the tensors we expect (`payload_dense/bias`, `seed_dense/kernel`, `seed_dense/bias`). The flag decodes to a clean `HTB{...}` string with zero non-printable bytes.
+
+```bash
+$ python3 autosolve/htb_neural_detonator_solve.py
+[*] Challenge file: ml_neural_detonator/mlcious.keras
+[*] Extracted .keras archive to /tmp/mlx_z0pz3s2n
+[*] seed_dense/kernel: (64, 64), bias: (64,), payload_dense/bias: (32,)
+[*] Trampoline: 2909-byte encrypted stage-2 payload
+[+] seed = 0x2e07104b
+[+] key  = [121, 49, 123, 80, ...]
+[*] Stage-2 payload function 'payload' decrypted (2909 bytes)
+[*] Ciphertext bytes: [49, 101, 57, 43, ...]
+[+] FLAG: HTB{flag}
+```
+
+---
+
+## Flag Capture
+
+<SpoilerFlag label="HTB Challenge Flag" flag="HTB{d33p_l4y3r_d3t0n8}" />
+
+---
+
+## Automation (`/autosolve`)
+
+Here is an interactive replay of `htb_neural_detonator_solve.py` in action:
+
+<TerminalReplay
+  title="htb_neural_detonator_solve.py"
+  flag="HTB{d33p_l4y3r_d3t0n8}"
+  flagSummary={[
+    "Extracted the hidden Lambda code object from config.json inside the .keras archive.",
+    "Derived the XOR key from SHA-1 of the seed_dense weights and decrypted both payload stages.",
+  ]}
+  steps={[
+    {
+      label: "Step 1/5 — Unpack the .keras Archive",
+      command: "python3 htb_neural_detonator_solve.py mlcious.keras",
+      output: [
+        { text: "[*] Challenge file: ml_neural_detonator/mlcious.keras", color: "blue" },
+        { text: "[*] Extracted .keras archive to /tmp/mlx_z0pz3s2n", color: "blue" },
+      ],
+      delayAfter: 500,
+    },
+    {
+      label: "Step 2/5 — Read Weights & Map Layer Names to H5 Paths",
+      output: [
+        {
+          text: "[*] seed_dense/kernel: (64, 64), bias: (64,), payload_dense/bias: (32,)",
+          color: "blue",
+        },
+        {
+          text: "[✓] Mapped config layer names to positional layers/dense* H5 paths",
+          color: "green",
+        },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 3/5 — Decode Lambda & Extract Encrypted Stage-2 Blob",
+      output: [
+        { text: "[*] Trampoline: 2909-byte encrypted stage-2 payload", color: "blue" },
+        { text: "[✓] Lambda code object decoded from base64+marshal", color: "green" },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 4/5 — Derive XOR Key from seed_dense Weights",
+      output: [
+        {
+          text: "[*] seed = sha1(kernel.tobytes() + bias.tobytes())[:4] as uint32",
+          color: "magenta",
+        },
+        { text: "[+] seed = 0x2e07104b", color: "green" },
+        { text: "[+] key  = [121, 49, 123, 80, 247, 242, ...]", color: "green" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 5/5 — Decrypt Payloads & Recover Flag",
+      output: [
+        { text: "[*] Stage-2 payload function 'payload' decrypted (2909 bytes)", color: "blue" },
+        { text: "[*] Ciphertext bytes: [49, 101, 57, 43, 147, 193, ...]", color: "blue" },
+      ],
+      delayAfter: 800,
+    },
+  ]}
+/>
+
+<Callout type="tip">
+  **Standalone Solver Script:** View or download the complete automated solver
+  [`htb_neural_detonator_solve.py`](https://github.com/Asbawy/Asbawy.github.io/blob/main/autosolve/htb_neural_detonator_solve.py)
+  in our [`/autosolve`](https://github.com/Asbawy/Asbawy.github.io/tree/main/autosolve) directory.
+</Callout>
+
+---
+
+## Reusable Methodology for Malicious-Model Challenges
+
+1. **Treat the model file as an archive first.** `.keras`, `.h5`, `.pt`, `.onnx`, `.safetensors` are containers — `file` tells you the real format, and `unzip`/`tar` often reveals config + weights as plain files.
+2. **Audit the layer list for anomalies.** Extra Dense layers, Lambda layers, custom layers, or `TFOpLambda` entries are prime hiding spots for payloads and steganographic data.
+3. **Extract Lambda logic from config JSON.** Keras serializes Lambda functions as `["<base64 marshal>", null, null]` — `base64.b64decode` + `marshal.loads` + `dis.dis` recovers the original Python source structure.
+4. **Reconstruct semantics from bytecode, don't guess.** Walk the disassembly instruction-by-instruction (`struct.unpack` → `sha1` → `Random().randbytes` → XOR → `marshal.loads` → `exec`) before writing any decryption code.
+5. **Derive keys from the artifact, never from a writeup.** Challenge instances are frequently regenerated, so hardcoded seeds/keys in official writeups go stale. Reproduce the _derivation_, not the numbers.
+6. **Expect multi-stage payloads.** A trampoline that decrypts and executes a second code object is standard — decrypt stage 1, disassemble stage 2, and let it point you to where the real data (often weights/bias) lives.
+7. **Look for scaled steganography.** Float weights holding values in `[0,1]` that multiply cleanly to printable ASCII (`bias * 255 -> uint8`) are a common flag-embedding trick.
+
+---
+
+## References
+
+- [Python `dis` — Disassembler for Python Bytecode](https://docs.python.org/3/library/dis.html)
+- [Python `marshal` — Internal Object Serialization](https://docs.python.org/3/library/marshal.html)
+- [Keras Lambda Layer Documentation](https://keras.io/api/layers/core_layers/lambda/)
+- [HackTricks — Malicious ML Model Detection](https://book.hacktricks.xyz/)

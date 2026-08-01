@@ -94,12 +94,13 @@ Structured, analytical writeups focusing on methodology, enumeration, vulnerabil
 
 #### HackTheBox
 
-| Machine / Challenge                         | Difficulty  |   Type    | Key Topics & Vectors                                                                                                                                                                                  |
-| :------------------------------------------ | :---------: | :-------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[Curveware](/writeups/htb-curveware)**    |   `Hard`    | Challenge | Reverse engineering Windows ransomware, ECDSA partial nonce leakage (40-bit LSB), and LLL lattice reduction on HNP for AES key recovery.                                                              |
-| **[Headless](/writeups/htb-headless)**      |   `Easy`    |  Machine  | Blind XSS in User-Agent header, cookie exfiltration, reporting feature command injection, and PAM backdoor via relative PATH hijack in sudo script.                                                   |
-| **[Hexecution](/writeups/htb-hexecution)**  |   `Hard`    | Challenge | Reversing kitchen-themed custom VM ('cook') on Linux, custom assembly opcodes ('recipe.asm'), and 2-stage permutation algebraic inversion. [[Auto-Solve Script]](./autosolve/htb_hexecution_solve.py) |
-| **[SpookyPass](/writeups/htb-spooky-pass)** | `Very Easy` | Challenge | Static binary analysis, hardcoded password string extraction, and C decompiler tracing using Ghidra.                                                                                                  |
+| Machine / Challenge                                    | Difficulty  |   Type    | Key Topics & Vectors                                                                                                                                                                                                                |
+| :----------------------------------------------------- | :---------: | :-------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[Curveware](/writeups/htb-curveware)**               |   `Hard`    | Challenge | Reverse engineering Windows ransomware, ECDSA partial nonce leakage (40-bit LSB), and LLL lattice reduction on HNP for AES key recovery.                                                                                            |
+| **[Headless](/writeups/htb-headless)**                 |   `Easy`    |  Machine  | Blind XSS in User-Agent header, cookie exfiltration, reporting feature command injection, and PAM backdoor via relative PATH hijack in sudo script.                                                                                 |
+| **[Hexecution](/writeups/htb-hexecution)**             |   `Hard`    | Challenge | Reversing kitchen-themed custom VM ('cook') on Linux, custom assembly opcodes ('recipe.asm'), and 2-stage permutation algebraic inversion. [[Auto-Solve Script]](./autosolve/htb_hexecution_solve.py)                               |
+| **[Neural Detonator](/writeups/htb-neural-detonator)** |   `Hard`    | Challenge | Reversing malicious Keras model ('mlcious.keras'), extracting embedded Lambda Python bytecode, SHA-1 weight seed XOR key derivation, and Dense bias steganography. [[Auto-Solve Script]](./autosolve/htb_neural_detonator_solve.py) |
+| **[SpookyPass](/writeups/htb-spooky-pass)**            | `Very Easy` | Challenge | Static binary analysis, hardcoded password string extraction, and C decompiler tracing using Ghidra.                                                                                                                                |
 
 #### TryHackMe
 
@@ -119,11 +120,12 @@ Structured, analytical writeups focusing on methodology, enumeration, vulnerabil
 
 Standalone, fully automated exploit and solver scripts for lab machines and challenges. See [`autosolve/README.md`](./autosolve/README.md) for execution details.
 
-| Script Name                                                                    | Target / Lab              |  Language  | Description                                                                                         |
-| :----------------------------------------------------------------------------- | :------------------------ | :--------: | :-------------------------------------------------------------------------------------------------- |
-| **[`htb_hexecution_solve.py`](./autosolve/htb_hexecution_solve.py)**           | HackTheBox — Hexecution   | `Python 3` | Custom VM bytecode parsing (`recipe.asm`), AES256 extraction, permutation inversion, and emulation. |
-| **[`thm_packed_light_solve.py`](./autosolve/thm_packed_light_solve.py)**       | TryHackMe — Packed Light  | `Python 3` | PCAP C2 payload extraction, XOR keylogger cryptanalysis, and keystroke cookie stream decryption.    |
-| **[`thm_complimentary_exploit.sh`](./autosolve/thm_complimentary_exploit.sh)** | TryHackMe — Complimentary |   `Bash`   | Cognito Identity Pool ID extraction, temporary AWS credentials exchange, and DynamoDB scan.         |
+| Script Name                                                                      | Target / Lab                  |  Language  | Description                                                                                                                |
+| :------------------------------------------------------------------------------- | :---------------------------- | :--------: | :------------------------------------------------------------------------------------------------------------------------- |
+| **[`htb_hexecution_solve.py`](./autosolve/htb_hexecution_solve.py)**             | HackTheBox — Hexecution       | `Python 3` | Custom VM bytecode parsing (`recipe.asm`), AES256 extraction, permutation inversion, and emulation.                        |
+| **[`htb_neural_detonator_solve.py`](./autosolve/htb_neural_detonator_solve.py)** | HackTheBox — Neural Detonator | `Python 3` | Automated Keras (`mlcious.keras`) extraction, Lambda bytecode disassembly, weight XOR key derivation, and bias decryption. |
+| **[`thm_packed_light_solve.py`](./autosolve/thm_packed_light_solve.py)**         | TryHackMe — Packed Light      | `Python 3` | PCAP C2 payload extraction, XOR keylogger cryptanalysis, and keystroke cookie stream decryption.                           |
+| **[`thm_complimentary_exploit.sh`](./autosolve/thm_complimentary_exploit.sh)**   | TryHackMe — Complimentary     |   `Bash`   | Cognito Identity Pool ID extraction, temporary AWS credentials exchange, and DynamoDB scan.                                |
 
 ---
 
