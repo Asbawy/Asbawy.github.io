@@ -4,7 +4,7 @@
     <title>Asbawy Blog</title>
     <description>Security cheatsheets, quick references, and field notes by Asbawy.</description>
     <link>https://asbawy.github.io</link>
-    <lastBuildDate>Sat, 01 Aug 2026 13:19:23 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 03 Aug 2026 09:39:36 GMT</lastBuildDate>
     
     <item>
       <title><![CDATA[CertiGhost (CVE-2026-54121): How a Low-Privileged AD User Impersonated a Domain Controller via AD CS]]></title>

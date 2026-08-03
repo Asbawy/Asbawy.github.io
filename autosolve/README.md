@@ -8,6 +8,7 @@ This directory contains standalone, end-to-end automated exploit and solver scri
 
 | Script Name                                                            | Target / Lab                  |  Language  | Vector / Mechanism                                                                                                                                     | Writeup Link                                                           |
 | :--------------------------------------------------------------------- | :---------------------------- | :--------: | :----------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
+| **[`htb_busqueda_solve.py`](./htb_busqueda_solve.py)**                 | HackTheBox — Busqueda         | `Python 3` | Searchor 2.4.0 eval() injection RCE, `.git/config` credential harvesting, SSH password reuse, and relative path hijack of sudo `/opt/scripts/system-checkup.py`. | [Read Writeup](https://asbawy.github.io/writeups/htb-busqueda)         |
 | **[`htb_hexecution_solve.py`](./htb_hexecution_solve.py)**             | HackTheBox — Hexecution       | `Python 3` | Automated custom VM (`cook`) assembly (`recipe.asm`) parsing, AES256 bytecode extraction, 2-stage permutation inversion, and full Python VM emulation. | [Read Writeup](https://asbawy.github.io/writeups/htb-hexecution)       |
 | **[`htb_neural_detonator_solve.py`](./htb_neural_detonator_solve.py)** | HackTheBox — Neural Detonator | `Python 3` | Automated `.keras` extraction, Lambda layer base64+marshal bytecode disassembly, SHA-1 weight key derivation, and Dense bias stego flag decryption.    | [Read Writeup](https://asbawy.github.io/writeups/htb-neural-detonator) |
 | **[`thm_complimentary_exploit.sh`](./thm_complimentary_exploit.sh)**   | TryHackMe — Complimentary     |   `Bash`   | Frontend JS extraction of Cognito Identity Pool ID, guest identity provisioning, temporary AWS credentials exchange, and DynamoDB flag scanning.       | [Read Writeup](https://asbawy.github.io/writeups/thm-complimentary)    |
@@ -16,6 +17,14 @@ This directory contains standalone, end-to-end automated exploit and solver scri
 ---
 
 ## 🚀 Quick Execution Guide
+
+### HackTheBox — Busqueda (`htb_busqueda_solve.py`)
+
+Execute the end-to-end automated exploit against the target IP:
+
+```bash
+python3 htb_busqueda_solve.py <TARGET_IP>
+```
 
 ### HackTheBox — Hexecution (`htb_hexecution_solve.py`)
 

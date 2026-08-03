@@ -19,6 +19,11 @@ export interface OutputLine {
   color?: "green" | "red" | "yellow" | "blue" | "cyan" | "magenta" | "white" | "muted";
 }
 
+export interface FlagItem {
+  label?: string;
+  flag: string;
+}
+
 interface TerminalReplayProps {
   /** Title shown in the terminal title bar */
   title?: string;
@@ -26,8 +31,10 @@ interface TerminalReplayProps {
   steps: TerminalStep[];
   /** Raw bash script for the "View Full Script" collapsible */
   rawScript?: string;
-  /** If true, the flag capture box is shown at the end */
+  /** Single flag string (backward compatibility) */
   flag?: string;
+  /** Multiple flags (e.g. user.txt & root.txt) */
+  flags?: Array<FlagItem | string>;
   /** Optional summary notes displayed in the flag capture box */
   flagSummary?: string[];
 }
@@ -52,8 +59,22 @@ export function TerminalReplay({
   steps,
   rawScript,
   flag,
+  flags,
   flagSummary,
 }: TerminalReplayProps) {
+  const flagList: FlagItem[] = [];
+  if (flags && flags.length > 0) {
+    flags.forEach((f) => {
+      if (typeof f === "string") {
+        flagList.push({ flag: f });
+      } else {
+        flagList.push(f);
+      }
+    });
+  } else if (flag) {
+    flagList.push({ flag });
+  }
+
   const [phase, setPhase] = useState<"idle" | "running" | "done">("idle");
   const [visibleSteps, setVisibleSteps] = useState(0);
   const [typingIdx, setTypingIdx] = useState(0); // chars typed of current command
@@ -269,15 +290,27 @@ export function TerminalReplay({
               })}
 
               {/* Flag capture box */}
-              {phase === "done" && flag && (
+              {phase === "done" && flagList.length > 0 && (
                 <div className="mt-6 animate-in fade-in zoom-in-95 duration-500">
                   <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/[0.07] p-4 shadow-[0_0_30px_rgba(16,185,129,0.15)]">
                     <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-2 font-mono">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                      🏁 FLAG CAPTURED
+                      🏁 {flagList.length > 1 ? "FLAGS CAPTURED" : "FLAG CAPTURED"}
                     </div>
-                    <div className="text-lg font-mono font-bold text-white tracking-wide pl-4">
-                      {flag}
+                    <div className="space-y-1.5 pl-4">
+                      {flagList.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="flex flex-wrap items-center gap-x-2.5 font-mono text-lg font-bold text-white tracking-wide"
+                        >
+                          {item.label && (
+                            <span className="text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+                              {item.label}:
+                            </span>
+                          )}
+                          <span>{item.flag}</span>
+                        </div>
+                      ))}
                     </div>
                     {flagSummary && flagSummary.length > 0 && (
                       <div className="mt-3 space-y-1 pl-4 text-xs text-purple-400/80 font-mono">
