@@ -239,13 +239,15 @@ export function TerminalReplay({
                 const cmdToShow =
                   isTyping && step.command ? step.command.slice(0, typingIdx) : step.command || "";
                 const showStepOutput = isCurrentStep ? showOutput : true;
+                const stepLabel = step.label || (step as any).title;
+                const stepOutput: OutputLine[] = step.output || (step as any).lines || [];
 
                 return (
                   <div key={idx} className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                     {/* Step label */}
-                    {step.label && (
+                    {stepLabel && (
                       <div className="text-[10px] text-blue-400/60 uppercase tracking-widest font-bold mb-1">
-                        {step.label}
+                        {stepLabel}
                       </div>
                     )}
 
@@ -273,9 +275,9 @@ export function TerminalReplay({
                     )}
 
                     {/* Output */}
-                    {showStepOutput && step.output.length > 0 && (
+                    {showStepOutput && stepOutput && stepOutput.length > 0 && (
                       <div className="mt-1.5 pl-3 border-l border-white/[0.06] space-y-0.5 animate-in fade-in duration-300">
-                        {step.output.map((line, lineIdx) => (
+                        {stepOutput.map((line, lineIdx) => (
                           <div
                             key={lineIdx}
                             className={`text-[12.5px] ${colorMap[line.color || "muted"]}`}

