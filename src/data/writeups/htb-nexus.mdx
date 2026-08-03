@@ -421,7 +421,7 @@ Two independent confirmations that the timer (not something else) wrote the file
 
 ## Autosolve
 
-The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harvest, SSH, crafted tree objects, push, and timer wait — fits in one standalone script. The standalone Python script [`autosolve/htb_nexus_solve.py`](./autosolve/htb_nexus_solve.py) runs the entire exploit in five automated stages and reads every credential dynamically off the live target.
+The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harvest, SSH, crafted tree objects, push, and timer wait — fits in one standalone script. The standalone Python script [`htb_nexus_solve.py`](https://github.com/Asbawy/Asbawy.github.io/blob/main/autosolve/htb_nexus_solve.py) runs the entire exploit in five automated stages and reads every credential dynamically off the live target.
 
 <TerminalReplay
   title="htb_nexus_solve.py"
@@ -488,7 +488,7 @@ The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harve
 />
 
 <Callout type="tip">
-Run the full solver with `python3 autosolve/htb_nexus_solve.py <TARGET_IP>`. It requires `requests`, `paramiko`, and the system `git` binary. The script is completely idempotent: template repos are scrubbed and re-initialized via the Gitea API before pushing, and sudoers polling accommodates the timer's 60-second interval. View all automated vault scripts in **[`/autosolve` Directory](../../../autosolve/README.md)**.
+Run the full solver with `python3 autosolve/htb_nexus_solve.py <TARGET_IP>`. It requires `requests`, `paramiko`, and the system `git` binary. The script is completely idempotent: template repos are scrubbed and re-initialized via the Gitea API before pushing, and sudoers polling accommodates the timer's 60-second interval. View all automated vault scripts in our **[`/autosolve`](https://github.com/Asbawy/Asbawy.github.io/tree/main/autosolve)** directory.
 </Callout>
 
 ## References
