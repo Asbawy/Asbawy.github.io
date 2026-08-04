@@ -103,6 +103,7 @@ Structured, analytical writeups focusing on methodology, enumeration, vulnerabil
 | **[Neural Detonator](/writeups/htb-neural-detonator)** |   `Hard`    | Challenge | Reversing malicious Keras model ('mlcious.keras'), extracting embedded Lambda Python bytecode, SHA-1 weight seed XOR key derivation, and Dense bias steganography. [[Auto-Solve Script]](./autosolve/htb_neural_detonator_solve.py) |
 | **[Nexus](/writeups/htb-nexus)**                       |   `Easy`    |  Machine  | Git history DB credential leak, Krayin CRM TinyMCE file upload RCE, .env password harvest, SSH reuse, and root gitea-template-sync timer traversal via git '..' tree objects. [[Auto-Solve Script]](./autosolve/htb_nexus_solve.py) |
 | **[SpookyPass](/writeups/htb-spooky-pass)**            | `Very Easy` | Challenge | Static binary analysis, hardcoded password string extraction, and C decompiler tracing using Ghidra.                                                                                                                                |
+| **[WhiteRabbit](/writeups/htb-whiterabbit)**            |  `Insane`   |  Machine  | Uptime Kuma subdomain leak, WikiJS n8n workflow HMAC secret & SQLi, error-based SQLi command log dump, 7z hashcat cracking, sudo-restic host SSH key extraction, and glibc PRNG millisecond timestamp seed recovery.               |
 
 #### TryHackMe
 
