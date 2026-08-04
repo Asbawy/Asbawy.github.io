@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link, useNavigate, getRouteApi } from "@tanstack/react-router";
-import { Search, X, Clock, ArrowRight, Tag as TagIcon, BookOpen } from "lucide-react";
+import { Search, X, Clock, ArrowRight, Tag as TagIcon, BookOpen, Shield } from "lucide-react";
 import { useMemo, useEffect, useState } from "react";
 import { cheatsheetFiles } from "@/data/cheatsheets";
 
@@ -163,111 +163,104 @@ function CheatsheetIndex() {
 
   return (
     <div className="w-full min-h-full bg-background text-foreground py-12 px-6 md:px-12 lg:px-16">
-      <div className="mx-auto max-w-7xl space-y-10">
-        {/* Simple Page Header — Blog Style */}
-        <div className="space-y-3">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground font-sans">
-            Cheatsheets
-          </h1>
-          <p className="text-base md:text-lg text-muted-foreground font-sans max-w-2xl">
+      <div className="mx-auto max-w-7xl space-y-8">
+        {/* Header */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-[#4ec9b0]/10 border border-[#4ec9b0]/30">
+              <BookOpen className="w-5 h-5 text-[#4ec9b0]" />
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-[#4ec9b0] bg-clip-text text-transparent font-sans">
+              Cheatsheets
+            </h1>
+          </div>
+          <p className="text-base md:text-lg text-muted-foreground font-sans max-w-2xl leading-relaxed">
             Security cheatsheets, command references, and tactical field notes.
           </p>
         </div>
 
-        {/* Category Filter Bar + Search Input — Horizontal Toolbar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
-          {/* Category Pill Tabs */}
-          <div className="flex flex-wrap items-center gap-2">
-            {categories.map((c) => {
-              const isActive = selectedCategory === c.name;
-              return (
-                <button
-                  key={c.name}
-                  onClick={() => handleCategorySelect(c.name)}
-                  className={`
-                    px-4 py-2 rounded-full text-sm font-medium transition-all cursor-pointer font-sans
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]/50
-                    ${
+        {/* Unified Filter Bar */}
+        <div className="flex flex-col gap-4 rounded-xl bg-card/50 border border-border/50 p-4">
+          {/* Top Row: Category Tabs + Search */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Category Pill Tabs */}
+            <div className="flex items-center gap-1 bg-muted/40 rounded-full p-1 border border-border/60">
+              {categories.map((c) => {
+                const isActive = selectedCategory === c.name;
+                return (
+                  <button
+                    key={c.name}
+                    onClick={() => handleCategorySelect(c.name)}
+                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer font-sans ${
                       isActive
-                        ? "bg-[#4ec9b0]/15 text-[#4ec9b0] border border-[#4ec9b0]/40 font-semibold shadow-[0_0_15px_rgba(78,201,176,0.12)]"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted border border-transparent"
-                    }
-                  `}
-                >
-                  {c.name}{" "}
-                  <span
-                    className={`ml-1 text-xs ${isActive ? "text-[#4ec9b0]/80" : "text-muted-foreground"}`}
+                        ? "bg-[#4ec9b0]/15 text-[#4ec9b0] font-semibold shadow-[0_0_10px_rgba(78,201,176,0.15)]"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    ({c.count})
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                    {c.name}{" "}
+                    <span className={`ml-0.5 text-xs ${isActive ? "text-[#4ec9b0]/80" : "text-muted-foreground"}`}>({c.count})</span>
+                  </button>
+                );
+              })}
+            </div>
 
-          {/* Search Bar + Reset Filters */}
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-72">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-              <input
-                type="text"
-                value={search.q || ""}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Search cheatsheets..."
-                className="w-full bg-muted border border-border text-foreground placeholder:text-muted-foreground rounded-lg pl-10 pr-9 py-2 text-sm font-sans focus:outline-none focus:border-[#4ec9b0] focus:ring-1 focus:ring-[#4ec9b0] transition-colors"
-              />
-              {q && (
+            {/* Search Bar + Reset */}
+            <div className="flex items-center gap-2">
+              <div className="relative md:w-64">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  value={search.q || ""}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Search cheatsheets..."
+                  className="w-full bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-full pl-10 pr-9 py-1.5 text-sm font-sans focus:outline-none focus:border-[#4ec9b0] focus:shadow-[0_0_12px_rgba(78,201,176,0.15)] transition-all"
+                />
+                {q && (
+                  <button
+                    onClick={() => handleSearchChange("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {hasActiveFilters && (
                 <button
-                  onClick={() => handleSearchChange("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                  title="Clear search"
+                  onClick={clearFilters}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-colors cursor-pointer whitespace-nowrap font-sans"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="w-3.5 h-3.5" />
+                  <span>Reset</span>
                 </button>
               )}
             </div>
-
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 transition-colors cursor-pointer whitespace-nowrap font-sans"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span>Reset</span>
-              </button>
-            )}
           </div>
-        </div>
 
-        {/* Quick Tag Pills Row (Blog-Style) */}
-        {topTags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground mr-1 flex items-center gap-1 font-sans">
-              <TagIcon className="w-3.5 h-3.5 text-[#4ec9b0]" />
-              Tags:
-            </span>
-            {topTags.map((t) => {
-              const isTagActive = activeTag === t.name.toLowerCase();
-              return (
-                <button
-                  key={t.name}
-                  onClick={() => handleTagToggle(t.name)}
-                  className={`
-                    px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer font-sans border
-                    focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#4ec9b0]/50
-                    ${
+          {/* Bottom Row: Tag Pills */}
+          {topTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mr-1 font-sans">Tags</span>
+              {topTags.map((t) => {
+                const isTagActive = activeTag === t.name.toLowerCase();
+                return (
+                  <button
+                    key={t.name}
+                    onClick={() => handleTagToggle(t.name)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer font-sans border ${
                       isTagActive
                         ? "bg-[#4ec9b0]/20 text-[#4ec9b0] border-[#4ec9b0]/50 shadow-[0_0_12px_rgba(78,201,176,0.15)]"
-                        : "bg-muted text-muted-foreground hover:text-foreground border-border hover:border-border"
-                    }
-                  `}
-                >
-                  #{t.name}
-                </button>
-              );
-            })}
-          </div>
-        )}
+                        : "bg-muted/50 text-muted-foreground border-border/60 hover:text-foreground hover:border-border"
+                    }`}
+                  >
+                    #{t.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Blog-Style Card Grid (3-Col Desktop, 2-Col Tablet, 1-Col Mobile) */}
         {displayedFiles.length > 0 ? (
@@ -285,12 +278,16 @@ function CheatsheetIndex() {
                   to="/cheatsheet/$"
                   params={{ _splat: file.path }}
                   className="
-                    group flex flex-col justify-between rounded-xl bg-card border border-border p-6 shadow-sm
-                    hover:-translate-y-1 hover:border-[#4ec9b0]/40 hover:shadow-xl
-                    transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]
+                    group relative flex flex-col justify-between rounded-xl bg-card border border-border overflow-hidden
+                    hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]
+                    transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4ec9b0]
                   "
                 >
-                  <div className="space-y-4">
+                  {/* Left accent bar */}
+                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-[#4ec9b0]/60 to-[#4ec9b0]/10 group-hover:w-[4px] transition-all duration-300" />
+                  {/* Hover glow overlay */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-[#4ec9b0]/[0.03] via-transparent to-cyan-500/[0.03] transition-opacity duration-500 pointer-events-none" />
+                  <div className="relative z-10 p-6 space-y-4">
                     {/* Top Row: Category Badge */}
                     <div className="flex items-center justify-between gap-2">
                       <span
@@ -327,21 +324,21 @@ function CheatsheetIndex() {
                   </div>
 
                   {/* Bottom Row: Tags + Hover Action Arrow */}
-                  <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-2">
+                  <div className="relative z-10 mx-6 py-4 border-t border-border/60 flex items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-1.5">
                       {file.meta.tags?.slice(0, 3).map((tag) => (
                         <span
                           key={tag}
-                          className="text-xs text-muted-foreground bg-muted border border-border px-2.5 py-0.5 rounded-full font-sans"
+                          className="text-[10px] text-muted-foreground bg-muted/60 border border-border/60 px-2 py-0.5 rounded-md font-medium font-sans"
                         >
                           #{tag}
                         </span>
                       ))}
                     </div>
 
-                    <div className="flex items-center gap-1 text-xs font-medium text-[#4ec9b0] opacity-0 group-hover:opacity-100 transition-opacity font-sans shrink-0">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-[#4ec9b0] opacity-0 group-hover:opacity-100 transition-all duration-300 font-sans shrink-0">
                       <span>Read</span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" />
                     </div>
                   </div>
                 </Link>

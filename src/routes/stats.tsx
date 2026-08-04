@@ -99,53 +99,63 @@ function StatsPage() {
       <div className="w-full min-h-full bg-background text-foreground py-12 px-6 md:px-12 lg:px-16 font-sans">
         <div className="mx-auto max-w-7xl space-y-8">
           {/* Header */}
-          <div className="space-y-3">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
-              Stats & Analytics
-            </h1>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/30">
+                <BarChart2 className="w-5 h-5 text-sky-400" />
+              </div>
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground to-sky-400 bg-clip-text text-transparent">
+                Stats & Analytics
+              </h1>
+            </div>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl leading-relaxed">
               Telemetry across writeups, logs, and cheatsheets.
             </p>
           </div>
 
           {/* Overview Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-            <div className="rounded-xl border border-border bg-card p-5 text-center">
-              <BarChart2 className="w-5 h-5 text-sky-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">{combinedTotal}</div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="group/stat relative rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 overflow-hidden hover:border-sky-500/30 hover:bg-sky-500/[0.02]">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-sky-500/80 to-sky-500/20" />
+              <BarChart2 className="w-5 h-5 text-sky-400 mx-auto mb-2 opacity-70 group-hover/stat:opacity-100 group-hover/stat:scale-110 transition-all duration-300" />
+              <div className="text-3xl font-extrabold text-foreground tabular-nums">{combinedTotal}</div>
+              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mt-1">
                 Total Entries
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-5 text-center">
-              <Swords className="w-5 h-5 text-emerald-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">{totalWriteups}</div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+            <div className="group/stat relative rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 overflow-hidden hover:border-emerald-500/30 hover:bg-emerald-500/[0.02]">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500/80 to-emerald-500/20" />
+              <Swords className="w-5 h-5 text-emerald-400 mx-auto mb-2 opacity-70 group-hover/stat:opacity-100 group-hover/stat:scale-110 transition-all duration-300" />
+              <div className="text-3xl font-extrabold text-foreground tabular-nums">{totalWriteups}</div>
+              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mt-1">
                 Writeups
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-5 text-center">
-              <FileTerminal className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">{totalLogs}</div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+            <div className="group/stat relative rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 overflow-hidden hover:border-cyan-500/30 hover:bg-cyan-500/[0.02]">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-500/80 to-cyan-500/20" />
+              <FileTerminal className="w-5 h-5 text-cyan-400 mx-auto mb-2 opacity-70 group-hover/stat:opacity-100 group-hover/stat:scale-110 transition-all duration-300" />
+              <div className="text-3xl font-extrabold text-foreground tabular-nums">{totalLogs}</div>
+              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mt-1">
                 Logs
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-5 text-center">
-              <BookOpen className="w-5 h-5 text-fuchsia-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">{totalCheatsheets}</div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+            <div className="group/stat relative rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 overflow-hidden hover:border-teal-500/30 hover:bg-teal-500/[0.02]">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-teal-500/80 to-teal-500/20" />
+              <BookOpen className="w-5 h-5 text-[#4ec9b0] mx-auto mb-2 opacity-70 group-hover/stat:opacity-100 group-hover/stat:scale-110 transition-all duration-300" />
+              <div className="text-3xl font-extrabold text-foreground tabular-nums">{totalCheatsheets}</div>
+              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mt-1">
                 Cheatsheets
               </div>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-5 text-center col-span-2 sm:col-span-1">
-              <TagIcon className="w-5 h-5 text-purple-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">{combinedTags.length}</div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
+            <div className="group/stat relative rounded-xl border border-border bg-card p-5 text-center col-span-2 sm:col-span-1 transition-all duration-300 overflow-hidden hover:border-purple-500/30 hover:bg-purple-500/[0.02]">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-500/80 to-purple-500/20" />
+              <TagIcon className="w-5 h-5 text-purple-400 mx-auto mb-2 opacity-70 group-hover/stat:opacity-100 group-hover/stat:scale-110 transition-all duration-300" />
+              <div className="text-3xl font-extrabold text-foreground tabular-nums">{combinedTags.length}</div>
+              <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mt-1">
                 Tags
               </div>
             </div>
