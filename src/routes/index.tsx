@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Swords, BookOpen, FileTerminal, Search, ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { Swords, BookOpen, FileTerminal, Search, ArrowRight, ShieldCheck } from "lucide-react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
 import { cheatsheetFiles } from "@/data/cheatsheets";
@@ -71,21 +71,21 @@ function Index() {
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all shadow-[0_0_15px_rgba(52,211,153,0.12)]"
               >
                 <Swords className="h-4 w-4" />
-                <span>Writeups ({writeupsMeta.length})</span>
+                <span>Writeups</span>
               </Link>
               <Link
                 to="/cheatsheet"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30 hover:bg-fuchsia-500/25 transition-all shadow-[0_0_15px_rgba(232,121,249,0.12)]"
               >
                 <BookOpen className="h-4 w-4" />
-                <span>Cheatsheets ({cheatsheetFiles.length})</span>
+                <span>Cheatsheets</span>
               </Link>
               <Link
                 to="/logs"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-semibold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/25 transition-all shadow-[0_0_15px_rgba(34,211,238,0.12)]"
               >
                 <FileTerminal className="h-4 w-4" />
-                <span>Logs ({postsMeta.length})</span>
+                <span>Logs</span>
               </Link>
             </div>
 
@@ -107,45 +107,7 @@ function Index() {
             </div>
           </div>
 
-          {/* Overview Metrics Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-sans">
-            <div className="rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 hover:border-emerald-500/40">
-              <Swords className="w-5 h-5 text-emerald-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">{writeupsMeta.length}</div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
-                Writeups
-              </div>
-            </div>
 
-            <div className="rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 hover:border-fuchsia-500/40">
-              <BookOpen className="w-5 h-5 text-fuchsia-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">
-                {cheatsheetFiles.length}
-              </div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
-                Cheatsheets
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 hover:border-cyan-500/40">
-              <FileTerminal className="w-5 h-5 text-cyan-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-foreground">{postsMeta.length}</div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
-                Logs
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border bg-card p-5 text-center transition-all duration-300 hover:border-amber-500/40">
-              <Zap className="w-5 h-5 text-amber-400 mx-auto mb-2" />
-              <div className="text-3xl font-extrabold text-amber-400 flex items-center justify-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                Active
-              </div>
-              <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
-                Status
-              </div>
-            </div>
-          </div>
 
           {/* Section: Dev Logs & Research */}
           <div className="space-y-4 font-sans">
