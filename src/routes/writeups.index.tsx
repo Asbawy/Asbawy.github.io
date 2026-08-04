@@ -76,15 +76,15 @@ const platformConfig: Record<
 function difficultyBg(d: string) {
   switch (d) {
     case "Very Easy":
-      return "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30";
+      return "bg-cyan-500/15 text-cyan-600 dark:text-cyan-300 border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.2)] font-semibold";
     case "Easy":
-      return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
+      return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-semibold";
     case "Medium":
-      return "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30";
+      return "bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] font-semibold";
     case "Hard":
-      return "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30";
+      return "bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)] font-semibold";
     case "Insane":
-      return "bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400 border border-fuchsia-500/30";
+      return "bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.35)] font-semibold";
     default:
       return "bg-muted text-muted-foreground border border-border";
   }

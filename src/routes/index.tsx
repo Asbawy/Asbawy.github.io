@@ -188,12 +188,22 @@ function Index() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {writeupsMeta.slice(0, 4).map((w) => {
-                const diffColor =
-                  w.difficulty.toLowerCase() === "easy"
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                    : w.difficulty.toLowerCase() === "medium"
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      : "bg-rose-500/10 text-rose-400 border-rose-500/20";
+                const diffColor = (() => {
+                  switch (w.difficulty.toLowerCase()) {
+                    case "very easy":
+                      return "bg-cyan-500/15 text-cyan-300 border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.2)] font-semibold";
+                    case "easy":
+                      return "bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-semibold";
+                    case "medium":
+                      return "bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] font-semibold";
+                    case "hard":
+                      return "bg-rose-500/15 text-rose-300 border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)] font-semibold";
+                    case "insane":
+                      return "bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.35)] font-semibold";
+                    default:
+                      return "bg-muted text-muted-foreground border-border";
+                  }
+                })();
 
                 return (
                   <Link

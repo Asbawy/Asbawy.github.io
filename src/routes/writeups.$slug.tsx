@@ -121,9 +121,9 @@ function difficultyColor(d: string) {
     case "Medium":
       return "text-[#FFD43B]";
     case "Hard":
-      return "text-[#FF7043]";
+      return "text-[#FF4545]";
     case "Insane":
-      return "text-[#FF3E3E]";
+      return "text-[#C084FC]";
     default:
       return "text-foreground";
   }
@@ -132,15 +132,15 @@ function difficultyColor(d: string) {
 function difficultyBg(d: string) {
   switch (d) {
     case "Very Easy":
-      return "bg-[#00E5FF]/10 border-[#00E5FF]/30";
+      return "bg-[#00E5FF]/15 border-[#00E5FF]/40 shadow-[0_0_10px_rgba(0,229,255,0.2)] font-semibold";
     case "Easy":
-      return "bg-[#9FEF00]/10 border-[#9FEF00]/30";
+      return "bg-[#9FEF00]/15 border-[#9FEF00]/40 shadow-[0_0_10px_rgba(159,239,0,0.2)] font-semibold";
     case "Medium":
-      return "bg-[#FFD43B]/10 border-[#FFD43B]/30";
+      return "bg-[#FFD43B]/15 border-[#FFD43B]/40 shadow-[0_0_10px_rgba(255,212,59,0.2)] font-semibold";
     case "Hard":
-      return "bg-[#FF7043]/10 border-[#FF7043]/30";
+      return "bg-[#FF4545]/15 border-[#FF4545]/40 shadow-[0_0_10px_rgba(255,69,69,0.2)] font-semibold";
     case "Insane":
-      return "bg-[#FF3E3E]/10 border-[#FF3E3E]/30";
+      return "bg-[#A855F7]/20 border-[#A855F7]/50 shadow-[0_0_12px_rgba(168,85,247,0.35)] font-semibold";
     default:
       return "bg-foreground/10";
   }
