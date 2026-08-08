@@ -1,0 +1,561 @@
+---
+slug: "5G-hacking"
+title: "A Technical Dive into 5G Hacking"
+date: "2026-08-07"
+category: "Telecommunications"
+tags:
+  - "5G"
+  - "Red Team"
+  - "Kubernetes"
+  - "SDR"
+  - "Web Vulnerabilities"
+  - "Cloud Security"
+  - "Cryptography"
+severity: "Critical"
+excerpt: "A complete technical breakdown of 5G Standalone (SA) vulnerabilities, covering RAN hardware exploitation, SBI web vulnerability chains, 5G-AKA cryptographic weaknesses, and Kubernetes CNF compromise."
+readTime: "15 min"
+url: "https://asbawy.github.io/logs/5G-hacking"
+---
+
+import { Callout } from "@/components/Callout";
+import {
+  AttackSurfaceMap,
+  ThreatActorCards,
+  RogueGnbFlow,
+  GhostSmfFlow,
+  KillChainTimeline,
+  ImpactDashboard,
+  SuciFlow,
+  FiveGKeyHierarchy,
+  FiveGAkaSequence,
+  K8sNfvArchitecture,
+  Term,
+} from "@/components/cyber/FiveGVisuals";
+
+
+![Banner](https://i.imgur.com/CBYDjpK.jpeg)
+
+## Summary
+
+5G Standalone (<Term name="5G SA" />) is not an upgrade — it is a full rebuild of the mobile network into a cloud-native, HTTP/2, Kubernetes-based distributed system. This collapses radio, transport, and core into one attack surface that no single discipline can cover alone.
+
+For red teamers, this changes everything. The same <Term name="SSRF">SSRF</Term> that pops a web app now chains into <Term name="NRF">NRF</Term> poisoning and lawful intercept abuse. The same Kubernetes <Term>LFI</Term> now yields cluster-admin over an entire 5G core. The same JTAG/<Term>UART</Term> toolkit that owns IoT firmware now extracts <Term>IPsec</Term> <Term>PSKs</Term> from <Term name="BBU">BBUs</Term> and tunnels into the operator's transport network.
+
+This article is a field manual — covering <Term name="RAN">RAN</Term> hardware exploitation, <Term name="SBI">SBI</Term> web vulnerability chains, <Term name="5G-AKA">5G-AKA</Term> crypto weaknesses, <Term name="HSM">HSM</Term> side channels, Kubernetes <Term name="CNF">CNF</Term> compromise, and full kill-chain scenarios. It extends the research of Arthur Naullet and Maxime Gautier (Orange Cyberdefense), and every technique maps to <Term name="3GPP">3GPP</Term> specs and open-source tooling.
+
+### Threat Actors Targeting Telecoms
+
+This is not theoretical. Key APT campaigns targeting telecoms include:
+
+- **Salt Typhoon** (PRC-linked) breached U.S. broadband providers and accessed lawful intercept infrastructure in 2023-2024.
+- **APT41** abuses telecom trust to deliver SMS lures and track dissidents.
+- **APT43** targets Korean/SE Asian carriers for subscriber metadata.
+
+Their <Term>TTPs</Term> are consistent: compromise edge appliances, steal <Term>CNF</Term> service account credentials, exploit <Term>SBI</Term> APIs lacking <Term>mTLS</Term>, and abuse roaming interfaces with poor certificate hygiene.
+
+<ThreatActorCards />
+
+A single successful breach means: <Term>SUPI</Term>/<Term>IMSI</Term> disclosure of millions of subscribers, forged auth vectors enabling <Term>SIM</Term> cloning, unauthorized wiretaps, mass SMS interception for 2FA bypass, and DoS via <Term>HSM</Term> starvation.
+
+### 5G Attack Surface Map
+
+<AttackSurfaceMap />
+
+<Callout type="info">
+  **Key Takeaway:** 5G collapses radio, transport, core microservices, cloud orchestration, and{" "}
+  <Term>HSM</Term> into a single kill chain. A red team must operate across all six layers.
+</Callout>
+
+---
+
+## 2. The 5G Red Team Playbook
+
+Traditional penetration testing methods fail on 5G networks. Unlike typical IT environments, a single cell tower connects several completely different attack surfaces that live behind hidden internal networks:
+
+- **Cloud Web APIs (<Term>SBI</Term>):** 5G core microservices communicating via RESTful HTTP/2 APIs on virtual IPs.
+- **Equipment Management (<Term>NETCONF</Term>/<Term>YANG</Term>, <Term>MML</Term>, <Term>OSS</Term>):** Operator management consoles used to configure base station hardware.
+- **Radio & Transport Protocols (<Term>SCTP</Term>, <Term>GTP-U</Term>, <Term>F1</Term>, <Term>eCPRI</Term>):** Specialized telecom protocols carrying user data and signaling between cell towers and the core.
+
+Because these services live across separate VLANs and radio interfaces, effective red teaming must start with architecture diagrams rather than simple port scans.
+
+### 2.1 Reconnaissance
+
+- **Passive DNS & Certificate Logs:**
+  - 5G network functions use standard <Term>3GPP</Term> naming formats (e.g., `nrf.5gc.mnc<MNC>.mcc<MCC>.3gppnetwork.org`).
+  - Look for internal server names leaking onto public DNS.
+  - Sweep Certificate Transparency (<Term>CT</Term>) logs for domains like `*.5gc.<operator>.net`. Pre-production cores are frequently exposed by accident.
+
+- **Shodan & Censys Scanning:**
+  - Search for exposed 5G dashboards or APIs. Because staging environments often lack VPN protection, they frequently show up on the internet.
+  - Useful queries: `http.html:"3gpp-Sbi"` (for <Term>SBI</Term> headers), `ssl.cert.subject.CN:"nrf"` (for <Term>NRF</Term> certificates), or `port:38412` (for <Term>N2</Term> <Term>SCTP</Term> traffic).
+
+- **Legacy Interconnects & Roaming:**
+  - Modern 5G networks still connect to older 3G/4G networks (SS7/Diameter) using gateways like <Term>IP-SM-GW</Term>, <Term>SMSF</Term>, and <Term>IWF</Term>.
+  - The modern 5G roaming gateway (the <Term>SEPP</Term> on the <Term>N32</Term> interface) is a prime target, as many are misconfigured to accept self-signed certificates.
+
+### 2.2 Asset Enumeration
+
+- **<Term>gNodeB</Term> <Term>OAM</Term>:** HTTP/HTTPS with default creds (`admin/admin`, `root/root`), SSH on non-standard ports, vendor MML consoles
+- **<Term>MML</Term> ports:** Ericsson MML on TCP 5000/5001, Huawei LMT on 22/23, Nokia C-Lesh on proprietary ports — all frequently vulnerable to command injection
+- **<Term>NETCONF</Term>/<Term>YANG</Term> (TCP 830):** Often vendor-default creds, accepts `<edit-config>` pushing rogue configs to <Term>gNBs</Term>
+- **SFTP jump hosts:** Store firmware in cleartext, accept SSH keys from compromised field-engineer laptops — poison one firmware image, backdoor 10,000 <Term>BBUs</Term>
+
+### 2.3 Hybrid Testing Matrix
+
+| 5G Layer                       | Black-Box                                                                    | Grey-Box                                                        | White-Box                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| **Radio Access Network**       | Rogue Base Station, Air Interface Fuzzing                                    | Management Console Credential Reuse, Operator Command Injection | Baseband Unit Firmware Reverse Engineering, VPN Pre-Shared Key Extraction |
+| **Transport Network**          | User-Plane Tunnel Probing, Control-Plane Protocol Flooding                   | Data Interface Packet Capture                                   | IPsec Key Exchange Audit, Packet Detection Rule Manipulation              |
+| **Core Microservice APIs**     | Server-Side Request Forgery via API Headers, Rogue Microservice Registration | Access Token Reuse, Subscriber Database Dump                    | Microservice Source Code Review, OAuth Authorization Scope Analysis       |
+| **Cryptography & Key Storage** | Random Challenge Bias, Identity Concealment Bypass                           | Cryptographic Token Interface Hijacking                         | Hardware Security Module Audit, Key Derivation Function Review            |
+| **Container Orchestration**    | Service Account Token Theft via File Inclusion, Role Permission Brute-Force  | Kubernetes Cluster Enumeration, Package Deployment Dump         | Deployment Chart Review, Container Network Interface Analysis             |
+| **Cloud Infrastructure**       | Cloud Metadata Service Probing, Identity Token Forgery                       | Image Repository Dump, Virtual Network Configuration Tampering  | Cloud Manager Audit, Hypervisor Source & Config Review                    |
+
+---
+
+## 3. Radio Access Network (<Term>RAN</Term>) Attacks
+
+The RAN is where physical meets digital. Compromise here bypasses every firewall and <Term>WAF</Term> in the core.
+
+### 3.1 Rogue <Term>gNodeB</Term> Attack
+
+A rogue gNodeB uses <Term>SDR</Term> to impersonate a legitimate base station, forcing <Term>UEs</Term> to attach and reveal identifiers.
+
+<RogueGnbFlow />
+
+**Equipment:** <Term>USRP</Term> B210/X310 or bladeRF 2.0 micro xA4, <Term>GPSDO</Term>, <Term>RF</Term> shielded enclosure.
+
+**Software:**
+
+```bash
+# Rogue gNodeB stack (5G SA gNB + UE)
+git clone https://gitlab.com/ocudu/ocudu
+cd ocudu && mkdir build && cd build
+cmake .. -DENABLE_UHD=ON -DENABLE_ZEROMQ=ON
+make -j$(nproc)
+
+# Open5GS as victim core
+docker run -d --name open5gs --network host \
+  -v $(pwd)/open5gs.yaml:/etc/open5gs/open5gs.yaml \
+  open5gs/open5gs:latest
+```
+
+**Attack steps:**
+
+1. **Scan the Airwaves (Recon):** Use radio tools (like `Kalibrate-RTL`) to scan local frequency bands. Record the target network's identifying details (like the <Term>PLMN</Term> ID and <Term>TAC</Term>).
+2. **Impersonate the Tower:** Configure your rogue base station (<Term>gNB</Term>) with the exact same network IDs, but broadcast a much stronger signal than the real tower. Mobile devices (<Term>UEs</Term>) will automatically connect to the strongest signal.
+3. **Steal Subscriber Identities:** Force devices to use the "NULL scheme" for encryption. This often works on roaming devices or <Term>MVNO</Term> users, causing them to transmit their permanent identity (<Term>SUPI</Term>) in pure plaintext.
+4. **Downgrade Encryption:** Attempt to force the connection into `NEA0` (no encryption) or `NEA1` (weak <Term>SNOW 3G</Term> encryption). If the device accepts `NEA0`, you can read all text messages and network traffic in plain text.
+5. **Harvest Master Keys:** Log the authentication challenges (<Term>RAND</Term>/<Term>AUTN</Term>) sent back and forth. If the target's <Term>SIM</Term> card uses older, weaker algorithms, these challenges can be cracked offline to recover the master encryption key `K`.
+
+**Detection evasion:** To avoid triggering alarms, keep the attack short (under 30 seconds per device) and constantly rotate your physical cell ID (<Term>PCI</Term>). Most modern smartphones will silently connect to your fake tower without warning the user.
+
+### 3.2 Hardware Hacking (Cell Tower Equipment)
+
+Cell tower baseband units (<Term>BBU</Term>) are a critical physical entry point. Once physical access to the cabinet is obtained, red teams can compromise the hardware directly:
+
+1. **Serial Console Access:** Locate debug pins on the main circuit board (<Term>UART</Term>). Connect a hardware debugger (like a Bus Pirate) to view the boot logs and memory addresses.
+2. **Dump the Firmware:** Use a hardware flasher to physically read the memory chip (<Term>SPI</Term> flash) and save the firmware to a file (`flashrom -r bbu_flash.bin`).
+3. **Extract the Filesystem:** Run `binwalk` on the extracted firmware to unpack the Linux filesystem (often SquashFS).
+4. **Steal VPN Keys:** Search the extracted files for hidden <Term>IPsec</Term> keys (often found in `/etc/ipsec.secrets`). Using these stolen keys, you can connect your own laptop directly to the carrier's internal transport network — bypassing all firewalls.
+
+### 3.3 Fronthaul Network Attacks
+
+The "fronthaul" network connects the antennas to the processing units. Surprisingly, this traffic often runs over plain, unencrypted Ethernet.
+
+- **Eavesdropping on Signaling (<Term>F1</Term>):** By mirroring the fronthaul network traffic, you can decode control messages in Wireshark. Since it's unencrypted, you can see subscriber connections in plain text, and even inject "disconnect" commands to silently drop users off the network.
+- **Radio Jamming via Ethernet (<Term>eCPRI</Term>):** Instead of using a bulky radio jammer, you can inject malicious data packets directly into the Ethernet cable. This creates targeted interference that traditional radio monitoring tools cannot detect.
+
+### 3.4 <Term>RAN</Term> Tools
+
+| Tool               | Use Case                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `ocudu`            | <Term>5G SA</Term> <Term>gNB</Term> + <Term>UE</Term>, rogue <Term>gNB</Term> base |
+| `UERANSIM`         | 5G <Term>gNB</Term> + <Term>UE</Term> simulator                                    |
+| `OpenAirInterface` | 5G <Term>gNB</Term>/CN, fronthaul research                                         |
+| `Kalibrate-RTL`    | <Term>ARFCN</Term> frequency calibration                                           |
+| `my5G-RANTester`   | 5G <Term>RAN</Term> stress/fuzz testing                                            |
+
+<Callout type="warning">
+  **Key Takeaway:** <Term>F1</Term>/<Term>eCPRI</Term> is unauthenticated by default. One unattended
+  switch port in a cell-site cabinet compromises an entire sector.
+</Callout>
+
+---
+
+## 4. Core Network Web Vulnerabilities
+
+5G <Term>SBA</Term> replaced SS7/Diameter with HTTP/2 REST APIs. Every <Term>SSRF</Term>, IDOR, and auth bypass that ever hit a web app is now a candidate for taking down a national carrier.
+
+### 4.1 The HTTP/2 Attack Surface
+
+<Term>SBI</Term> custom headers (TS 29.500) that are routinely mishandled:
+
+- `3gpp-Sbi-Target-apiRoot` — tells <Term>SCP</Term> where to forward → arbitrary SSRF
+- `3gpp-Sbi-Callback` — async event callback URL → blind SSRF to internal services
+- `3gpp-Sbi-Discovery-*` — NF discovery via <Term>NRF</Term> → internal topology leak
+- `3gpp-Sbi-Routing-Binding` — SCP routing → traffic redirection to attacker NF
+
+**Example — Callback SSRF:**
+
+```http
+POST /npcf-smpolicycontrol/v1/sm-policies HTTP/2
+Host: pcf.5gc.mnc001.mcc001.3gppnetwork.org
+Authorization: Bearer <jwt-from-nrf>
+3gpp-Sbi-Callback: http://169.254.169.254/latest/meta-data/iam/security-credentials/
+
+{"supi":"imsi-001010000000001","dnn":"internet","ipv4Addr":"10.0.0.5"}
+```
+
+If the PCF follows that callback, you get cloud credentials → Keystone access → Glance image upload → backdoored VM. One header, full kill chain.
+
+### 4.2 API Chaining: Jumping from Edge to Core
+
+The Network Exposure Function (<Term>NEF</Term>) is designed to be the gateway for external applications, making it a prime initial target for attackers trying to break into the core:
+
+1. **Find an Edge Vulnerability (SSRF):** The NEF often accepts external callback URLs. By providing an internal IP instead of a real external URL, the attacker forces the NEF to make unauthorized internal requests on their behalf.
+2. **Map the Internal Network:** The attacker sends a request to the central network registry (<Term>NRF</Term>) to list all active core microservices and their hidden internal IP addresses.
+3. **Target Session Management:** The attacker routes a request through the NEF into the Session Management Function (<Term>SMF</Term>). These internal endpoints often lack authentication because developers wrongly assume they are shielded from the outside.
+4. **Dump Subscriber Data:** The attacker extracts sensitive user data, including active session IDs, network slices, and real-time physical locations (`ueLocation`).
+
+### 4.3 Auth Bypass: <Term>OAuth2</Term>/<Term>mTLS</Term> Failures
+
+The gap between spec and deployment is enormous:
+
+- **Self-signed cert acceptance:** Many Open5GS/free5GC deployments ship with `verify: false`
+- **<Term>OAuth2</Term> scope escalation:** NFs check `iss`/`exp` but not `scope` — a <Term>NEF</Term> <Term>JWT</Term> works against <Term>UDM</Term>
+- **<Term>JWT</Term> `alg=none`:** Still present in some Java-based vendor NFs using older `nimbus-jose-jwt`
+- **<Term>N32</Term>/<Term>SEPP</Term> misconfiguration:** <Term>SEPPs</Term> accepting self-signed peer certs → pivot from roaming partner into home network
+
+### 4.4 NF Discovery Poisoning
+
+Register a rogue NF via `Nnrf_NFRegister` (TS 29.510). If cert validation is weak, your rogue <Term>SMF</Term> gets returned to every consumer querying for <Term>SMF</Term> instances. You intercept all subsequent PDU session traffic.
+
+### 4.5 The Ghost <Term>SMF</Term> Attack
+
+<GhostSmfFlow />
+
+This attack creates a hidden "man-in-the-middle" inside the 5G core network.
+
+1. **Break In:** The attacker uses the edge vulnerability (SSRF) mentioned earlier to reach the central registry (<Term>NRF</Term>).
+2. **Steal Credentials:** The attacker finds exposed security certificates (often left unsecured in Kubernetes <Term>Helm</Term> configurations).
+3. **Register a Fake Service:** Using the stolen certificates, the attacker tells the central registry, "I am a legitimate Session Management Function (<Term>SMF</Term>)."
+4. **Hijack Traffic:** The core network believes the fake service is real and starts routing user session traffic directly to the attacker.
+5. **Listen and Forward:** The attacker secretly reads the traffic, then forwards it to the _real_ <Term>SMF</Term>. The victim's phone continues to work normally, completely unaware of the intercept.
+6. **Profit:** The attacker can now inject fake billing records, resulting in direct financial fraud.
+
+**Staying Hidden:** The attacker configures their fake service to only be checked once every 24 hours (`heartBeatTimer`). Since most operators don't actively audit their internal registry logs, the fake service remains undetected indefinitely.
+
+---
+
+## 5. Cryptography and <Term>HSM</Term> Flaws
+
+5G crypto is spec'd in TS 33.501. The primitives are sound — the implementations are not.
+
+<FiveGKeyHierarchy />
+
+### 5.1 <Term>5G-AKA</Term> Weaknesses
+
+<FiveGAkaSequence />
+
+While the <Term>5G-AKA</Term> authentication protocol introduced new protections to stop fake cell towers, real-world software and hardware implementations still suffer from critical weaknesses:
+
+- **Cheating the Math (Milenage Weakness):** Some phone chips intentionally take shortcuts in the complex authentication math to save battery and processing power. Attackers can send a deliberately corrupted signal—and because the chip skips the full math check, it connects to the fake tower anyway.
+- **Predictable Random Numbers (<Term>RAND</Term>):** Security relies on generating truly random numbers. If a carrier's security hardware (<Term>HSM</Term>) uses a weak or predictable random number generator, an attacker who observes just one authentication sequence can mathematically predict all future secret keys.
+- **The "Fast-Reauth" Loophole:** To speed up connections, 5G allows a "fast re-authentication" token. If an attacker steals just one of these tokens using a fake tower, they can often reuse it indefinitely to hijack connections because many network operators forget to configure them to expire.
+
+### 5.2 <Term>SUCI</Term> De-anonymization
+
+<Term>SUCI</Term> protects the <Term>SUPI</Term> via <Term>ECIES</Term> encryption. But TS 33.501
+mandates a NULL-scheme fallback — and many <Term>UEs</Term> ship without operator public keys,
+defaulting to NULL. The <Term>SUPI</Term> goes in cleartext.
+
+<SuciFlow />
+
+For <Term>ECIES</Term> deployments: recover the home network public key from a <Term>SIM</Term>, then check for weak entropy in key generation or key reuse. One compromise of the private key unmasks every subscriber in real time.
+
+### 5.3 Hardware Security Module (<Term>HSM</Term>) Attacks
+
+The physical security vaults (<Term>HSMs</Term>) used by telecom networks are supposed to be impenetrable. But in reality, they often fail in surprising ways:
+
+- **Denial of Service (Session Exhaustion):** Attackers can spam the <Term>HSM</Term> with thousands of fake connection requests. Many older systems hit a hard limit (e.g., 1024 connections) and completely lock up. This stops the network from generating new keys for genuine users, causing a massive network-wide outage.
+- **Timing Attacks:** If an <Term>HSM</Term> takes a split-second longer to calculate one mathematical operation versus another, attackers can measure that delay to slowly guess the master keys. This is especially effective against cheaper, software-based <Term>HSMs</Term>.
+- **Cloud Configuration Leaks:** Operators are increasingly moving <Term>HSMs</Term> to the cloud, but misconfigured permissions can allow attackers to simply ask the vault to export its secrets. In some real-world telecom setups, supposed "secure vaults" running in Docker containers were caught storing master keys in plain text.
+
+### 5.4 The "Copy-Paste" Password Problem
+
+A chronic flaw in modern 5G rollouts is deployment laziness. In one real-world case, a vendor shipped 10,000 cell tower computers (<Term>BBUs</Term>) with the exact same master password hardcoded into their setup files. If a hacker breaks into just one isolated rural cell tower, they instantly have the passwords to hack the other 9,999.
+
+---
+
+## 6. Kubernetes and Cloud Exploitation
+
+5G cores run as <Term>CNFs</Term> on Kubernetes. Compromise one pod with cluster-admin → own the entire 5G core.
+
+### 6.1 5G Core NFV Architecture
+
+<K8sNfvArchitecture />
+
+### 6.2 Hacking the 5G Software (The <Term>CNF</Term>)
+
+Modern 5G core apps are just software running in containers. Here is how a standard breach unfolds:
+
+1. **Find a Web Flaw:** Attackers look for simple web vulnerabilities (like a directory traversal) in internal diagnostic dashboards that the vendor left exposed.
+2. **Steal Kubernetes Passwords:** They use the web flaw to read internal configuration files, stealing the application's Kubernetes access token.
+3. **Exploit Over-Permissions:** To make installation easy, vendors often give these apps `cluster-admin` (god-mode) rights by default. The attacker uses the stolen token to dump all network secrets, including database passwords and <Term>HSM</Term> PINs.
+4. **Total Takeover:** The attacker uses their god-mode access to push a malicious update to all servers in the cluster, gaining permanent root access to the entire 5G core.
+
+### 6.3 Bypassing Internal Security (Service Mesh)
+
+Even if the network uses internal encryption (like a Service Mesh) to hide traffic between 5G apps, attackers can bypass it:
+
+- **Misconfigurations:** Many networks leave encryption in "permissive mode" during testing and forget to enforce it in production, allowing attackers to send unencrypted commands directly to the core.
+- **Traffic Interception:** If an attacker gains admin rights, they can inject malicious routing rules to silently copy all internal 5G traffic to their own rogue servers.
+
+### 6.4 Escaping the Network Sandbox (<Term>CNI</Term>)
+
+Telecom apps often require direct access to physical network cards for high-speed routing (using technologies like <Term>SR-IOV</Term> or Multus). If an attacker compromises one of these apps (like the <Term>UPF</Term> data router), they can reconfigure the network card to sniff _all_ traffic passing through the datacenter, completely bypassing standard firewall rules.
+
+### 6.5 Cloud Platform (<Term>IaaS</Term>) Exploitation
+
+If the 5G core runs on a private cloud (like OpenStack), the attack doesn't stop at the container level:
+
+- **Metadata Leaks:** A compromised virtual machine can often query the cloud's internal metadata service to steal cloud API keys, allowing the attacker to delete, modify, or clone other servers.
+- **Virtualization Escapes:** Exploiting unpatched system drivers allows attackers to break out of their virtual machine and completely take over the underlying physical server.
+
+### 6.6 Supply Chain Poisoning
+
+Instead of hacking the live network, attackers can hack the software update process:
+
+1. Break into the vendor's or operator's software registry.
+2. Inject a backdoor into the 5G software package (the <Term>Helm</Term> chart).
+3. Wait for the automated CI/CD pipeline to push the poisoned update directly into production.
+
+<Callout type="danger">
+  **Key Takeaway:** A simple web vulnerability in a 5G dashboard can trigger a massive domino
+  effect. One stolen Kubernetes token can lead to a total cluster takeover, which can then be used
+  to compromise the physical servers and the entire telecom network.
+</Callout>
+
+---
+
+## 7. Advanced Red Team Scenarios
+
+### 7.1 Operation "Shadow <Term>SIM</Term>" (Mass Data Theft)
+
+If an attacker breaches the core network, they can extract the master keys for millions of subscribers and clone their <Term>SIMs</Term>:
+
+1. **Initial Breach:** The attacker gains internal access (e.g., through a web flaw or a stolen Kubernetes token).
+2. **Scraping the Database:** They target the main subscriber database (<Term>UDM</Term>). Because internal systems rarely limit the speed of requests, they can write a simple Python script to scrape millions of user profiles in minutes:
+
+   ```python
+   # Example: Scraping the 5G subscriber database using a stolen internal token
+   import concurrent.futures, requests, urllib3
+   urllib3.disable_warnings()
+
+   def dump(supi):
+       r = requests.get(f"https://udm.5gc.svc.local/nudm-sdm/v2/{supi}",
+                        headers={"Authorization":f"Bearer {JWT}"}, verify=False)
+       return r.json() if r.ok else None
+
+   with concurrent.futures.ThreadPoolExecutor(max_workers=50) as ex:
+       # Iterate through 10 million possible subscriber IDs
+       for r in ex.map(dump, [f"imsi-00101000{i:07d}" for i in range(10000000)]):
+           if r: log(r)
+   ```
+
+3. **Cloning <Term>SIMs</Term>:** Using the stolen master keys, the attacker writes them to blank, programmable <Term>SIM</Term> cards. They can now receive the victim's SMS messages, effortlessly bypassing banking two-factor authentication (2FA).
+4. **Real-time Tracking:** They subscribe to the network's internal location-tracking API, silently monitoring the physical location of any user in real-time.
+
+### 7.2 The Silent Interceptor (Hacking Lawful Wiretaps)
+
+5G includes built-in systems for Lawful Interception (wiretaps used by law enforcement). State-sponsored hackers actively target these systems because they offer perfect, silent surveillance without having to hack the user's actual phone.
+
+**How attackers abuse wiretaps:**
+
+1. **Hacking the Admin Panel:** Attackers log into the wiretap provisioning system (often using default passwords) and configure a wiretap on a target. The network silently forwards a copy of all the target's calls and data to the attacker.
+2. **Direct Traffic Tampering:** If the attacker has admin rights to the Kubernetes cluster, they can manually edit the network's routing rules to send a copy of a user's internet traffic directly to an offshore rogue server.
+3. **Hijacking Police Data:** The attacker registers a fake receiving server with the wiretap system. When actual law enforcement sets up a wiretap, the network accidentally sends the intercepted data to the hacker instead of the police.
+
+**Covering Tracks:** Operators often store wiretap logs in basic, unencrypted databases. If the attacker has database credentials, they can simply hit `DELETE` to erase all evidence of their surveillance.
+
+### 7.3 Full Kill Chain: Baseband to Cloud
+
+<KillChainTimeline />
+
+The eleven-day attack timeline shown above is conservative. With full access to source code and documentation (white-box testing), this entire attack chain has been executed by security teams in under 72 hours.
+
+### 7.4 Build Your Own 5G Hacking Lab
+
+You can spin up a fully functional 5G network on your own machine to practice these techniques:
+
+```bash
+# 1. Start the 5G Core Network
+mkdir -p ~/5g-lab && cd ~/5g-lab
+git clone https://github.com/open5gs/open5gs
+cd open5gs && docker compose up -d
+
+# 2. Start the Fake Cell Tower & Phone Simulator
+git clone https://github.com/aligungr/UERANSIM
+cd UERANSIM && make -j$(nproc)
+./nr-gnb -c config/open5gs-gnb.yaml
+./nr-ue -c config/open5gs-ue.yaml
+
+# 3. Install a lightweight Kubernetes cluster (k3s)
+curl -sfL https://get.k3s.io | sh -
+
+# 4. Deploy the 5G Core onto Kubernetes via Helm
+helm repo add open5gs https://gradiant.github.io/open5gs-helm/
+helm install 5g-core open5gs/open5gs -n 5g-core --create-namespace
+
+# 5. Spin up a software-based HSM emulator
+docker run -d --name softhsm softhsm/softhsm:latest
+
+# 6. Install Istio (Service Mesh) for internal security testing
+istioctl install --set profile=demo -y
+```
+
+---
+
+## 8. Tooling and Resources
+
+### 8.1 Open Source 5G Lab Tools
+
+These are the tools you need to build a working 5G hacking lab:
+
+| Tool                                                                                              | What It Does                                                                |
+| ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **[Open5GS](https://github.com/open5gs/open5gs)**                                                | A complete 5G/4G core network written in C. Your primary lab core.          |
+| **[free5GC](https://github.com/free5gc/free5gc)**                                                | An alternative 5G core written in Go. Easy to deploy on Kubernetes.         |
+| **[Ocudu](https://gitlab.com/ocudu/ocudu)**                                                      | Open source 5G radio (<Term>gNB</Term>) that works with real <Term>SDR</Term> hardware.         |
+| **[UERANSIM](https://github.com/aligungr/UERANSIM)**                                            | Simulates both a phone (<Term>UE</Term>) and a cell tower (<Term>gNB</Term>) in software. No hardware needed. |
+| **[OpenAirInterface](https://gitlab.eurecom.fr/oai/openairinterface5g)**                         | Full 5G radio stack for research. Supports real-world fronthaul testing.    |
+| **[my5G-RANTester](https://github.com/my5G/my5G-RANTester)**                                    | Stress tests and fuzzes the 5G radio interface to find crashes.             |
+| **[5G-Trace-Analyzer](https://github.com/SadeghKrmi/5G-Trace-Analyzer)**                         | Analyzes captured network traffic (PCAPs) for 5G protocols.                |
+| **[SoftHSMv2](https://github.com/opendnssec/SoftHSMv2)**                                        | A software-only <Term>HSM</Term> emulator for practicing crypto attacks.              |
+| **[Wireshark](https://www.wireshark.org/)**                                                      | The industry-standard packet analyzer with built-in 5G protocol decoders.  |
+| **[Kalibrate-RTL](https://github.com/steve-m/kalibrate-rtl)**                                   | Scans radio frequencies to find active cell towers.                         |
+
+### 8.2 Cloud-Native Security Tools
+
+| Tool                                                                           | What It Does                                                      |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| **[kube-hunter](https://github.com/aquasecurity/kube-hunter)**                | Scans Kubernetes clusters for known security vulnerabilities.     |
+| **[peirates](https://github.com/inguardians/peirates)**                       | Pentesting toolkit for exploiting Kubernetes misconfigurations.   |
+| **[kube-bench](https://github.com/aquasecurity/kube-bench)**                  | Checks if your Kubernetes cluster follows CIS security standards. |
+| **[kubescape](https://github.com/kubescape/kubescape)**                       | Scans Kubernetes for security posture and compliance issues.      |
+| **[trivy](https://github.com/aquasecurity/trivy)**                            | Scans containers and <Term>Helm</Term> charts for vulnerabilities.          |
+| **[gitleaks](https://github.com/gitleaks/gitleaks)**                          | Finds accidentally committed passwords and API keys in code.     |
+| **[Falco](https://github.com/falcosecurity/falco)**                          | Detects suspicious runtime behavior inside Kubernetes pods.       |
+| **[pkcs11-tool](https://github.com/OpenSC/OpenSC)**                          | Enumerates and tests <Term>HSM</Term> <Term>PKCS#11</Term> interfaces.                 |
+
+### 8.3 Essential Reading
+
+**<Term>3GPP</Term> Specs (free to read):** TS 23.501 (Architecture), TS 23.502 (Procedures), TS 33.501 (Security), TS 29.500 (Service-Based Architecture), TS 29.510 (<Term>NRF</Term>), TS 29.503 (<Term>UDM</Term>), TS 33.126/33.127 (Lawful Intercept)
+
+**Conferences to follow:** Black Hat USA/EU, DEF CON Telecom Village, Hexacon, USENIX Security, NDSS
+
+**Security Guidance:** GSMA FS.07/FS.15/FS.31, NIST SP 800-207 (Zero Trust), NIST SP 1800-33 (5G Cybersecurity), ENISA 5G Threat Landscape
+
+---
+
+## 9. Evasion
+
+### 9.1 How Attackers Stay Hidden (Red Team Evasion)
+
+Understanding attacker evasion techniques helps defenders know what to watch for:
+
+- **Silencing Logs:** Attackers can change the logging verbosity of a 5G app to `ERROR` before performing sensitive operations, then change it back after. Only errors are logged — normal reconnaissance activity is invisible.
+- **Exploiting SIEM Lag:** Most security monitoring systems take 30-60 seconds to ingest and process logs. If an attacker completes their operation within that window, alerts fire *after* the damage is done.
+- **Blending In:** Instead of blasting thousands of requests at once (which is easy to detect), smart attackers spread their operations across hours or days, mimicking normal network traffic patterns.
+- **Reusing Debug Pods:** Almost every production 5G core has at least one vendor debug container running with elevated privileges. Attackers reuse these existing pods instead of deploying their own, leaving no deployment logs.
+- **DNS Tunneling:** Even in heavily locked-down Kubernetes clusters, DNS traffic is almost always allowed. Attackers tunnel stolen data out through DNS queries, which most firewalls pass without inspection.
+
+---
+
+## 10. Conclusion
+
+For thirty years, telecom security relied on proprietary protocols and closed hardware. That era is over. 5G Standalone rebuilt the mobile network on HTTP/2, REST APIs, <Term>OAuth2</Term>, mutual TLS, Kubernetes, <Term>Helm</Term>, and Linux containers — inheriting every vulnerability those technologies have ever produced.
+
+A web pentester who learns the 5G architecture spec (TS 23.501) can find core network vulnerabilities within a week. A Kubernetes red teamer who understands the <Term>NRF</Term> can compromise a national carrier within a month. The cross-disciplinary attacker wins.
+
+
+### References
+
+#### 3GPP Specifications
+
+1. 3GPP TS 23.501 — _System Architecture for the 5G System (5GS)_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/23501.htm)
+2. 3GPP TS 23.502 — _Procedures for the 5G System (5GS)_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/23502.htm)
+3. 3GPP TS 33.501 — _Security Architecture and Procedures for 5G System_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33501.htm)
+4. 3GPP TS 29.500 — _5G System; Technical Realization of Service Based Architecture_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29500.htm)
+5. 3GPP TS 29.510 — _Network Function Repository Services_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29510.htm)
+6. 3GPP TS 29.503 — _Unified Data Management Services_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29503.htm)
+7. 3GPP TS 29.502 — _Session Management Services_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29502.htm)
+8. 3GPP TS 33.310 — _Network Domain Security (NDS); Authentication Framework (AF)_, v17.3.0, 2023. [3gpp.org](https://www.3gpp.org/dynareport/33310.htm)
+9. 3GPP TS 33.126 — _Lawful Interception (LI); LI Requirements_, v18.2.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33126.htm)
+10. 3GPP TS 33.127 — _Lawful Interception (LI); LI Architecture and Functions_, v18.3.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33127.htm)
+11. 3GPP TS 29.910 — _Domain Name System Procedures; Stage 3_, v17.0.0, 2022. [3gpp.org](https://www.3gpp.org/dynareport/29910.htm)
+12. 3GPP TS 28.541 — _Management and Orchestration; 5G Network Resource Model (NRM)_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/28541.htm)
+13. 3GPP TR 33.809 — _Study on 5G Security Enhancements_, v18.0.0, 2023. [3gpp.org](https://www.3gpp.org/dynareport/33809.htm)
+14. 3GPP TS 35.206 — _Specification of the Milenage Algorithm Set_, v17.0.0, 2022. [3gpp.org](https://www.3gpp.org/dynareport/35206.htm)
+
+#### Conference Talks and Presentations
+
+15. Naullet, A. & Gautier, M. — _Unmasking the 5G Core: A Practical Red Team Approach_, Hexacon 2023. [Orange Cyberdefense Research](https://www.orangecyberdefense.com/global/research)
+16. Naullet, A. & Gautier, M. — _5G Core Network Hacking_, Black Hat EU 2023. [blackhat.com](https://www.blackhat.com/eu-23/briefings/schedule/)
+17. Beer, I. & Groß, S. — _A Deep Dive into an NSO Zero-Click iMessage Exploit_, Project Zero, 2021. [googleprojectzero.blogspot.com](https://googleprojectzero.blogspot.com/2021/12/a-deep-dive-into-nso-zero-click.html)
+18. Weinmann, R.-P. — _Baseband Attacks: Remote Exploitation of Memory Corruption in Cellular Protocol Stacks_, USENIX WOOT 2012. [usenix.org](https://www.usenix.org/conference/woot12/workshop-program)
+19. Golde, N., Redon, K., & Seifert, J.-P. — _Let Me Answer That for You: Exploiting Broadcast Information in Cellular Networks_, USENIX Security 2013. [usenix.org](https://www.usenix.org/conference/usenixsecurity13)
+20. SRLabs — _Rooting SIM Cards_, Black Hat USA 2013. [srlabs.de](https://srlabs.de/bites/rooting-sim-cards/)
+21. Michau, B. & Muzat, C. — _How to not Break LTE Crypto_, SSTIC 2016. [sstic.org](https://www.sstic.org/2016/)
+22. Positive Technologies — _5G Standalone Core Security Research_, 2021. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-core-security/)
+23. ERNW — _5G Security Evaluation_, Troopers Conference 2020. [ernw.de](https://www.ernw.de/research.html)
+24. Altaf Shaik — _Practical Attacks Against 5G Networks_, DEF CON 31 Telecom Village, 2023. [defcon.org](https://www.defcon.org/html/defcon-31/dc-31-villages.html)
+25. Karsten Nohl — _Mobile Self-Defense_, 31C3, 2014. [media.ccc.de](https://media.ccc.de/v/31c3-6249-mobile_self_defense)
+26. Yuwei Zheng & Haoqi Shan — _Ghost Telephonist Impersonates You_, DEF CON 25, 2017. [defcon.org](https://www.defcon.org/html/defcon-25/dc-25-speakers.html)
+
+#### Industry Reports and Threat Intelligence
+
+27. ENISA — _Threat Landscape for 5G Networks_, 2024. [enisa.europa.eu](https://www.enisa.europa.eu/publications/enisa-threat-landscape-report-for-5g-networks)
+28. ENISA — _5G Supplement: Security of Open RAN_, 2024. [enisa.europa.eu](https://www.enisa.europa.eu/publications/5g-supplement-security-of-open-ran)
+29. CISA — _Enhanced Visibility and Hardening Guidance for Communications Infrastructure_, 2024. [cisa.gov](https://www.cisa.gov/news-events/alerts/2024/12/04/cisa-and-partners-release-joint-guidance-salt-typhoon)
+30. Mandiant — _APT41: A Dual Espionage and Cyber Crime Operation_, 2022. [mandiant.com](https://www.mandiant.com/resources/apt41-dual-espionage-and-cyber-crime-operation)
+31. Recorded Future — _Chinese State-Sponsored Cyber Espionage Targeting Telecoms_, Insikt Group, 2024. [recordedfuture.com](https://www.recordedfuture.com/research)
+32. CrowdStrike — _2024 Global Threat Report: Telecom Sector Analysis_, 2024. [crowdstrike.com](https://www.crowdstrike.com/global-threat-report/)
+33. Positive Technologies — _5G SA Core Network Security Assessment_, 2021. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-standalone-core-security-assessment-2021/)
+34. Positive Technologies — _Vulnerabilities in 5G Networks_, 2020. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-network-vulnerabilities-2020/)
+35. AdaptiveMobile Security — _Simjacker Technical Report_, 2019. [simjacker.com](https://simjacker.com/)
+36. SRLabs — _SIM Toolkit Security_, 2019. [srlabs.de](https://srlabs.de/bites/sim-toolkit-security/)
+37. Nokia — _Threat Intelligence Report: Telecoms_, 2024. [nokia.com](https://www.nokia.com/networks/security-portfolio/threat-intelligence-report/)
+38. Ericsson — _Security in 5G RAN and Core Deployments_, 2023. [ericsson.com](https://www.ericsson.com/en/reports-and-papers/white-papers/security-in-5g-ran-and-core-deployments)
+39. Orange Cyberdefense — _Security Navigator 2024_, 2024. [orangecyberdefense.com](https://www.orangecyberdefense.com/global/security-navigator)
+40. EFF — _Gotta Catch 'Em All: Understanding How IMSI-Catchers Exploit Cell Networks_, 2019. [eff.org](https://www.eff.org/wp/gotta-catch-em-all-understanding-how-imsi-catchers-exploit-cell-networks)
+
+#### CVEs and Security Advisories
+
+41. CVE-2021-45462 — Open5GS UPF GTP-U denial of service via crafted packet (v2.4.0). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2021-45462)
+42. CVE-2023-24033 — Samsung Exynos baseband Internet-to-Baseband RCE, discovered by Google Project Zero. [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-24033)
+43. CVE-2019-14378 — QEMU SLiRP networking heap buffer overflow during IP packet reassembly (potential VM escape). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2019-14378)
+44. CVE-2021-3748 — QEMU virtio-net use-after-free (potential guest-to-host escape). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2021-3748)
+45. CVE-2023-20198 — Cisco IOS XE web UI privilege escalation (used against telecom edge routers). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-20198)
+46. CVE-2022-22947 — Spring Cloud Gateway RCE via SpEL injection (impacts Java-based NFs). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2022-22947)
+47. CVE-2023-44487 — HTTP/2 Rapid Reset DoS (affects all HTTP/2 SBI endpoints). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-44487)
+
+#### Regulatory and Standards Guidance
+
+48. GSMA FS.07 — _SIM Security Guidelines_, 2023. [gsma.com](https://www.gsma.com/security/resources/fs-07-sim-security-guidelines/)
+49. GSMA FS.15 — _Network Equipment Security Assurance Scheme_, 2023. [gsma.com](https://www.gsma.com/security/network-equipment-security-assurance-scheme/)
+50. GSMA FS.31 — _Baseline Security Controls for 5G_, 2023. [gsma.com](https://www.gsma.com/security/resources/fs-31-baseline-security-controls/)
+51. NIST SP 800-207 — _Zero Trust Architecture_, 2020. [nist.gov](https://csrc.nist.gov/publications/detail/sp/800-207/final)
+52. NIST SP 1800-33 — _5G Cybersecurity_, 2023. [nist.gov](https://www.nccoe.nist.gov/5g-cybersecurity)
+53. EU Toolbox — _EU Coordinated Risk Assessment of 5G Networks Security_, 2020. [ec.europa.eu](https://digital-strategy.ec.europa.eu/en/library/eu-toolbox-5g-security)
+54. O-RAN Alliance — _O-RAN Security Requirements and Threat Model_, WG11, 2023. [o-ran.org](https://www.o-ran.org/specifications)
+
+#### Books
+
+55. Liyanage, M., Ahmad, I., Abro, A.B., Gurtov, A., & Ylianttila, M. — _A Comprehensive Guide to 5G Security_, Wiley, 2018. ISBN: 978-1119293040
+56. Penttinen, J. — _5G Explained: Security and Deployment of Advanced Mobile Communications_, Wiley, 2019. ISBN: 978-1119275688
+57. Schneider, P. & Horn, G. — _Towards 5G Security_, IEEE TrustCom 2015. [doi:10.1109/Trustcom.2015.499](https://doi.org/10.1109/Trustcom.2015.499)
+58. Rao, M. & Prasad, N. — _Telecom Infrastructure Security for Operators_, CRC Press, 2022. ISBN: 978-1032047812
+
+

@@ -4,8 +4,16 @@
     <title>Asbawy Blog</title>
     <description>Security cheatsheets, quick references, and field notes by Asbawy.</description>
     <link>https://asbawy.github.io</link>
-    <lastBuildDate>Thu, 06 Aug 2026 05:00:57 GMT</lastBuildDate>
+    <lastBuildDate>Sat, 08 Aug 2026 07:03:05 GMT</lastBuildDate>
     
+    <item>
+      <title><![CDATA[A Technical Dive into 5G Hacking]]></title>
+      <description><![CDATA[A complete technical breakdown of 5G Standalone (SA) vulnerabilities, covering RAN hardware exploitation, SBI web vulnerability chains, 5G-AKA cryptographic weaknesses, and Kubernetes CNF compromise.]]></description>
+      <link>https://asbawy.github.io/logs/5G-hacking</link>
+      <guid>https://asbawy.github.io/logs/5G-hacking</guid>
+      <pubDate>Fri, 07 Aug 2026 00:00:00 GMT</pubDate>
+    </item>
+  
     <item>
       <title><![CDATA[CertiGhost (CVE-2026-54121): How a Low-Privileged AD User Impersonated a Domain Controller via AD CS]]></title>
       <description><![CDATA[A deep dive into CVE-2026-54121 — the CertiGhost vulnerability that let any Domain User forge a Domain Controller certificate through an AD CS chase fallback, escalate to DCSync, and fully compromise the domain.]]></description>
