@@ -175,6 +175,7 @@
   --code-redirect: #f7768e;
   --code-cmdlet: #7aa2f7;
   --code-psvar: #ff9e64;
+  --code-prompt: #ef4444;
 
   --chart-1: var(--accent-primary);
   --chart-2: var(--accent-secondary);
@@ -286,6 +287,7 @@
   --code-redirect: #c0392b;
   --code-cmdlet: #2563eb;
   --code-psvar: #d97706;
+  --code-prompt: #dc2626;
 }
 
 /* ── Dark Mode Class override ───────────────────────────────────── */
@@ -369,6 +371,7 @@
   --code-redirect: #f7768e;
   --code-cmdlet: #7aa2f7;
   --code-psvar: #ff9e64;
+  --code-prompt: #ef4444;
 
   --chart-1: var(--accent-primary);
   --chart-2: var(--accent-secondary);

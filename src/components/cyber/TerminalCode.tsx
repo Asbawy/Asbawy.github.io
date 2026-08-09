@@ -60,6 +60,7 @@ function highlightShellCommands(html: string): string {
 
   const masterPattern = new RegExp(
     [
+      `((?:asbawy@kali:[~\\/a-zA-Z0-9_.-]*[\\$#])|(?:[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.-]+:[~\\/a-zA-Z0-9_.-]*[\\$#]))`,
       `((?:^|\\s+)#.*)`,
       `(https?://[^\\s'"<>&]+|ftp://[^\\s'"<>&]+)`,
       `(\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(?:/\\d{1,2})?\\b)`,
@@ -90,7 +91,7 @@ function highlightShellCommands(html: string): string {
       let match: RegExpExecArray | null;
 
       while ((match = masterPattern.exec(text)) !== null) {
-        const [full, comment, url, ip, psCmdlet, command, psVar, option, pipe] = match;
+        const [full, prompt, comment, url, ip, psCmdlet, command, psVar, option, pipe] = match;
         const matchStart = match.index;
 
         if (matchStart > lastIndex) {
@@ -101,7 +102,10 @@ function highlightShellCommands(html: string): string {
         span.className = "font-mono";
         span.textContent = full;
 
-        if (comment) {
+        if (prompt) {
+          span.style.color = "var(--code-prompt, #ef4444)";
+          span.style.fontWeight = "600";
+        } else if (comment) {
           span.style.color = "var(--code-comment)";
           span.style.fontStyle = "italic";
         } else if (url) {

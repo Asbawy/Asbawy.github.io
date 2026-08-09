@@ -141,6 +141,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://asbawy.github.io/writeups/htb-forest</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://asbawy.github.io/writeups/htb-headless</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

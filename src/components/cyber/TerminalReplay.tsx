@@ -56,7 +56,7 @@ const colorMap: Record<string, string> = {
 
 export function TerminalReplay({
   title = "exploit.sh",
-  steps,
+  steps = [],
   rawScript,
   flag,
   flags,
