@@ -377,7 +377,7 @@ export function CategoryIcon({
   return <FileCode2 className={className} />;
 }
 
-/* ── Auto Script Badge ───────────────────────────────── */
+/* ── Auto Script / AutoSolve Badge ───────────────────── */
 
 export function AutoScriptBadge({ size = "sm" }: { size?: "sm" | "md" }) {
   const isMd = size === "md";
@@ -386,33 +386,34 @@ export function AutoScriptBadge({ size = "sm" }: { size?: "sm" | "md" }) {
     <span
       className={`
         relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border
-        border-cyan-400/40 bg-gradient-to-r from-cyan-950/60 via-cyan-900/40 to-emerald-950/60
+        border-cyan-400/40 bg-gradient-to-r from-cyan-950/70 via-cyan-900/40 to-emerald-950/70
+        light:from-cyan-50 light:via-emerald-50/80 light:to-cyan-50 light:border-cyan-300 light:shadow-[0_2px_8px_rgba(6,182,212,0.15)]
         font-mono font-bold uppercase tracking-wider cursor-default select-none shrink-0
-        shadow-[0_0_14px_rgba(34,211,238,0.2)] hover:shadow-[0_0_18px_rgba(34,211,238,0.35)]
-        transition-all duration-300
+        shadow-[0_0_14px_rgba(34,211,238,0.25)] hover:shadow-[0_0_20px_rgba(34,211,238,0.4)]
+        transition-all duration-300 group/autosolve
         ${isMd ? "px-3 py-1 text-[11px]" : "px-2.5 py-0.5 text-[10px]"}
       `}
-      title="This writeup includes a full automated exploit script"
+      title="This writeup includes a standalone automated exploit / solver script"
     >
       {/* Animated shimmer sweep */}
-      <span className="absolute inset-0 -translate-x-full animate-[auto-shine_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-cyan-300/[0.18] to-transparent pointer-events-none" />
+      <span className="absolute inset-0 -translate-x-full animate-[auto-shine_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-cyan-300/[0.22] to-transparent pointer-events-none" />
 
       {/* Pulse beacon dot */}
-      <span className="relative flex h-2 w-2 items-center justify-center">
+      <span className="relative flex h-2 w-2 items-center justify-center shrink-0">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.9)]" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.9)] light:bg-cyan-600" />
       </span>
 
-      {/* Terminal Icon */}
-      <Terminal
-        className={`shrink-0 text-cyan-300 animate-[auto-terminal_2.5s_ease-in-out_infinite] ${
+      {/* Cyber Lightning Zap Icon */}
+      <Zap
+        className={`shrink-0 text-cyan-300 light:text-cyan-600 fill-cyan-400/40 light:fill-cyan-500/20 group-hover/autosolve:scale-110 transition-transform ${
           isMd ? "h-3.5 w-3.5" : "h-3 w-3"
         }`}
       />
 
       {/* Label */}
-      <span className="tracking-widest font-extrabold text-cyan-200 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">
-        AUTO
+      <span className="tracking-widest font-extrabold text-cyan-200 light:text-cyan-900 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] light:drop-shadow-none">
+        AUTOSOLVE
       </span>
     </span>
   );
