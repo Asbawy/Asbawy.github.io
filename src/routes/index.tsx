@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Swords, BookOpen, FileTerminal, Search, ArrowRight, ShieldCheck } from "lucide-react";
+import { Swords, BookOpen, FileTerminal, Search, ArrowRight, ShieldCheck, Clock, Cpu } from "lucide-react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
 import { cheatsheetFiles } from "@/data/cheatsheets";
 import { writeupsMeta } from "@/data/writeups";
+import { AutoScriptBadge } from "@/components/cyber/WriteupComponents";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -205,6 +206,19 @@ function Index() {
                   }
                 })();
 
+                const platformStyle = (() => {
+                  switch (w.platform) {
+                    case "HackTheBox":
+                      return "bg-[#9FEF00]/10 text-[#9FEF00] border-[#9FEF00]/30";
+                    case "TryHackMe":
+                      return "bg-[#FF3E3E]/10 text-[#FF3E3E] border-[#FF3E3E]/30";
+                    case "VulnHub":
+                      return "bg-[#4FC3F7]/10 text-[#4FC3F7] border-[#4FC3F7]/30";
+                    default:
+                      return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+                  }
+                })();
+
                 return (
                   <Link
                     key={w.slug}
@@ -212,25 +226,58 @@ function Index() {
                     params={{ slug: w.slug }}
                     className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-200"
                   >
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold">
-                          {w.platform}
-                        </span>
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full border text-[11px] font-medium ${diffColor}`}
-                        >
-                          {w.difficulty}
-                        </span>
+                    <div className="space-y-3">
+                      {/* Top Row: Badges + AutoSolve Badge */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${platformStyle}`}
+                          >
+                            <Swords className="w-3 h-3" />
+                            {w.platform}
+                          </span>
+
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] ${diffColor}`}
+                          >
+                            {w.difficulty}
+                          </span>
+
+                          {w.category && (
+                            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full border border-border/80 bg-muted/60 text-muted-foreground text-[10px] font-medium">
+                              {w.category}
+                            </span>
+                          )}
+                        </div>
+
+                        {w.hasAutoScript && <AutoScriptBadge size="sm" />}
                       </div>
 
+                      {/* Title */}
                       <h3 className="text-lg font-bold text-foreground group-hover:text-emerald-400 transition-colors leading-snug">
                         {w.title}
                       </h3>
 
+                      {/* Excerpt */}
                       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                         {w.excerpt}
                       </p>
+
+                      {/* Metadata Row */}
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground/70 font-mono">
+                        {w.date && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3 opacity-60" />
+                            {w.date}
+                          </span>
+                        )}
+                        {w.os && (
+                          <span className="flex items-center gap-1">
+                            <Cpu className="w-3 h-3 opacity-60" />
+                            {w.os}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
@@ -244,8 +291,9 @@ function Index() {
                           </span>
                         ))}
                       </div>
-                      <span className="text-xs text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                        Read →
+                      <span className="text-xs text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
+                        <span>Read</span>
+                        <ArrowRight className="w-3 h-3" />
                       </span>
                     </div>
                   </Link>
