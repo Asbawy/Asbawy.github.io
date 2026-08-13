@@ -6,6 +6,10 @@ import {
   KillChain,
   SkillMatrix,
   CategoryIcon,
+  ScriptVault,
+  FileAttachment,
+  FileButton,
+  CodeExplorerModal,
 } from "@/components/cyber/WriteupComponents";
 import { TerminalReplay } from "@/components/cyber/TerminalReplay";
 
@@ -340,6 +344,10 @@ export function useSharedMdxComponents(setLightboxSrc?: (src: string) => void) {
       SkillMatrix,
       CategoryIcon,
       TerminalReplay,
+      ScriptVault,
+      FileAttachment,
+      FileButton,
+      CodeExplorerModal,
       Callout: ({ type, title, children }: any) => {
         const t = (type || "info").toLowerCase();
         let colorTheme = {

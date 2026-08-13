@@ -417,3 +417,15 @@ export function AutoScriptBadge({ size = "sm" }: { size?: "sm" | "md" }) {
     </span>
   );
 }
+
+/* ── Code Explorer & Exploit Artifacts ───────────────── */
+
+export {
+  CodeExplorerModal,
+  ScriptVault,
+  FileAttachment,
+  FileButton,
+  detectLanguage,
+} from "./CodeExplorer";
+export type { AttachedFile, ScriptVaultProps, FileAttachmentProps, FileButtonProps } from "./CodeExplorer";
+

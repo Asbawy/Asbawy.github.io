@@ -818,3 +818,133 @@
 .cheatsheet-pill:hover {
   transform: translateY(-1px);
 }
+
+/* ── Code Explorer High-Contrast Syntax Highlighting ─────────────────── */
+.code-explorer-viewer {
+  color: #e2e8f0;
+}
+
+.code-explorer-viewer .hljs-comment,
+.code-explorer-viewer .hljs-quote {
+  color: #82aaff !important;
+  font-style: italic;
+  opacity: 0.95;
+}
+
+.code-explorer-viewer .hljs-keyword,
+.code-explorer-viewer .hljs-selector-tag,
+.code-explorer-viewer .hljs-subst {
+  color: #c099ff !important;
+  font-weight: 600;
+}
+
+.code-explorer-viewer .hljs-string,
+.code-explorer-viewer .hljs-meta .hljs-string,
+.code-explorer-viewer .hljs-doctag {
+  color: #7ee787 !important;
+}
+
+.code-explorer-viewer .hljs-title,
+.code-explorer-viewer .hljs-title.function_,
+.code-explorer-viewer .hljs-title.class_,
+.code-explorer-viewer .hljs-section {
+  color: #79c0ff !important;
+  font-weight: 600;
+}
+
+.code-explorer-viewer .hljs-number,
+.code-explorer-viewer .hljs-literal {
+  color: #ffa657 !important;
+  font-weight: 500;
+}
+
+.code-explorer-viewer .hljs-built_in,
+.code-explorer-viewer .hljs-type {
+  color: #56d4dd !important;
+}
+
+.code-explorer-viewer .hljs-variable,
+.code-explorer-viewer .hljs-template-variable,
+.code-explorer-viewer .hljs-attr {
+  color: #e6edf3 !important;
+}
+
+.code-explorer-viewer .hljs-meta {
+  color: #e3b341 !important;
+}
+
+.code-explorer-viewer .hljs-params {
+  color: #e6edf3 !important;
+}
+
+/* ── Light Mode Code Explorer Syntax Override ─────────────────── */
+:is(.light *) .code-explorer-viewer,
+.light .code-explorer-viewer {
+  color: #0f172a !important;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-comment,
+:is(.light *) .code-explorer-viewer .hljs-quote,
+.light .code-explorer-viewer .hljs-comment,
+.light .code-explorer-viewer .hljs-quote {
+  color: #64748b !important;
+  font-style: italic;
+  opacity: 1;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-keyword,
+:is(.light *) .code-explorer-viewer .hljs-selector-tag,
+.light .code-explorer-viewer .hljs-keyword,
+.light .code-explorer-viewer .hljs-selector-tag {
+  color: #7c3aed !important;
+  font-weight: 600;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-string,
+:is(.light *) .code-explorer-viewer .hljs-meta .hljs-string,
+.light .code-explorer-viewer .hljs-string,
+.light .code-explorer-viewer .hljs-meta .hljs-string {
+  color: #15803d !important;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-title,
+:is(.light *) .code-explorer-viewer .hljs-title.function_,
+:is(.light *) .code-explorer-viewer .hljs-title.class_,
+.light .code-explorer-viewer .hljs-title,
+.light .code-explorer-viewer .hljs-title.function_ {
+  color: #1d4ed8 !important;
+  font-weight: 600;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-number,
+:is(.light *) .code-explorer-viewer .hljs-literal,
+.light .code-explorer-viewer .hljs-number,
+.light .code-explorer-viewer .hljs-literal {
+  color: #c2410c !important;
+  font-weight: 500;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-built_in,
+:is(.light *) .code-explorer-viewer .hljs-type,
+.light .code-explorer-viewer .hljs-built_in,
+.light .code-explorer-viewer .hljs-type {
+  color: #0891b2 !important;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-variable,
+:is(.light *) .code-explorer-viewer .hljs-attr,
+.light .code-explorer-viewer .hljs-variable,
+.light .code-explorer-viewer .hljs-attr {
+  color: #1e293b !important;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-meta,
+.light .code-explorer-viewer .hljs-meta {
+  color: #b45309 !important;
+}
+
+:is(.light *) .code-explorer-viewer .hljs-params,
+.light .code-explorer-viewer .hljs-params {
+  color: #334155 !important;
+}
+
