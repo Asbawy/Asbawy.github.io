@@ -10,6 +10,7 @@ import {
   FileAttachment,
   FileButton,
   CodeExplorerModal,
+  BufferOverflowVisualizer,
 } from "@/components/cyber/WriteupComponents";
 import { TerminalReplay } from "@/components/cyber/TerminalReplay";
 
@@ -444,6 +445,7 @@ export function useSharedMdxComponents(setLightboxSrc?: (src: string) => void) {
       Tab: ({ label, children }: any) => {
         return <InteractiveTab label={label}>{children}</InteractiveTab>;
       },
+      BufferOverflowVisualizer,
     };
   }, [setLightboxSrc, seenIds]);
 }

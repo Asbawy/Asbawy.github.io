@@ -161,6 +161,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://asbawy.github.io/writeups/htb-jail</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://asbawy.github.io/writeups/htb-neural-detonator</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

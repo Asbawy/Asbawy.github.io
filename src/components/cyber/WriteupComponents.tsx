@@ -430,3 +430,7 @@ export {
 } from "./CodeExplorer";
 export type { AttachedFile, ScriptVaultProps, FileAttachmentProps, FileButtonProps } from "./CodeExplorer";
 
+/* ── Interactive Stack & Binary Exploitation Visualizers ── */
+export { BufferOverflowVisualizer } from "./BufferOverflowVisualizer";
+
+

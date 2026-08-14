@@ -39,10 +39,11 @@ export interface ScriptVaultProps {
 }
 
 export interface FileAttachmentProps {
-  name: string;
+  name?: string;
   description?: string;
   language?: string;
-  code: string;
+  code?: string;
+  file?: AttachedFile;
   className?: string;
 }
 
@@ -758,16 +759,22 @@ export function ScriptVault({
 /* ── Single File Attachment Card Component ────────────── */
 
 export function FileAttachment({
-  name,
-  description,
-  language,
-  code,
+  name: propName,
+  description: propDescription,
+  language: propLanguage,
+  code: propCode,
+  file,
   className = "",
 }: FileAttachmentProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const lang = detectLanguage(name, language);
+  const name = file?.name || propName || "file.txt";
+  const description = file?.description || propDescription;
+  const rawLang = file?.language || propLanguage;
+  const code = file?.code || propCode || "";
+
+  const lang = detectLanguage(name, rawLang);
   const style = getLanguageColor(lang);
   const lineCount = code ? code.split("\n").length : 0;
 
