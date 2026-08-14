@@ -11,6 +11,7 @@ This directory contains standalone, end-to-end automated exploit and solver scri
 | **[`htb_busqueda_solve.py`](./htb_busqueda_solve.py)**                 | HackTheBox — Busqueda         | `Python 3` | Searchor 2.4.0 eval() injection RCE, `.git/config` credential harvesting, SSH password reuse, and relative path hijack of sudo `/opt/scripts/system-checkup.py`. | [Read Writeup](https://asbawy.github.io/writeups/htb-busqueda)         |
 | **[`Ghostlink_scripts/`](./Ghostlink_scripts/)**                       | HackTheBox — Ghostlink        | `Python 3` | Modular exploit toolkit: MQTT NTLM coercion, custom thread-locked HTTP relay bridge, double URL-encoded traversal, KeePass extraction, Gogs CVE-2025-8110 symlink RCE, and ADCS ESC11. | [Read Writeup](https://asbawy.github.io/writeups/htb-ghostlink)        |
 | **[`htb_hexecution_solve.py`](./htb_hexecution_solve.py)**             | HackTheBox — Hexecution       | `Python 3` | Automated custom VM (`cook`) assembly (`recipe.asm`) parsing, AES256 bytecode extraction, 2-stage permutation inversion, and full Python VM emulation. | [Read Writeup](https://asbawy.github.io/writeups/htb-hexecution)       |
+| **[`Jail_scripts/`](./Jail_scripts/)**                                 | HackTheBox — Jail             | `Python 3` | 32-bit stack BOF with DEBUG pointer leak and custom 27-byte `dup2(1,0)` shellcode, NFS `no_all_squash` SUID binary, sudo rvim Python sandbox escape, Atbash decryption, and RSA Wiener attack on 512-bit key. | [Read Writeup](https://asbawy.github.io/writeups/htb-jail)            |
 | **[`htb_neural_detonator_solve.py`](./htb_neural_detonator_solve.py)** | HackTheBox — Neural Detonator | `Python 3` | Automated `.keras` extraction, Lambda layer base64+marshal bytecode disassembly, SHA-1 weight key derivation, and Dense bias stego flag decryption.    | [Read Writeup](https://asbawy.github.io/writeups/htb-neural-detonator) |
 | **[`htb_nexus_solve.py`](./htb_nexus_solve.py)**                       | HackTheBox — Nexus            | `Python 3` | Gitea git history DB credential leak, Krayin CRM TinyMCE file upload RCE, production `.env` password harvest, SSH reuse, and root gitea-template-sync timer traversal via crafted git `..` tree objects. | [Read Writeup](https://asbawy.github.io/writeups/htb-nexus)            |
 | **[`thm_complimentary_exploit.sh`](./thm_complimentary_exploit.sh)**   | TryHackMe — Complimentary     |   `Bash`   | Frontend JS extraction of Cognito Identity Pool ID, guest identity provisioning, temporary AWS credentials exchange, and DynamoDB flag scanning.       | [Read Writeup](https://asbawy.github.io/writeups/thm-complimentary)    |
@@ -57,6 +58,21 @@ Run the standalone solver against the challenge bytecode file (`recipe.asm`):
 python3 htb_hexecution_solve.py -f recipe.asm
 # Or verify execution with the local cook VM binary:
 python3 htb_hexecution_solve.py -f recipe.asm --bin ./cook
+```
+
+### HackTheBox — Jail (`Jail_scripts/`)
+
+Execute the port 7411 stack buffer overflow or run the privilege escalation helper:
+
+```bash
+# 1. Trigger stack BOF for remote shell as nobody
+python3 Jail_scripts/breakout.py <TARGET_IP>
+
+# 2. Escape sudo rvim to adm
+python3 Jail_scripts/adm_pick.py "id; cat /var/adm/.keys/.local/.frank"
+
+# 3. Extract root key from keys.rar & run RSA Wiener attack
+# (See Jail_scripts/README.md for full multi-stage details)
 ```
 
 ### HackTheBox — Neural Detonator (`htb_neural_detonator_solve.py`)
