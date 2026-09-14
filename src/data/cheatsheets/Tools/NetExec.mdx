@@ -1,6 +1,6 @@
 ---
-title: "NetExec (nxc) Operational Cheat Sheet"
-excerpt: "Comprehensive, tradecraft-driven reference for NetExec (nxc). Covers multi-protocol enumeration (SMB, LDAP, WinRM, MSSQL, RDP, WMI, SSH, VNC, FTP), safe password spraying, credential harvesting, BloodHound CE collection, execution methods, and detection telemetry."
+title: "NetExec (nxc) Cheat Sheet"
+excerpt: "Reference for NetExec (nxc). Covers multi-protocol enumeration (SMB, LDAP, WinRM, MSSQL, RDP, WMI, SSH, VNC, FTP), safe password spraying, credential harvesting, BloodHound CE collection, execution methods, and detection telemetry."
 url: "https://asbawy.github.io/cheatsheet/Tools/NetExec"
 date: "2026-09-14"
 updated: "2026-09-14"
@@ -717,39 +717,3 @@ nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --exec-method mmcexec -
 | **`mmcexec`** | DCOM (`MMC20.Application`) | **No** | Invokes `Document.ActiveView.ExecuteShellCommand` via COM | Spawned process child of `mmc.exe` |
 
 > **Key Rule**: Avoid `smbexec` against environments monitored by SIEM or EDR, because creating and instantly deleting a service triggers high-confidence detection rules (`7045`). Prefer **`wmiexec`** or native **`winrm`**.
-
----
-
-## Phase 8: Detection Telemetry & Blue Team Hardening
-
-Understanding the defensive footprint left by NetExec allows penetration testers to operate conscientiously and assists blue teams in tuning detection filters.
-
-### Windows Event ID Mapping
-
-| Event ID | Event Source | NetExec Activity Trigger | Forensic Indicator / Query Filter |
-| :--- | :--- | :--- | :--- |
-| **`4624`** | Security | Successful Logon | `LogonType = 3` (Network logon via SMB/RPC/WinRM) or `LogonType = 10` (RDP). |
-| **`4625`** | Security | Failed Logon Attempt | High volume of `Status = 0xC000006A` (wrong password) across multiple accounts from single workstation IP. |
-| **`4672`** | Security | Special Privileges Assigned | `SeDebugPrivilege` or `SeBackupPrivilege` assigned upon successful `(Pwn3d!)` administrative logon. |
-| **`7045`** | System | Service Creation | Temporary randomized service created by `--exec-method smbexec`. |
-| **`5140`** / **`5145`** | Security | Share / Object Access | Access checks against administrative shares: `IPC$`, `ADMIN$`, `C$`. |
-| **`4768`** | Security | Kerberos TGT Request | AS-REP Roasting activity: `PreAuthType = 0` (`DONT_REQ_PREAUTH`). |
-| **`4769`** | Security | Kerberos Service Ticket (TGS) | Kerberoasting activity: `TicketOptions = 0x40810000` with `TicketEncryptionType = 0x17` (RC4). |
-| **`4662`** | Security | Operation on AD Object | NTDS DCSync replication: Extended right `DS-Replication-Get-Changes-All` (`1131f6aa-9c07-11d1-f79f-00c04fc2dcd2`). |
-| **Sysmon `1`** | Microsoft-Windows-Sysmon | Process Creation | Command line execution patterns: `cmd.exe /Q /c ... \127.0.0.1\C$\__output`. |
-| **Sysmon `10`** | Microsoft-Windows-Sysmon | Process Access | `SourceImage` accessing `TargetImage = lsass.exe` with `GrantedAccess = 0x1010` (`PROCESS_VM_READ`). |
-
----
-
-### Blue Team Hardening Checklist
-
-1. **Enforce SMB Signing**:
-   - Set `Microsoft network server: Digitally sign communications (always)` to **Enabled** via Group Policy. This invalidates SMB relaying completely.
-2. **Enforce LDAP Signing & Channel Binding**:
-   - Enable LDAP server signing requirements and LdapEnforceChannelBinding (`2` - Always) to prevent LDAP relaying from PetitPotam / WebDAV.
-3. **Deploy Windows LAPS**:
-   - Transition from legacy LAPS to native Windows LAPS, enabling automatic encryption of passwords stored in `msLAPS-Password`.
-4. **Disable NTLMv1**:
-   - Enforce NTLMv2 minimums (`LMCompatibilityLevel = 5`) and restrict NTLM usage across the domain using Protected Users security groups.
-5. **Protect High-Privilege Accounts**:
-   - Add Domain Admins and sensitive service accounts to the **Protected Users** group to prevent caching plaintext credentials, NTLM hashes, or RC4 tickets in LSASS memory.

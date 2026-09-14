@@ -4,11 +4,11 @@
     <title>Asbawy Blog</title>
     <description>Security cheatsheets, quick references, and field notes by Asbawy.</description>
     <link>https://asbawy.github.io</link>
-    <lastBuildDate>Mon, 14 Sep 2026 06:15:30 GMT</lastBuildDate>
+    <lastBuildDate>Mon, 14 Sep 2026 06:35:00 GMT</lastBuildDate>
     
     <item>
-      <title><![CDATA[NetExec (nxc) Operational Cheat Sheet]]></title>
-      <description><![CDATA[Comprehensive, tradecraft-driven reference for NetExec (nxc). Covers multi-protocol enumeration (SMB, LDAP, WinRM, MSSQL, RDP, WMI, SSH, VNC, FTP), safe password spraying, credential harvesting, BloodHound CE collection, execution methods, and detection telemetry.]]></description>
+      <title><![CDATA[NetExec (nxc) Cheat Sheet]]></title>
+      <description><![CDATA[Reference for NetExec (nxc). Covers multi-protocol enumeration (SMB, LDAP, WinRM, MSSQL, RDP, WMI, SSH, VNC, FTP), safe password spraying, credential harvesting, BloodHound CE collection, execution methods, and detection telemetry.]]></description>
       <link>https://asbawy.github.io/cheatsheet/Tools/NetExec</link>
       <guid>https://asbawy.github.io/cheatsheet/Tools/NetExec</guid>
       <pubDate>Mon, 14 Sep 2026 00:00:00 GMT</pubDate>
