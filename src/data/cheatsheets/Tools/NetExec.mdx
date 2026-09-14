@@ -50,16 +50,8 @@ pipx upgrade NetExec
 
 NetExec commands follow a modular structure: **Protocol** → **Scope / Target** → **Authentication** → **Assessment Action / Module**.
 
-```
-nxc   smb    10.10.10.0/24   -u 'Administrator' -H '8846f7eaee8fb117ad06bdd830b7586c'   --shares   -M spider_plus
- │     │           │                                   │                                    │            │
- └─► Engine        │                                   │                                    │            │
-       └─► Protocol Scope                              │                                    │            │
-                   └─► Target Subnet                   │                                    │            │
-                               └─► Authentication (User + NTLM Hash)                        │            │
-                                                       └─► Core Assessment Flag (List Shares)            │
-                                                                   └─► Extended Module (Share Spider) ───┘
-```
+<NetExecCommandAnatomy />
+
 
 | Global Flag | Example Value | Operational Behavior & Default |
 | :--- | :--- | :--- |

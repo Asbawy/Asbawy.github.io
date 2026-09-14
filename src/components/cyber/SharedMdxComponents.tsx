@@ -14,6 +14,7 @@ import {
 } from "@/components/cyber/WriteupComponents";
 import { TerminalReplay } from "@/components/cyber/TerminalReplay";
 import { NetExecArchitecture } from "@/components/cyber/NetExecArchitecture";
+import { NetExecCommandAnatomy } from "@/components/cyber/NetExecCommandAnatomy";
 
 /**
  * Recursively extracts plain text from React nodes/children.
@@ -448,6 +449,7 @@ export function useSharedMdxComponents(setLightboxSrc?: (src: string) => void) {
       },
       BufferOverflowVisualizer,
       NetExecArchitecture,
+      NetExecCommandAnatomy,
     };
   }, [setLightboxSrc, seenIds]);
 }
