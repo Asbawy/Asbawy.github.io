@@ -14,21 +14,8 @@ readTime: "22 mins"
 
 **NetExec** (`nxc`) is the modern, actively maintained successor to CrackMapExec (`cme`). Built on a modular Python asynchronous architecture, it automates assessment tasks across nine distinct network protocols. Rather than executing disjointed scripts, NetExec unifies network discovery, authentication testing, credential harvesting, and remote execution into a single, cohesive interface.
 
-```
-                  ┌────────────────────────────────────────────────────────┐
-                  │                 NetExec Engine (nxc)                   │
-                  │   Core CLI  •  Async Engine  •  SQLite DB (~/.nxc)     │
-                  └──────────┬─────────────────────────────────┬───────────┘
-                             │                                 │
-           ┌─────────────────┴─────────────────┐    ┌──────────┴─────────────────┐
-           ▼                                   ▼    ▼                            ▼
-  [ Directory & Identity ]               [ File & Remote Ops ]            [ Data & Telemetry ]
-  • LDAP / LDAPS (389/636)               • SMB / CIFS (445)               • SQLite Results DB
-  • Kerberos / PKINIT                    • WinRM (5985/5986)              • Relay Target Lists
-  • BloodHound CE Ingestion              • WMI / DCOM (135)               • Hashcat / John Dumps
-  • ADCS / Certificate Services          • MSSQL (1433)                   • EDR-Conscious Memory
-                                         • RDP / SSH / VNC / FTP            Dumping Modules
-```
+<NetExecArchitecture />
+
 
 ---
 

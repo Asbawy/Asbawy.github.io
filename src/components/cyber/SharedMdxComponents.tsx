@@ -13,6 +13,7 @@ import {
   BufferOverflowVisualizer,
 } from "@/components/cyber/WriteupComponents";
 import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+import { NetExecArchitecture } from "@/components/cyber/NetExecArchitecture";
 
 /**
  * Recursively extracts plain text from React nodes/children.
@@ -446,6 +447,7 @@ export function useSharedMdxComponents(setLightboxSrc?: (src: string) => void) {
         return <InteractiveTab label={label}>{children}</InteractiveTab>;
       },
       BufferOverflowVisualizer,
+      NetExecArchitecture,
     };
   }, [setLightboxSrc, seenIds]);
 }
