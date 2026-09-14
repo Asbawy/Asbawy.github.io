@@ -46,23 +46,32 @@ pipx upgrade NetExec
 
 ## Global Options & The Built-in Database Engine
 
-### Global Command Structure
+### Command Structure Anatomy
 
-```bash
-nxc <protocol> <target(s)> [authentication] [enumeration/action flags] [module options]
+NetExec commands follow a modular structure: **Protocol** → **Scope / Target** → **Authentication** → **Assessment Action / Module**.
+
+```
+nxc   smb    10.10.10.0/24   -u 'Administrator' -H '8846f7eaee8fb117ad06bdd830b7586c'   --shares   -M spider_plus
+ │     │           │                                   │                                    │            │
+ └─► Engine        │                                   │                                    │            │
+       └─► Protocol Scope                              │                                    │            │
+                   └─► Target Subnet                   │                                    │            │
+                               └─► Authentication (User + NTLM Hash)                        │            │
+                                                       └─► Core Assessment Flag (List Shares)            │
+                                                                   └─► Extended Module (Share Spider) ───┘
 ```
 
-| Flag | Argument | Description |
+| Global Flag | Example Value | Operational Behavior & Default |
 | :--- | :--- | :--- |
-| `-t` | `<threads>` | Set concurrent thread count (default: 100 for network, 50 for exec). |
-| `--timeout` | `<seconds>` | Set socket timeout threshold in seconds (default: 2.0). |
-| `--jitter` | `<min-max>` | Introduce random delay between requests (e.g. `2-5`) to evade rate-based alerts. |
-| `--delay` | `<seconds>` | Fixed sleep interval between sequential attempts (critical for safe spraying). |
-| `--continue-on-success` | None | Continue spraying the userlist even after a valid match is found. |
-| `--no-bruteforce` | None | Pair users and passwords 1:1 (`user1:pass1`, `user2:pass2`) rather than Cartesian testing. |
-| `--local-auth` | None | Force authentication against the local SAM database rather than the Active Directory domain. |
-| `-k` | None | Authenticate using Kerberos instead of NTLM negotiation. |
-| `--use-kcache` | None | Use Kerberos tickets stored in the environment cache (`KRB5CCNAME`). |
+| `-t` | `50` or `100` | Concurrent worker threads (default: 100 network scan, 50 command execution). |
+| `--timeout` | `5` | Socket response threshold in seconds (default: 2.0s). Adjust higher over slow VPN links. |
+| `--jitter` | `2-5` | Randomized pause range (seconds) injected between targets to defeat rate-based SIEM rules. |
+| `--delay` | `10` | Static sleep interval (seconds) enforced between consecutive authentication attempts. |
+| `--continue-on-success` | *(Flag)* | Continue auditing remaining accounts in a wordlist even after locating valid credentials. |
+| `--no-bruteforce` | *(Flag)* | Enforces 1:1 pair matching (`user1:pass1`, `user2:pass2`) rather than Cartesian matrix spraying. |
+| `--local-auth` | *(Flag)* | Directs authentication against the target's local SAM rather than domain Active Directory. |
+| `-k` | *(Flag)* | Enforce Kerberos negotiation instead of NTLM (requires target FQDN, not IP). |
+| `--use-kcache` | *(Flag)* | Read and inject valid Kerberos ticket-granting tickets directly from the environment cache. |
 
 ---
 
@@ -212,10 +221,10 @@ NetExec supports Public Key Cryptography for Initial Authentication (PKINIT) usi
 
 ```bash
 # Authenticate over LDAP using a PFX certificate bundle
-nxc ldap dc01.corp.local -u 'jdoe' --pfx '/path/to/user.pfx' -p 'PfxPasswd'
+nxc ldap dc01.corp.local -u 'jdoe' --pfx './certs/user_auth.pfx' -p 'PfxSecret2026!'
 
 # Authenticate using separate PEM certificate and private key
-nxc ldap dc01.corp.local -u 'jdoe' --cert-pem '/path/to/cert.pem' --key-pem '/path/to/key.pem'
+nxc ldap dc01.corp.local -u 'jdoe' --cert-pem './certs/esc1_admin.crt' --key-pem './certs/esc1_admin.key'
 ```
 
 ---
