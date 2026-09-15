@@ -270,26 +270,26 @@ T H E   M A T R I X   H A S   Y O U .
   return (
     <div
       onClick={() => inputRef.current?.focus({ preventScroll: true })}
-      className={`rounded-2xl border border-border bg-[#0a0a0c] overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.6)] font-mono transition-all duration-300 ${
+      className={`rounded-2xl border border-border bg-[#0a0a0c] light:bg-white overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.6)] light:shadow-[0_8px_30px_rgba(0,0,0,0.08)] light:border-border/80 font-mono transition-all duration-300 ${
         isExpanded ? "fixed inset-4 z-50 flex flex-col" : "relative w-full"
       }`}
     >
       {/* Terminal Titlebar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-card/70 border-b border-border select-none">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-card/70 light:bg-zinc-100/90 border-b border-border select-none">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block border border-rose-600/40" />
             <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block border border-amber-600/40" />
             <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block border border-emerald-600/40" />
           </div>
-          <span className="text-xs text-muted-foreground ml-2 font-mono flex items-center gap-1.5">
-            <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-xs text-muted-foreground light:text-zinc-600 ml-2 font-mono flex items-center gap-1.5 font-medium">
+            <Terminal className="w-3.5 h-3.5 text-emerald-400 light:text-emerald-600" />
             <span>asbawy-ops // bash v5.2</span>
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-emerald-400/80 font-mono hidden sm:inline">
+          <span className="text-[10px] text-emerald-400/80 light:text-emerald-600 font-mono font-medium hidden sm:inline">
             [TAB: AUTOCOMPLETE]
           </span>
           <button
@@ -297,7 +297,7 @@ T H E   M A T R I X   H A S   Y O U .
               e.stopPropagation();
               setIsExpanded(!isExpanded);
             }}
-            className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+            className="p-1 rounded text-muted-foreground light:text-zinc-500 hover:text-foreground light:hover:text-zinc-900 hover:bg-muted/40 light:hover:bg-zinc-200/70 transition-colors"
             title={isExpanded ? "Restore" : "Maximize"}
           >
             {isExpanded ? (
@@ -312,22 +312,22 @@ T H E   M A T R I X   H A S   Y O U .
       {/* Terminal Body */}
       <div
         ref={terminalBodyRef}
-        className={`p-4 md:p-5 overflow-y-auto space-y-2 text-xs leading-relaxed text-zinc-300 ${
+        className={`p-4 md:p-5 overflow-y-auto space-y-2 text-xs leading-relaxed text-zinc-300 light:text-zinc-700 bg-[#0a0a0c] light:bg-[#f8f9fa] scrollbar-thin ${
           isExpanded ? "flex-1 max-h-none" : "max-h-[280px]"
         }`}
       >
         {history.map((line) => {
           if (line.type === "command") {
             return (
-              <div key={line.id} className="flex items-center gap-2 text-emerald-400 font-semibold">
-                <span className="text-muted-foreground select-none">visitor@asbawy-ops:~$</span>
-                <span>{line.content}</span>
+              <div key={line.id} className="flex items-center gap-2 text-emerald-400 light:text-emerald-600 font-semibold">
+                <span className="text-muted-foreground light:text-zinc-500 select-none">visitor@asbawy-ops:~$</span>
+                <span className="text-emerald-300 light:text-emerald-700 font-bold">{line.content}</span>
               </div>
             );
           }
           if (line.type === "error") {
             return (
-              <div key={line.id} className="text-rose-400 pl-4">
+              <div key={line.id} className="text-rose-400 light:text-rose-600 pl-4 font-medium">
                 {line.content}
               </div>
             );
@@ -336,7 +336,7 @@ T H E   M A T R I X   H A S   Y O U .
             return (
               <div
                 key={line.id}
-                className="text-emerald-400 pl-4 whitespace-pre-wrap animate-pulse"
+                className="text-emerald-400 light:text-emerald-600 pl-4 whitespace-pre-wrap animate-pulse font-mono font-medium"
               >
                 {line.content}
               </div>
@@ -344,18 +344,18 @@ T H E   M A T R I X   H A S   Y O U .
           }
           if (line.type === "links" && line.links) {
             return (
-              <div key={line.id} className="pl-4 space-y-1 my-1">
+              <div key={line.id} className="pl-4 space-y-1.5 my-1">
                 {line.links.map((link, lIdx) => (
                   <div key={lIdx} className="flex items-center gap-2">
-                    <span className="text-emerald-400 select-none">↳</span>
+                    <span className="text-emerald-400 light:text-emerald-600 select-none">↳</span>
                     <Link
                       to={link.url}
-                      className="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 hover:brightness-125 transition-all"
+                      className="text-cyan-400 light:text-cyan-700 hover:text-cyan-300 light:hover:text-cyan-800 underline underline-offset-2 hover:brightness-125 transition-all font-medium"
                     >
                       {link.label}
                     </Link>
                     {link.badge && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded border border-border bg-muted/40 text-muted-foreground">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border border-border light:border-zinc-300 bg-muted/40 light:bg-zinc-200/70 text-muted-foreground light:text-zinc-700 font-semibold">
                         {link.badge}
                       </span>
                     )}
@@ -365,15 +365,24 @@ T H E   M A T R I X   H A S   Y O U .
             );
           }
           return (
-            <div key={line.id} className="text-zinc-400 pl-4 whitespace-pre-wrap">
+            <div
+              key={line.id}
+              className={`pl-4 whitespace-pre-wrap ${
+                line.content?.includes("ASBAWY OFFENSIVE")
+                  ? "text-zinc-200 light:text-zinc-900 font-bold"
+                  : "text-zinc-400 light:text-zinc-600"
+              }`}
+            >
               {line.content}
             </div>
           );
         })}
 
         {/* Active Prompt Input Row */}
-        <div className="flex items-center gap-2 text-emerald-400 pt-1">
-          <span className="text-muted-foreground shrink-0 select-none">visitor@asbawy-ops:~$</span>
+        <div className="flex items-center gap-2 text-emerald-400 light:text-emerald-600 pt-1">
+          <span className="text-muted-foreground light:text-zinc-500 shrink-0 select-none font-semibold">
+            visitor@asbawy-ops:~$
+          </span>
           <div className="relative flex-1 flex items-center">
             <input
               ref={inputRef}
@@ -381,7 +390,7 @@ T H E   M A T R I X   H A S   Y O U .
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="w-full bg-transparent text-emerald-300 font-mono text-xs focus:outline-none caret-emerald-400"
+              className="w-full bg-transparent text-emerald-300 light:text-emerald-800 font-mono text-xs focus:outline-none caret-emerald-400 light:caret-emerald-600 font-semibold"
               spellCheck={false}
               autoCapitalize="off"
               autoComplete="off"

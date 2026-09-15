@@ -113,7 +113,7 @@ function Index() {
           <div className="space-y-2 font-sans">
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <FileTerminal className="w-3.5 h-3.5 text-emerald-400" />
+                <FileTerminal className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
                 Live Interactive Operations Terminal
               </span>
               <span className="text-[11px] font-mono text-muted-foreground/70">
