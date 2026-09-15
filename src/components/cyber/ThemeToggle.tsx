@@ -19,13 +19,23 @@ export function ThemeToggle() {
 
   const toggleTheme = () => {
     const newTheme = !isLight;
-    setIsLight(newTheme);
-    if (newTheme) {
-      document.documentElement.classList.add("light");
-      localStorage.setItem("theme", "light");
+    const applyTheme = () => {
+      setIsLight(newTheme);
+      if (newTheme) {
+        document.documentElement.classList.add("light");
+        localStorage.setItem("theme", "light");
+      } else {
+        document.documentElement.classList.remove("light");
+        localStorage.setItem("theme", "dark");
+      }
+    };
+
+    if (typeof document !== "undefined" && "startViewTransition" in document) {
+      (document as any).startViewTransition(() => {
+        applyTheme();
+      });
     } else {
-      document.documentElement.classList.remove("light");
-      localStorage.setItem("theme", "dark");
+      applyTheme();
     }
   };
 
