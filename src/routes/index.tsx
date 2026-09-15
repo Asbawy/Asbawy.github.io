@@ -5,6 +5,7 @@ import { postsMeta } from "@/data/posts";
 import { cheatsheetFiles } from "@/data/cheatsheets";
 import { writeupsMeta } from "@/data/writeups";
 import { AutoScriptBadge } from "@/components/cyber/WriteupComponents";
+import { CyberTerminal } from "@/components/cyber/CyberTerminal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -108,7 +109,19 @@ function Index() {
             </div>
           </div>
 
-
+          {/* Interactive Cyber Terminal Console */}
+          <div className="space-y-2 font-sans">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <FileTerminal className="w-3.5 h-3.5 text-emerald-400" />
+                Live Interactive Operations Terminal
+              </span>
+              <span className="text-[11px] font-mono text-muted-foreground/70">
+                Interactive shell session
+              </span>
+            </div>
+            <CyberTerminal />
+          </div>
 
           {/* Section: Dev Logs & Research */}
           <div className="space-y-4 font-sans">

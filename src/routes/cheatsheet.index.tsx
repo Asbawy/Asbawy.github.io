@@ -93,12 +93,16 @@ function CheatsheetIndex() {
       }
       // Query filter
       if (q) {
-        const matchesQ =
-          file.path.toLowerCase().includes(q) ||
-          file.meta.title?.toLowerCase().includes(q) ||
-          file.meta.category?.toLowerCase().includes(q) ||
-          file.meta.excerpt?.toLowerCase().includes(q) ||
-          file.meta.tags?.some((t) => t.toLowerCase().includes(q));
+        const queryTerms = q.split(" ").filter(Boolean);
+        const matchesQ = queryTerms.every((term) => {
+          return (
+            file.path.toLowerCase().includes(term) ||
+            file.meta.title?.toLowerCase().includes(term) ||
+            file.meta.category?.toLowerCase().includes(term) ||
+            file.meta.excerpt?.toLowerCase().includes(term) ||
+            file.meta.tags?.some((t) => t.toLowerCase().includes(term))
+          );
+        });
         if (!matchesQ) return false;
       }
       return true;
@@ -212,7 +216,7 @@ function CheatsheetIndex() {
                   type="text"
                   value={search.q || ""}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Search cheatsheets..."
+                  placeholder="Search commands, tools, tags..."
                   className="w-full bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-full pl-10 pr-9 py-1.5 text-sm font-sans focus:outline-none focus:border-[#4ec9b0] focus:shadow-[0_0_12px_rgba(78,201,176,0.15)] transition-all"
                 />
                 {q && (

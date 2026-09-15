@@ -338,6 +338,31 @@ function WriteupsIndex() {
                 );
               })}
             </div>
+
+            {/* Category / Attack Vector Chips */}
+            {availableCategories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+                <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mr-1">
+                  Vector / Category
+                </span>
+                {availableCategories.map((c) => {
+                  const isActive = categoryFilter === c;
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => setCategoryFilter(isActive ? null : c)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+                        isActive
+                          ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40 font-semibold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+                          : "bg-muted/50 text-muted-foreground border-border/60 hover:text-foreground hover:border-border"
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Cards Grid */}

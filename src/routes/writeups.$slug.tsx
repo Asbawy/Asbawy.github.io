@@ -26,6 +26,8 @@ import { AuthorBio } from "@/components/cyber/AuthorBio";
 import { useSharedMdxComponents } from "@/components/cyber/SharedMdxComponents";
 import { useArticleToc } from "@/hooks/use-article-toc";
 import { TableOfContents } from "@/components/cyber/TableOfContents";
+import { ReadingProgress } from "@/components/cyber/ReadingProgress";
+import { Breadcrumbs } from "@/components/cyber/Breadcrumbs";
 
 export const Route = createFileRoute("/writeups/$slug")({
   loader: async ({ params }) => {
@@ -190,15 +192,16 @@ function WriteupPage() {
 
   return (
     <CyberLayout>
-      {/* Global Scroll Progress Bar */}
-      <div className="fixed top-0 left-0 h-1 z-50 w-full bg-transparent">
-        <div
-          className="h-full bg-foreground/80 transition-all duration-100 ease-out shadow-[0_0_10px_rgba(255,255,255,0.5)]"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
+      <ReadingProgress progress={progress} />
 
       <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <Breadcrumbs
+          items={[
+            { label: "Writeups", href: "/writeups" },
+            { label: writeup.platform, href: `/writeups?platform=${encodeURIComponent(writeup.platform)}` },
+            { label: writeup.title },
+          ]}
+        />
         <Link
           to="/writeups"
           className="inline-flex items-center gap-2 font-sans text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-6"

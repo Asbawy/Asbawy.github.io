@@ -20,6 +20,7 @@ import { useArticleToc } from "@/hooks/use-article-toc";
 import { TableOfContents } from "@/components/cyber/TableOfContents";
 import { getRelatedCheatsheets } from "@/lib/related-cheatsheets";
 import { Panel, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
+import { ReadingProgress } from "@/components/cyber/ReadingProgress";
 
 export const Route = createFileRoute("/cheatsheet/$")({
   loader: async ({ params }) => {
@@ -166,6 +167,7 @@ function CheatsheetViewer() {
 
   return (
     <div className="h-full flex flex-col bg-background">
+      <ReadingProgress progress={progress} />
       {/* Sticky Action Top Bar + Breadcrumbs */}
       <div className="sticky top-0 z-40 border-b border-white/[0.08] bg-background/95 backdrop-blur-md">
         <div className="flex items-center justify-between px-4 md:px-8 py-2.5 font-sans text-xs">
@@ -231,13 +233,6 @@ function CheatsheetViewer() {
           </div>
         </div>
 
-        {/* Reading Progress Line along bottom edge */}
-        <div className="h-[2px] w-full bg-white/[0.05] overflow-hidden">
-          <div
-            className="h-full bg-accent-primary transition-all duration-150 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
       </div>
 
       {/* Content layout with right rail */}

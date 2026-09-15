@@ -14,6 +14,8 @@ import { getRelatedPosts } from "@/lib/related-posts";
 import { useArticleToc } from "@/hooks/use-article-toc";
 import { TableOfContents } from "@/components/cyber/TableOfContents";
 import { useSharedMdxComponents } from "@/components/cyber/SharedMdxComponents";
+import { ReadingProgress } from "@/components/cyber/ReadingProgress";
+import { Breadcrumbs } from "@/components/cyber/Breadcrumbs";
 
 export const Route = createFileRoute("/logs/$slug")({
   loader: async ({ params }) => {
@@ -105,10 +107,18 @@ function PostPage() {
 
   return (
     <CyberLayout>
+      <ReadingProgress progress={progress} />
       <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <Breadcrumbs
+          items={[
+            { label: "Logs", href: "/logs" },
+            { label: post.category || "Research", href: `/logs?q=${encodeURIComponent(post.category || "")}` },
+            { label: post.title },
+          ]}
+        />
         <Link
           to="/logs"
-          className="inline-flex items-center gap-2 font-sans text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 font-sans text-[11px] text-muted-foreground hover:text-foreground transition-colors mb-2"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> cd ../logs
         </Link>

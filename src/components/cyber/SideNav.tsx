@@ -170,6 +170,17 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              document.dispatchEvent(
+                new KeyboardEvent("keydown", { key: "k", ctrlKey: true, bubbles: true }),
+              );
+            }}
+            className="p-2 rounded-lg border border-border text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+            aria-label="Open search dialog"
+          >
+            <Search className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
+          </button>
           <ThemeToggle />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
