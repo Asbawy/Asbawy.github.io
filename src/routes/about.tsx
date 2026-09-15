@@ -257,7 +257,7 @@ function AboutPage() {
               rel="noopener noreferrer"
               className="rounded-xl border border-border bg-card p-5 text-center hover:border-amber-500/40 transition-colors"
             >
-              <AnimatedCount target={81} />
+              <AnimatedCount target={77} />
               <div className="text-xs font-semibold text-amber-400 uppercase tracking-wider mt-2">
                 HTB Global Rank
               </div>
