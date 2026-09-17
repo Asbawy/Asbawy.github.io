@@ -432,5 +432,6 @@ export type { AttachedFile, ScriptVaultProps, FileAttachmentProps, FileButtonPro
 
 /* ── Interactive Stack & Binary Exploitation Visualizers ── */
 export { BufferOverflowVisualizer } from "./BufferOverflowVisualizer";
+export { SstiDecisionTree } from "./SstiDecisionTree";
 
 

