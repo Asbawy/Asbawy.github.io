@@ -68,18 +68,6 @@ import { TerminalReplay } from "@/components/cyber/TerminalReplay";
 
 The attack chain begins with targeted service enumeration, drills down through nested directory structures where HTTP 403 status codes disguise valid functional paths, weaponizes an elegant Jinja2 SSTI filter bypass using attribute introspection without relying on brittle subclass indices, and escalates privileges by abusing Logstash's built-in execution plugins.
 
-### Skill Breakdown
-
-<SkillMatrix
-  skills={[
-    { name: "Server-Side Template Injection (SSTI)", level: 9 },
-    { name: "Jinja2 Sandbox & Blacklist Bypass", level: 9 },
-    { name: "Multi-Level Web Directory Enumeration", level: 7 },
-    { name: "Logstash Pipeline Exploitation", level: 8 },
-    { name: "Linux Privilege Escalation", level: 8 },
-  ]}
-/>
-
 ---
 
 ## 1. Reconnaissance
@@ -89,7 +77,7 @@ The attack chain begins with targeted service enumeration, drills down through n
 We begin our engagement with an aggressive, all-ports TCP scan to establish the perimeter surface:
 
 ```bash
-asbawy@kali:~$ nmap -p- --min-rate 5000 -T4 -Pn 10.114.137.179 -oN scans/all-ports.txt
+asbawy@kali:~$ nmap -p- --min-rate 5000 -T4 -Pn 10.114.137.179 -oN ports.txt
 ```
 
 ```text
@@ -106,7 +94,7 @@ PORT      STATE SERVICE
 Five ports are open. We run deep script and banner enumeration (`-sC -sV`) against the detected listeners:
 
 ```bash
-asbawy@kali:~$ nmap -p 21,22,23,80,61337 -sC -sV -T4 -Pn 10.114.137.179 -oN scans/services.txt
+asbawy@kali:~$ nmap -p 21,22,23,80,61337 -sC -sV -T4 -Pn 10.114.137.179 -oN services.txt
 ```
 
 ```text
@@ -129,14 +117,6 @@ PORT      STATE SERVICE VERSION
 |_Requested resource was http://10.114.137.179:61337/login
 Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 ```
-
-<Callout type="info">
-  **Port Analysis:**
-  - **Port 21 (FTP)** and **Port 23 (Telnet)**: Anonymous logins are disabled; standard banner-grabbing confirms no known zero-day vulnerabilities in these versions.
-  - **Port 80 (HTTP)**: Serves the vanilla Ubuntu 18.04 Apache default landing page.
-  - **Port 61337 (HTTP)**: Running **Werkzeug 2.0.1** on **Python 3.6.9**. Any production or lab box hosting a Python WSGI server on a high port immediately warrants primary focus, especially since `nmap` was redirected straight to `/login`.
-</Callout>
-
 ---
 
 ## 2. Web Enumeration & Directory Discovery
@@ -718,39 +698,7 @@ To demonstrate how the entire attack chain can be automated end-to-end—from di
 
 ---
 
-## 6. Defensive Remediation & Key Takeaways
-
-### 6.1 Application Hardening (Preventing SSTI)
-
-1. **Avoid `render_template_string` with Untrusted Input:** Never concatenate or interpolate user input directly into template strings. Pass dynamic data strictly as template context variables:
-   ```python
-   # VULNERABLE:
-   return render_template_string(f"<p>Logged in as {username}</p>")
-
-   # SECURE:
-   return render_template("account.html", username=username)
-   ```
-2. **Never Rely on Blacklists for Template Sanitization:** Blacklists fail because template engines offer rich introspective capabilities, hex/octal string interpretations, and alternate syntax forms (`|attr`, `getitem`, dictionary access). Use strict alphanumeric whitelists or safe sanitization libraries like Bleach.
-
-### 6.2 System & Service Hardening (Securing Logstash)
-
-1. **Apply the Principle of Least Privilege:** Logstash should never execute under the `root` user account. Modern package distributions create a dedicated, unprivileged service user (`logstash:logstash`):
-   ```bash
-   sudo chown -R logstash:logstash /etc/logstash /var/log/logstash
-   # In systemd service unit:
-   User=logstash
-   Group=logstash
-   ```
-2. **Restrict Configuration File Permissions:** The pipeline configuration directory must be restricted so only the administrative user or service group can write to it:
-   ```bash
-   chmod 750 /etc/logstash/conf.d
-   chmod 640 /etc/logstash/conf.d/*.conf
-   ```
-3. **Disable Dynamic Configuration Reloading in Sensitive Environments:** In production systems, disable automatic reloading (`config.reload.automatic: false`) to prevent unauthorized hot-patching of execution pipelines.
-
----
-
-## 7. References
+## 6. References
 
 ### Technical Specifications & Documentation
 - [PortSwigger Web Security — Server-Side Template Injection (SSTI)](https://portswigger.net/web-security/server-side-template-injection)
@@ -758,7 +706,7 @@ To demonstrate how the entire attack chain can be automated end-to-end—from di
 - [Elasticsearch — Logstash Exec Input Plugin Reference](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-exec.html)
 - [Jinja2 Official Documentation — Built-in Filters & Utilities](https://jinja.palletsprojects.com/en/latest/templates/#builtin-filters)
 
-### Related Cheatsheets & Writeups on Asbawy's Blog
+### Related Cheatsheets & Writeups
 - [Contrabando — TryHackMe Writeup (Jinja2 SSTI & Docker Pivoting)](/writeups/thm-contrabando)
 - [Clocky — TryHackMe Writeup (Token Forgery & Flask Reversing)](/writeups/thm-clocky)
 - [Linux Privilege Escalation: Enumeration & Recon Cheatsheet](/cheatsheet/linux/privesc-enumeration)
