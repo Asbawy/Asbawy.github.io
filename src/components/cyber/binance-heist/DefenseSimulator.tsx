@@ -30,7 +30,7 @@ export function DefenseSimulator() {
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-muted/30 font-mono">
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/15 border border-emerald-500/30">
-            <Sliders className="h-4 w-4 text-emerald-400" />
+            <Sliders className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-foreground">
@@ -51,7 +51,7 @@ export function DefenseSimulator() {
                 : DEFENSE_CONTROLS.map((c) => c.id),
             )
           }
-          className="px-3 py-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 text-[11px] font-bold text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+          className="px-3 py-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
         >
           {enabledIds.length === DEFENSE_CONTROLS.length ? "Reset All" : "Enable All 4"}
         </button>
@@ -66,17 +66,19 @@ export function DefenseSimulator() {
             <span
               className={`text-xl font-extrabold transition-colors ${
                 residualM === 0
-                  ? "text-emerald-400"
+                  ? "text-emerald-600 dark:text-emerald-400"
                   : residualM < 2000
-                    ? "text-amber-400"
-                    : "text-red-400"
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-red-600 dark:text-red-400"
               }`}
             >
               ${residualB.toFixed(2)}B
             </span>
             <span className="text-xs text-muted-foreground ml-1.5">(out of $6.36B)</span>
           </div>
-          <span className="text-xs font-bold text-emerald-400">{pctBlocked}% Prevented</span>
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+            {pctBlocked}% Prevented
+          </span>
         </div>
 
         <div className="h-3 w-full rounded-full bg-muted overflow-hidden flex border border-border/60">
@@ -109,7 +111,7 @@ export function DefenseSimulator() {
               <div>
                 <div className="flex items-center gap-2 font-mono">
                   {isOn ? (
-                    <CheckSquare className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <CheckSquare className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   ) : (
                     <Square className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
@@ -122,7 +124,13 @@ export function DefenseSimulator() {
 
               <div className="pt-2 border-t border-border/40 flex items-center justify-between font-mono text-[10px]">
                 <span className="text-muted-foreground">{ctrl.layer}</span>
-                <span className={isOn ? "text-emerald-400 font-bold" : "text-amber-300"}>
+                <span
+                  className={
+                    isOn
+                      ? "text-emerald-600 dark:text-emerald-400 font-bold"
+                      : "text-amber-700 dark:text-amber-300"
+                  }
+                >
                   Est. ~${(ctrl.mitigatesM / 1000).toFixed(2)}B
                 </span>
               </div>

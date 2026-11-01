@@ -1,11 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Swords, BookOpen, FileTerminal, Search, ArrowRight, ShieldCheck, Clock, Cpu } from "lucide-react";
+import {
+  Swords,
+  BookOpen,
+  FileTerminal,
+  Search,
+  ArrowRight,
+  Clock,
+  Cpu,
+  Sparkles,
+  Flame,
+} from "lucide-react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
 import { cheatsheetFiles } from "@/data/cheatsheets";
 import { writeupsMeta } from "@/data/writeups";
 import { AutoScriptBadge } from "@/components/cyber/WriteupComponents";
 import { CyberTerminal } from "@/components/cyber/CyberTerminal";
+import { HeistCardPreview } from "@/components/cyber/BinanceHeistVisuals";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -140,47 +151,119 @@ function Index() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {postsMeta.slice(0, 4).map((p) => (
-                <Link
-                  key={p.slug}
-                  to="/logs/$slug"
-                  params={{ slug: p.slug }}
-                  className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 hover:-translate-y-1 hover:border-cyan-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-200"
-                >
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 text-[11px] font-medium">
-                        {p.category}
+              {postsMeta.slice(0, 5).map((p) => {
+                const isBinanceHeist = p.slug === "october-2026-binance-heist";
+                const sevStyle = (() => {
+                  switch (p.severity?.toLowerCase()) {
+                    case "critical":
+                      return "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 dark:border-rose-500/35";
+                    case "high":
+                      return "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 dark:border-amber-500/35";
+                    case "medium":
+                      return "bg-yellow-500/15 text-yellow-800 dark:text-yellow-300 border-yellow-500/40 dark:border-yellow-500/35";
+                    default:
+                      return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40 dark:border-emerald-500/35";
+                  }
+                })();
+
+                return (
+                  <Link
+                    key={p.slug}
+                    to="/logs/$slug"
+                    params={{ slug: p.slug }}
+                    className={`group relative overflow-hidden flex flex-col justify-between rounded-xl border bg-card p-5 hover:-translate-y-1 transition-all duration-200 ${
+                      isBinanceHeist
+                        ? "md:col-span-2 border-amber-500/45 dark:border-amber-500/35 hover:border-amber-500/80 dark:hover:border-amber-400/60 shadow-[0_8px_30px_rgba(245,158,11,0.10)] dark:shadow-[0_10px_35px_rgba(244,63,94,0.12)]"
+                        : "border-border hover:border-cyan-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
+                    }`}
+                  >
+                    {isBinanceHeist && (
+                      <>
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-rose-500 via-amber-400 to-cyan-400" />
+                        <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-rose-500/[0.06] blur-3xl pointer-events-none" />
+                      </>
+                    )}
+
+                    <div className="relative z-10 space-y-2.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-800 dark:text-cyan-400 border border-cyan-500/35 dark:border-cyan-500/30 text-[11px] font-semibold">
+                            {p.category}
+                          </span>
+                          {p.severity && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${sevStyle}`}
+                            >
+                              {p.severity.toLowerCase() === "critical" && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400 animate-pulse" />
+                              )}
+                              {p.severity}
+                            </span>
+                          )}
+                          {isBinanceHeist && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40 dark:border-amber-500/35 text-[10px] font-mono font-bold uppercase tracking-wider">
+                              <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                              Featured Threat Intel
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2.5 text-muted-foreground font-mono text-[11px]">
+                          {p.readTime && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 opacity-60" />
+                              {p.readTime}
+                            </span>
+                          )}
+                          <span>{p.date}</span>
+                        </div>
+                      </div>
+
+                      <h3
+                        className={`font-bold text-foreground transition-colors leading-snug ${
+                          isBinanceHeist
+                            ? "text-xl md:text-2xl group-hover:text-amber-700 dark:group-hover:text-amber-300"
+                            : "text-lg group-hover:text-cyan-700 dark:group-hover:text-cyan-400"
+                        }`}
+                      >
+                        {p.title}
+                      </h3>
+
+                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                        {p.excerpt}
+                      </p>
+
+                      {isBinanceHeist && <HeistCardPreview variant="compact" />}
+                    </div>
+
+                    <div className="relative z-10 mt-4 pt-3 border-t border-border flex items-center justify-between">
+                      <div className="flex flex-wrap gap-1.5">
+                        {p.tags.slice(0, isBinanceHeist ? 6 : 3).map((t) => (
+                          <span
+                            key={t}
+                            className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
+                          >
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                      <span
+                        className={`text-xs font-semibold flex items-center gap-1 transition-all ${
+                          isBinanceHeist
+                            ? "text-amber-700 dark:text-amber-300 opacity-100"
+                            : "text-cyan-700 dark:text-cyan-400 opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        {isBinanceHeist && (
+                          <Flame className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                        )}
+                        <span>{isBinanceHeist ? "Explore Interactive Report" : "Read"}</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                       </span>
-                      <span className="text-muted-foreground">{p.date}</span>
                     </div>
-
-                    <h3 className="text-lg font-bold text-foreground group-hover:text-cyan-400 transition-colors leading-snug">
-                      {p.title}
-                    </h3>
-
-                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                      {p.excerpt}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                    <div className="flex flex-wrap gap-1.5">
-                      {p.tags.slice(0, 3).map((t) => (
-                        <span
-                          key={t}
-                          className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
-                        >
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-xs text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                      Read →
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 

@@ -18,7 +18,7 @@ export function IocCopyVault() {
     >
       <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border bg-muted/30">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-cyan-500/15 border border-cyan-500/30">
-          <Shield className="h-4 w-4 text-cyan-400" />
+          <Shield className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
         </div>
         <div>
           <div className="text-xs font-bold uppercase tracking-widest text-foreground">
@@ -40,7 +40,7 @@ export function IocCopyVault() {
             >
               <div className="min-w-0 space-y-0.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 text-[9.5px] font-bold text-cyan-300">
+                  <span className="rounded bg-cyan-500/15 border border-cyan-500/30 px-1.5 py-0.5 text-[9.5px] font-bold text-cyan-700 dark:text-cyan-300">
                     {ioc.tag}
                   </span>
                   <span className="text-xs font-semibold text-foreground font-sans">
@@ -48,7 +48,9 @@ export function IocCopyVault() {
                   </span>
                   <span className="text-[11px] text-muted-foreground font-sans">({ioc.note})</span>
                 </div>
-                <div className="text-[11.5px] text-cyan-200/90 break-all">{ioc.value}</div>
+                <div className="text-[11.5px] text-cyan-700 dark:text-cyan-200/90 break-all">
+                  {ioc.value}
+                </div>
               </div>
 
               <button
@@ -59,8 +61,8 @@ export function IocCopyVault() {
               >
                 {isCopied ? (
                   <>
-                    <Check className="h-3 w-3 text-emerald-400" />
-                    <span className="text-emerald-400 font-bold">Copied</span>
+                    <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Copied</span>
                   </>
                 ) : (
                   <>

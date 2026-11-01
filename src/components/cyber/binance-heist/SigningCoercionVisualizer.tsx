@@ -39,7 +39,7 @@ export function SigningCoercionVisualizer() {
             onClick={() => setMode("normal")}
             className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
               !isHijacked
-                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/35"
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/35"
                 : "text-muted-foreground hover:text-foreground border border-transparent"
             }`}
           >
@@ -51,7 +51,7 @@ export function SigningCoercionVisualizer() {
             onClick={() => setMode("hijacked")}
             className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
               isHijacked
-                ? "bg-red-500/15 text-red-400 border border-red-500/40"
+                ? "bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/40"
                 : "text-muted-foreground hover:text-foreground border border-transparent"
             }`}
           >
@@ -72,7 +72,9 @@ export function SigningCoercionVisualizer() {
           >
             <div
               className={`flex items-center gap-1.5 font-bold ${
-                isHijacked ? "text-red-400" : "text-emerald-400"
+                isHijacked
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-emerald-600 dark:text-emerald-400"
               }`}
             >
               {isHijacked ? (
@@ -92,7 +94,9 @@ export function SigningCoercionVisualizer() {
           <div className="hidden md:flex items-center justify-center">
             <ArrowRight
               className={`h-4 w-4 ${
-                isHijacked ? "text-red-400 animate-pulse" : "text-emerald-400"
+                isHijacked
+                  ? "text-red-600 dark:text-red-400 animate-pulse"
+                  : "text-emerald-600 dark:text-emerald-400"
               }`}
             />
           </div>
@@ -105,7 +109,7 @@ export function SigningCoercionVisualizer() {
           >
             <div
               className={`flex items-center gap-1.5 font-bold ${
-                isHijacked ? "text-amber-300" : "text-foreground"
+                isHijacked ? "text-amber-700 dark:text-amber-300" : "text-foreground"
               }`}
             >
               <Container className="h-4 w-4 shrink-0" />
@@ -121,14 +125,16 @@ export function SigningCoercionVisualizer() {
           <div className="hidden md:flex items-center justify-center">
             <ArrowRight
               className={`h-4 w-4 ${
-                isHijacked ? "text-amber-400 animate-pulse" : "text-emerald-400"
+                isHijacked
+                  ? "text-amber-600 dark:text-amber-400 animate-pulse"
+                  : "text-emerald-600 dark:text-emerald-400"
               }`}
             />
           </div>
 
           {/* Stage 3: Hardware Signer */}
           <div className="rounded-lg border border-cyan-500/35 bg-cyan-500/[0.06] p-3.5">
-            <div className="flex items-center gap-1.5 font-bold text-cyan-300">
+            <div className="flex items-center gap-1.5 font-bold text-cyan-700 dark:text-cyan-300">
               <Lock className="h-4 w-4 shrink-0" />
               <span>Hardware Signer (HSM)</span>
             </div>
@@ -149,9 +155,9 @@ export function SigningCoercionVisualizer() {
           }`}
         >
           {isHijacked ? (
-            <AlertTriangle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+            <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
           ) : (
-            <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+            <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           )}
           <span>
             {isHijacked ? (

@@ -96,13 +96,13 @@ export function HeistTimelineSimulator() {
 
   const phaseBadgeClass =
     frame.phase === "Hijack" || frame.phase === "Blitz"
-      ? "border-red-500/40 bg-red-500/15 text-red-400"
+      ? "border-red-500/40 bg-red-500/15 text-red-600 dark:text-red-400"
       : frame.phase === "Laundering"
-        ? "border-amber-500/40 bg-amber-500/15 text-amber-400"
+        ? "border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400"
         : frame.phase === "Containment"
-          ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-400"
+          ? "border-cyan-500/40 bg-cyan-500/15 text-cyan-600 dark:text-cyan-400"
           : frame.phase === "Recovery"
-            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
+            ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
             : "border-border bg-muted/60 text-muted-foreground";
 
   return (
@@ -115,7 +115,7 @@ export function HeistTimelineSimulator() {
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2.5 font-mono">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-red-500/15 border border-red-500/30">
-            <Activity className="h-4 w-4 text-red-400" />
+            <Activity className="h-4 w-4 text-red-600 dark:text-red-400" />
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-foreground">
@@ -137,7 +137,7 @@ export function HeistTimelineSimulator() {
               setIsPlaying((p) => !p);
             }}
             aria-label={isPlaying ? "Pause timeline replay" : "Play timeline replay"}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 font-bold transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/25 font-bold transition-colors cursor-pointer"
           >
             {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
             <span>{isPlaying ? "Pause" : "Auto-Play"}</span>
@@ -220,9 +220,9 @@ export function HeistTimelineSimulator() {
                 <span
                   className={`font-mono text-[10px] font-bold ${
                     isCurrent
-                      ? "text-cyan-400"
+                      ? "text-cyan-600 dark:text-cyan-400"
                       : isPast
-                        ? "text-emerald-400"
+                        ? "text-emerald-600 dark:text-emerald-400"
                         : "text-muted-foreground"
                   }`}
                 >
@@ -243,7 +243,7 @@ export function HeistTimelineSimulator() {
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Gross Drained
           </div>
-          <div className="mt-1 text-lg sm:text-xl font-bold text-red-400">
+          <div className="mt-1 text-lg sm:text-xl font-bold text-red-600 dark:text-red-400">
             ${animGross.toFixed(2)}B
           </div>
           <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -258,7 +258,7 @@ export function HeistTimelineSimulator() {
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Frozen On-Chain
           </div>
-          <div className="mt-1 text-lg sm:text-xl font-bold text-cyan-400">
+          <div className="mt-1 text-lg sm:text-xl font-bold text-cyan-600 dark:text-cyan-400">
             ${animFrozen.toFixed(2)}B
           </div>
           <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -273,7 +273,7 @@ export function HeistTimelineSimulator() {
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Unfreezable At-Large
           </div>
-          <div className="mt-1 text-lg sm:text-xl font-bold text-amber-400">
+          <div className="mt-1 text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">
             ${animAtLarge.toFixed(2)}B
           </div>
           <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -288,7 +288,7 @@ export function HeistTimelineSimulator() {
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Binance User Backstop
           </div>
-          <div className="mt-1 text-lg sm:text-xl font-bold text-emerald-400">
+          <div className="mt-1 text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">
             ${animReplenished.toFixed(2)}B
           </div>
           <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -303,7 +303,7 @@ export function HeistTimelineSimulator() {
       {/* Active Event Narrative & 10-Chain Live Status Board */}
       <div className="p-5 space-y-4" aria-live="polite">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 font-mono text-xs text-cyan-400">
+          <div className="flex items-center gap-2 font-mono text-xs text-cyan-600 dark:text-cyan-400">
             <Clock className="h-3.5 w-3.5" />
             <span className="font-bold">{frame.timeEt}</span>
             <span className="text-muted-foreground">({frame.timeUtc})</span>
@@ -325,9 +325,9 @@ export function HeistTimelineSimulator() {
         </p>
 
         <div className="rounded-lg border border-border bg-muted/25 p-3.5 flex items-start gap-2.5">
-          <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+          <ShieldAlert className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <div className="text-[13px] text-foreground/80 leading-relaxed font-sans">
-            <strong className="font-mono text-xs uppercase tracking-wider text-amber-400 mr-1.5">
+            <strong className="font-mono text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400 mr-1.5">
               Strategic Significance:
             </strong>
             {frame.whyItMatters}
@@ -343,10 +343,10 @@ export function HeistTimelineSimulator() {
               <strong
                 className={
                   frame.eip7702State === "hijacked"
-                    ? "text-red-400"
+                    ? "text-red-600 dark:text-red-400"
                     : frame.eip7702State === "revoked"
-                      ? "text-emerald-400"
-                      : "text-amber-400"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-amber-600 dark:text-amber-400"
                 }
               >
                 {frame.eip7702State.toUpperCase()}
@@ -362,9 +362,9 @@ export function HeistTimelineSimulator() {
                   key={chain}
                   className={`px-2.5 py-1.5 rounded-md border flex items-center justify-between transition-all duration-300 ${
                     isDraining
-                      ? "border-red-500/50 bg-red-500/15 text-red-300 font-bold"
+                      ? "border-red-500/50 bg-red-500/15 text-red-700 dark:text-red-300 font-bold"
                       : isFrozen
-                        ? "border-cyan-500/40 bg-cyan-500/12 text-cyan-300 font-semibold"
+                        ? "border-cyan-500/40 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300 font-semibold"
                         : "border-border/50 bg-background/40 text-muted-foreground"
                   }`}
                 >
@@ -372,7 +372,7 @@ export function HeistTimelineSimulator() {
                   {isDraining ? (
                     <span className="h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" />
                   ) : isFrozen ? (
-                    <Lock className="h-3 w-3 text-cyan-400 shrink-0" />
+                    <Lock className="h-3 w-3 text-cyan-600 dark:text-cyan-400 shrink-0" />
                   ) : (
                     <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 shrink-0" />
                   )}

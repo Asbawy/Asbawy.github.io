@@ -57,7 +57,7 @@ export function AttributionScaleExplorer() {
             onClick={() => setTab("clues")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
               tab === "clues"
-                ? "bg-cyan-500/15 text-cyan-300 border border-cyan-500/35"
+                ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/35"
                 : "text-muted-foreground hover:text-foreground border border-transparent"
             }`}
           >
@@ -70,7 +70,7 @@ export function AttributionScaleExplorer() {
             onClick={() => setTab("scale")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
               tab === "scale"
-                ? "bg-red-500/15 text-red-300 border border-red-500/35"
+                ? "bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/35"
                 : "text-muted-foreground hover:text-foreground border border-transparent"
             }`}
           >
@@ -93,7 +93,7 @@ export function AttributionScaleExplorer() {
                   onClick={() => setActiveClue(idx)}
                   className={`text-left p-3 rounded-lg border transition-all cursor-pointer ${
                     selected
-                      ? "border-cyan-400/60 bg-cyan-500/10 text-cyan-300"
+                      ? "border-cyan-400/60 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300"
                       : "border-border/60 bg-background/40 text-foreground/80 hover:bg-muted/40"
                   }`}
                 >
@@ -105,7 +105,7 @@ export function AttributionScaleExplorer() {
           </div>
 
           <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/[0.05] p-4 flex items-start gap-2.5">
-            <CheckCircle2 className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-4 w-4 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" />
             <p className="text-sm font-sans text-foreground/90 leading-relaxed m-0">
               {CLUES[activeClue].detail}
             </p>
@@ -135,7 +135,11 @@ export function AttributionScaleExplorer() {
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-muted-foreground">{item.actor}</span>
                     <span
-                      className={isTop ? "text-red-400 font-extrabold" : "text-amber-300 font-bold"}
+                      className={
+                        isTop
+                          ? "text-red-600 dark:text-red-400 font-extrabold"
+                          : "text-amber-700 dark:text-amber-300 font-bold"
+                      }
                     >
                       {item.displayAmount}
                     </span>

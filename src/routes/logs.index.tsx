@@ -2,8 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { CyberLayout } from "@/components/cyber/Layout";
 import { postsMeta } from "@/data/posts";
-import { Search, Calendar, Clock, ArrowRight, X, FileTerminal } from "lucide-react";
+import { Search, Calendar, Clock, ArrowRight, X, FileTerminal, Sparkles, Cpu } from "lucide-react";
 import { RssSubscribe } from "@/components/cyber/RssSubscribe";
+import { HeistCardPreview } from "@/components/cyber/BinanceHeistVisuals";
 
 type LogsSearch = {
   q?: string;
@@ -47,7 +48,7 @@ function LogsPage() {
     setQ(val);
     navigate({
       from: Route.fullPath,
-      search: (old: any) => ({ ...old, q: val || undefined, tag: undefined }),
+      search: (old: LogsSearch) => ({ ...old, q: val || undefined, tag: undefined }),
       replace: true,
     });
   };
@@ -159,64 +160,151 @@ function LogsPage() {
           {/* Log Entries */}
           {filtered.length > 0 ? (
             <div className="space-y-4">
-              {filtered.map((p) => (
-                <Link
-                  key={p.slug}
-                  to="/logs/$slug"
-                  params={{ slug: p.slug }}
-                  className="group relative flex flex-col md:flex-row md:items-start justify-between gap-6 rounded-xl bg-card border border-border overflow-hidden hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all duration-300"
-                >
-                  {/* Left accent bar */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-cyan-500/60 to-cyan-500/10 group-hover:w-[4px] transition-all duration-300" />
-                  {/* Hover glow overlay */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-cyan-500/[0.03] via-transparent to-blue-500/[0.03] transition-opacity duration-500 pointer-events-none" />
+              {filtered.map((p) => {
+                const isBinanceHeist = p.slug === "october-2026-binance-heist";
+                const sevStyle = (() => {
+                  switch (p.severity?.toLowerCase()) {
+                    case "critical":
+                      return "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 dark:border-rose-500/35";
+                    case "high":
+                      return "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 dark:border-amber-500/35";
+                    case "medium":
+                      return "bg-yellow-500/15 text-yellow-800 dark:text-yellow-300 border-yellow-500/40 dark:border-yellow-500/35";
+                    default:
+                      return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40 dark:border-emerald-500/35";
+                  }
+                })();
 
-                  <div className="relative z-10 space-y-3 flex-1 p-6">
-                    {/* Top Row Badges */}
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-semibold">
-                        {p.category}
-                      </span>
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <Calendar className="w-3 h-3 opacity-60" />
-                        {p.date}
-                      </span>
-                      <span className="flex items-center gap-1.5 text-muted-foreground">
-                        <Clock className="w-3 h-3 opacity-60" />
-                        {p.readTime}
-                      </span>
-                    </div>
+                return (
+                  <Link
+                    key={p.slug}
+                    to="/logs/$slug"
+                    params={{ slug: p.slug }}
+                    className={`group relative flex flex-col md:flex-row md:items-stretch justify-between rounded-xl bg-card border overflow-hidden hover:-translate-y-0.5 transition-all duration-300 ${
+                      isBinanceHeist
+                        ? "border-amber-500/45 dark:border-amber-500/40 hover:border-amber-500/80 dark:hover:border-amber-400/70 shadow-[0_8px_30px_rgba(245,158,11,0.10)] dark:shadow-[0_10px_40px_rgba(244,63,94,0.12)]"
+                        : "border-border hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+                    }`}
+                  >
+                    {/* Top accent bar for flagship report */}
+                    {isBinanceHeist && (
+                      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-rose-500 via-amber-400 to-cyan-400" />
+                    )}
 
-                    {/* Title */}
-                    <h2 className="text-lg font-bold text-foreground group-hover:text-cyan-400 transition-colors duration-300 leading-snug">
-                      {p.title}
-                    </h2>
+                    {/* Left accent bar */}
+                    <div
+                      className={`absolute left-0 top-0 bottom-0 w-[3px] group-hover:w-[4px] transition-all duration-300 ${
+                        isBinanceHeist
+                          ? "bg-gradient-to-b from-rose-500 via-amber-400 to-cyan-400"
+                          : "bg-gradient-to-b from-cyan-500/60 to-cyan-500/10"
+                      }`}
+                    />
 
-                    {/* Excerpt */}
-                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 max-w-4xl">
-                      {p.excerpt}
-                    </p>
+                    {/* Hover glow overlay */}
+                    <div
+                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none ${
+                        isBinanceHeist
+                          ? "bg-gradient-to-br from-rose-500/[0.05] via-amber-500/[0.03] to-cyan-500/[0.05]"
+                          : "bg-gradient-to-br from-cyan-500/[0.03] via-transparent to-blue-500/[0.03]"
+                      }`}
+                    />
 
-                    {/* Tags Row */}
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {p.tags.map((t) => (
-                        <span
-                          key={t}
-                          className="text-[10px] text-muted-foreground bg-muted/60 border border-border/60 px-2 py-0.5 rounded-md font-medium"
+                    <div className="relative z-10 space-y-3 flex-1 p-6 flex flex-col justify-between">
+                      <div className="space-y-3">
+                        {/* Top Row Badges */}
+                        <div className="flex flex-wrap items-center gap-2.5 text-xs">
+                          <span className="px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-800 dark:text-cyan-400 border border-cyan-500/35 dark:border-cyan-500/30 font-semibold">
+                            {p.category}
+                          </span>
+                          {p.severity && (
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${sevStyle}`}
+                            >
+                              {p.severity.toLowerCase() === "critical" && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400 animate-pulse" />
+                              )}
+                              {p.severity}
+                            </span>
+                          )}
+                          {isBinanceHeist && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40 dark:border-amber-500/35 text-[10px] font-mono font-bold uppercase tracking-wider">
+                              <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                              Flagship Threat Intel
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1.5 text-muted-foreground font-mono">
+                            <Calendar className="w-3 h-3 opacity-60" />
+                            {p.date}
+                          </span>
+                          <span className="flex items-center gap-1.5 text-muted-foreground font-mono">
+                            <Clock className="w-3 h-3 opacity-60" />
+                            {p.readTime}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h2
+                          className={`font-bold text-foreground transition-colors duration-300 leading-snug ${
+                            isBinanceHeist
+                              ? "text-xl md:text-2xl group-hover:text-amber-700 dark:group-hover:text-amber-300"
+                              : "text-lg group-hover:text-cyan-700 dark:group-hover:text-cyan-400"
+                          }`}
                         >
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                          {p.title}
+                        </h2>
 
-                  {/* Read Link */}
-                  <div className="relative z-10 flex items-center gap-1.5 text-xs font-semibold text-cyan-400 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0 pr-6 pt-2 md:pt-6">
-                    <span>Read Log</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" />
-                  </div>
-                </Link>
-              ))}
+                        {/* Excerpt */}
+                        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 max-w-4xl">
+                          {p.excerpt}
+                        </p>
+
+                        {/* Interactive Feature Pills for Binance Heist */}
+                        {isBinanceHeist && (
+                          <div className="pt-1 flex flex-wrap items-center gap-1.5">
+                            {[
+                              "Auto-Play 10-Chain Timeline",
+                              "50-Nonce EIP-7702 Simulator",
+                              "37-Min DeFi Freeze Race",
+                              "Hardware Enclave Lab",
+                              "One-Click IOC Vault",
+                            ].map((mod) => (
+                              <span
+                                key={mod}
+                                className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold text-cyan-900 dark:text-cyan-200/90 bg-cyan-500/15 dark:bg-cyan-500/10 border border-cyan-500/35 dark:border-cyan-500/25 px-2 py-0.5 rounded"
+                              >
+                                <Cpu className="w-2.5 h-2.5 text-cyan-600 dark:text-cyan-400" />
+                                {mod}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tags Row */}
+                      <div className="flex flex-wrap gap-1.5 pt-2">
+                        {p.tags.map((t) => (
+                          <span
+                            key={t}
+                            className="text-[10px] text-muted-foreground bg-muted/60 border border-border/60 px-2 py-0.5 rounded-md font-medium"
+                          >
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right Side: Rich Telemetry HUD for Binance Heist or Standard Read Link */}
+                    {isBinanceHeist ? (
+                      <HeistCardPreview variant="wide" />
+                    ) : (
+                      <div className="relative z-10 flex items-center gap-1.5 text-xs font-semibold text-cyan-700 dark:text-cyan-400 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0 pr-6 pb-4 md:pb-0 pt-2 md:pt-6">
+                        <span>Read Log</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" />
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <div className="py-20 text-center rounded-2xl border border-dashed border-border bg-card space-y-3">

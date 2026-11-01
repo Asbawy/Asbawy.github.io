@@ -25,7 +25,7 @@ export function MoneyTrailExplorer() {
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2.5 font-mono">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/15 border border-emerald-500/30">
-            <Coins className="h-4 w-4 text-emerald-400" />
+            <Coins className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-foreground">
@@ -51,7 +51,7 @@ export function MoneyTrailExplorer() {
               onClick={() => setFilterMode(mode)}
               className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 filterMode === mode
-                  ? "bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 font-bold"
+                  ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/35 font-bold"
                   : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
             >
@@ -121,7 +121,7 @@ export function MoneyTrailExplorer() {
               <h4 className="font-mono text-base font-bold text-foreground m-0">
                 {activeChain.name}
               </h4>
-              <span className="rounded border border-border bg-muted px-2 py-0.5 font-mono text-[10px] text-cyan-300 font-bold">
+              <span className="rounded border border-border bg-muted px-2 py-0.5 font-mono text-[10px] text-cyan-700 dark:text-cyan-300 font-bold">
                 {activeChain.vectorType}
               </span>
             </div>
@@ -129,13 +129,13 @@ export function MoneyTrailExplorer() {
             <div className="grid grid-cols-2 gap-2 font-mono text-xs">
               <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/[0.06] p-2.5">
                 <div className="text-[10px] text-muted-foreground">Frozen</div>
-                <div className="mt-0.5 font-bold text-cyan-300">
+                <div className="mt-0.5 font-bold text-cyan-700 dark:text-cyan-300">
                   ~${activeChain.frozenEstimateM.toLocaleString()}M
                 </div>
               </div>
               <div className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-2.5">
                 <div className="text-[10px] text-muted-foreground">Unfreezable</div>
-                <div className="mt-0.5 font-bold text-amber-300">
+                <div className="mt-0.5 font-bold text-amber-700 dark:text-amber-300">
                   ~${activeChain.atLargeEstimateM.toLocaleString()}M
                 </div>
               </div>

@@ -15,28 +15,28 @@ function roleStyle(role: CastMember["roleTag"]) {
   switch (role) {
     case "Exchange":
       return {
-        badge: "border-amber-500/35 bg-amber-500/12 text-amber-300",
-        icon: <Landmark className="h-3.5 w-3.5 text-amber-400" />,
+        badge: "border-amber-500/35 bg-amber-500/12 text-amber-700 dark:text-amber-300",
+        icon: <Landmark className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />,
       };
     case "Suspect":
       return {
-        badge: "border-red-500/40 bg-red-500/15 text-red-300",
-        icon: <AlertTriangle className="h-3.5 w-3.5 text-red-400" />,
+        badge: "border-red-500/40 bg-red-500/15 text-red-700 dark:text-red-300",
+        icon: <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />,
       };
     case "Forensics":
       return {
-        badge: "border-cyan-500/35 bg-cyan-500/12 text-cyan-300",
-        icon: <Search className="h-3.5 w-3.5 text-cyan-400" />,
+        badge: "border-cyan-500/35 bg-cyan-500/12 text-cyan-700 dark:text-cyan-300",
+        icon: <Search className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />,
       };
     case "Freeze Switch":
       return {
-        badge: "border-emerald-500/35 bg-emerald-500/12 text-emerald-300",
-        icon: <Lock className="h-3.5 w-3.5 text-emerald-400" />,
+        badge: "border-emerald-500/35 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+        icon: <Lock className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />,
       };
     case "Law Enforcement":
       return {
-        badge: "border-blue-500/35 bg-blue-500/12 text-blue-300",
-        icon: <Shield className="h-3.5 w-3.5 text-blue-400" />,
+        badge: "border-blue-500/35 bg-blue-500/12 text-blue-700 dark:text-blue-300",
+        icon: <Shield className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />,
       };
   }
 }
@@ -57,7 +57,7 @@ export function CastDossierCards() {
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2.5 font-mono">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-cyan-500/15 border border-cyan-500/30">
-            <Users className="h-4 w-4 text-cyan-400" />
+            <Users className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-foreground">
@@ -84,7 +84,7 @@ export function CastDossierCards() {
               }}
               className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
                 roleFilter === role
-                  ? "bg-cyan-500/15 text-cyan-300 border border-cyan-500/35 font-bold"
+                  ? "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/35 font-bold"
                   : "text-muted-foreground hover:text-foreground border border-transparent"
               }`}
             >
@@ -145,7 +145,9 @@ export function CastDossierCards() {
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Key Metric
           </div>
-          <div className="mt-0.5 text-xs font-bold text-cyan-300">{active.keyStat}</div>
+          <div className="mt-0.5 text-xs font-bold text-cyan-700 dark:text-cyan-300">
+            {active.keyStat}
+          </div>
         </div>
       </div>
     </section>

@@ -3,10 +3,22 @@ import { Lock, Unlock, ArrowRight, ShieldAlert } from "lucide-react";
 import { LAUNDERING_STAGES } from "./data";
 
 const FREEZE_BUCKETS = [
-  { label: "Tether (5:01 PM ET)", amount: ">$1.56B USDT", tone: "text-cyan-300" },
-  { label: "Circle (5:04 PM ET)", amount: ">$800M USDC", tone: "text-cyan-300" },
-  { label: "Arbitrum, USD1 & RLUSD", amount: "~$320M-$620M", tone: "text-cyan-300" },
-  { label: "Escaped War Chest", amount: ">420K ETH + 18,270 BTC", tone: "text-amber-300" },
+  {
+    label: "Tether (5:01 PM ET)",
+    amount: ">$1.56B USDT",
+    tone: "text-cyan-700 dark:text-cyan-300",
+  },
+  { label: "Circle (5:04 PM ET)", amount: ">$800M USDC", tone: "text-cyan-700 dark:text-cyan-300" },
+  {
+    label: "Arbitrum, USD1 & RLUSD",
+    amount: "~$320M-$620M",
+    tone: "text-cyan-700 dark:text-cyan-300",
+  },
+  {
+    label: "Escaped War Chest",
+    amount: ">420K ETH + 18,270 BTC",
+    tone: "text-amber-700 dark:text-amber-300",
+  },
 ];
 
 export function FreezeAndLaunderingFlow() {
@@ -21,10 +33,10 @@ export function FreezeAndLaunderingFlow() {
       {/* Part 1: Clean Visual Freeze Tug-of-War */}
       <div className="p-5 border-b border-border bg-muted/20 space-y-3 font-mono">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="text-cyan-300 font-bold flex items-center gap-1.5">
+          <span className="text-cyan-700 dark:text-cyan-300 font-bold flex items-center gap-1.5">
             <Lock className="h-3.5 w-3.5" /> Frozen On-Chain: $2.70B - $3.00B (~45%)
           </span>
-          <span className="text-amber-300 font-bold flex items-center gap-1.5">
+          <span className="text-amber-700 dark:text-amber-300 font-bold flex items-center gap-1.5">
             <Unlock className="h-3.5 w-3.5" /> Escaped & Unfreezable: $3.36B - $3.66B (~55%)
           </span>
         </div>
@@ -66,7 +78,7 @@ export function FreezeAndLaunderingFlow() {
                 onClick={() => setActiveStage(idx)}
                 className={`text-left p-2.5 rounded-lg border transition-all cursor-pointer ${
                   isCurrent
-                    ? "border-amber-400/60 bg-amber-500/12 text-amber-300"
+                    ? "border-amber-400/60 bg-amber-500/12 text-amber-700 dark:text-amber-300"
                     : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -85,7 +97,7 @@ export function FreezeAndLaunderingFlow() {
           className="rounded-lg border border-border bg-background/50 p-4 space-y-3 animate-in fade-in duration-200"
         >
           <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
-            <span className="font-bold text-amber-300">
+            <span className="font-bold text-amber-700 dark:text-amber-300">
               Step 0{stage.step}: {stage.title}
             </span>
             <span className="text-muted-foreground">{stage.window}</span>
@@ -93,18 +105,18 @@ export function FreezeAndLaunderingFlow() {
 
           <div className="flex flex-wrap items-center gap-2 font-mono text-xs bg-muted/30 px-3 py-2 rounded border border-border/50">
             <span className="text-foreground/85">{stage.fromAsset}</span>
-            <ArrowRight className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-            <span className="text-amber-300 font-bold">{stage.toAsset}</span>
+            <ArrowRight className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-amber-700 dark:text-amber-300 font-bold">{stage.toAsset}</span>
           </div>
 
           <p className="text-sm font-sans text-foreground/90 leading-relaxed m-0">
             {stage.simpleExplanation}
           </p>
 
-          <div className="flex items-start gap-2 text-xs font-sans text-cyan-300 pt-0.5">
-            <ShieldAlert className="h-3.5 w-3.5 shrink-0 mt-0.5 text-cyan-400" />
+          <div className="flex items-start gap-2 text-xs font-sans text-cyan-700 dark:text-cyan-300 pt-0.5">
+            <ShieldAlert className="h-3.5 w-3.5 shrink-0 mt-0.5 text-cyan-600 dark:text-cyan-400" />
             <span>
-              <strong className="font-mono uppercase text-cyan-400">
+              <strong className="font-mono uppercase text-cyan-600 dark:text-cyan-400">
                 How Defenders Fight Back:
               </strong>{" "}
               {stage.defenderAction}

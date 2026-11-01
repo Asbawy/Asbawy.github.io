@@ -10,3 +10,4 @@ export { MarketShockwavePanel } from "./binance-heist/MarketShockwavePanel";
 export { DefenseSimulator } from "./binance-heist/DefenseSimulator";
 export { IocCopyVault } from "./binance-heist/IocCopyVault";
 export { BriefingSummaryCard } from "./binance-heist/BriefingSummaryCard";
+export { HeistCardPreview } from "./binance-heist/HeistCardPreview";

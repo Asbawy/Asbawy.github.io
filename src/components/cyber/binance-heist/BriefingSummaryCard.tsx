@@ -32,12 +32,12 @@ export function BriefingSummaryCard() {
     >
       <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 border-b border-border bg-red-500/10 font-mono">
         <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-red-400" />
+          <Activity className="h-4 w-4 text-red-600 dark:text-red-400" />
           <span className="text-xs font-bold uppercase tracking-widest text-foreground">
             One-Page Executive Briefing: October 2026 Binance Heist
           </span>
         </div>
-        <span className="rounded border border-red-500/40 bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-red-300">
+        <span className="rounded border border-red-500/40 bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-red-700 dark:text-red-300">
           Severity: Critical
         </span>
       </div>
@@ -84,24 +84,26 @@ export function BriefingSummaryCard() {
             </div>
 
             <div className="rounded border border-cyan-500/30 bg-cyan-500/[0.07] p-2.5 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-cyan-300">
+              <span className="flex items-center gap-1.5 text-cyan-700 dark:text-cyan-300">
                 <Lock className="h-3.5 w-3.5" /> Frozen On-Chain
               </span>
-              <span className="font-bold text-cyan-300">$2.70B - $3.00B</span>
+              <span className="font-bold text-cyan-700 dark:text-cyan-300">$2.70B - $3.00B</span>
             </div>
 
             <div className="rounded border border-amber-500/30 bg-amber-500/[0.07] p-2.5 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-amber-300">
+              <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
                 <Unlock className="h-3.5 w-3.5" /> Escaped (ETH & BTC)
               </span>
-              <span className="font-bold text-amber-300">$3.36B - $3.66B</span>
+              <span className="font-bold text-amber-700 dark:text-amber-300">$3.36B - $3.66B</span>
             </div>
 
             <div className="rounded border border-emerald-500/30 bg-emerald-500/[0.07] p-2.5 flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-emerald-300">
+              <span className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300">
                 <ShieldCheck className="h-3.5 w-3.5" /> Binance User Backstop
               </span>
-              <span className="font-bold text-emerald-300">$6.34B Set Aside (Nov 1 Open)</span>
+              <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                $6.34B Set Aside (Nov 1 Open)
+              </span>
             </div>
           </div>
         </div>

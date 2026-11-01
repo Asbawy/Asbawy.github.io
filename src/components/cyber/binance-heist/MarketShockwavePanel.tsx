@@ -78,7 +78,7 @@ export function MarketShockwavePanel() {
             onClick={() => setView("market")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
               view === "market"
-                ? "bg-red-500/15 text-red-300 border border-red-500/35"
+                ? "bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/35"
                 : "text-muted-foreground hover:text-foreground border border-transparent"
             }`}
           >
@@ -91,7 +91,7 @@ export function MarketShockwavePanel() {
             onClick={() => setView("solvency")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
               view === "solvency"
-                ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/35"
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/35"
                 : "text-muted-foreground hover:text-foreground border border-transparent"
             }`}
           >
@@ -113,7 +113,7 @@ export function MarketShockwavePanel() {
             >
               <div className="flex items-center justify-between font-mono text-xs">
                 <span className="font-bold text-foreground">{c.asset}</span>
-                <span className="font-bold text-red-400">{c.drop}</span>
+                <span className="font-bold text-red-600 dark:text-red-400">{c.drop}</span>
               </div>
               <p className="text-xs font-sans text-foreground/80 leading-relaxed m-0">{c.detail}</p>
             </div>
@@ -127,7 +127,9 @@ export function MarketShockwavePanel() {
               className="rounded-lg border border-emerald-500/25 bg-emerald-500/[0.04] p-3.5 space-y-1"
             >
               <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
-                <span className="font-bold text-emerald-300">{s.headline}</span>
+                <span className="font-bold text-emerald-700 dark:text-emerald-300">
+                  {s.headline}
+                </span>
                 <span className="text-muted-foreground">{s.day}</span>
               </div>
               <p className="text-xs sm:text-[13px] font-sans text-foreground/85 leading-relaxed m-0">

@@ -16,7 +16,7 @@ export function ConceptGlossaryExplorer() {
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2.5 font-mono">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/15 border border-emerald-500/30">
-            <BookOpen className="h-4 w-4 text-emerald-400" />
+            <BookOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-foreground">
@@ -39,7 +39,7 @@ export function ConceptGlossaryExplorer() {
             onClick={() => setViewMode("analogy")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
               viewMode === "analogy"
-                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                 : "text-muted-foreground hover:text-foreground border border-transparent"
             }`}
           >
@@ -52,7 +52,7 @@ export function ConceptGlossaryExplorer() {
             onClick={() => setViewMode("technical")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-semibold transition-all cursor-pointer ${
               viewMode === "technical"
-                ? "bg-cyan-500/15 text-cyan-400 border border-cyan-500/30"
+                ? "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30"
                 : "text-muted-foreground hover:text-foreground border border-transparent"
             }`}
           >
@@ -74,7 +74,7 @@ export function ConceptGlossaryExplorer() {
               onClick={() => setActiveId(item.id)}
               className={`text-left px-3 py-2.5 rounded-lg border font-mono text-xs transition-all cursor-pointer ${
                 isActive
-                  ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-300 font-bold"
+                  ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-bold"
                   : "border-border/60 bg-card text-foreground/80 hover:bg-muted/40"
               }`}
             >
@@ -107,10 +107,12 @@ export function ConceptGlossaryExplorer() {
           </p>
         </div>
 
-        <div className="flex items-start gap-2 text-xs text-amber-300 font-sans pt-0.5">
-          <Crosshair className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-400" />
+        <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300 font-sans pt-0.5">
+          <Crosshair className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
           <span>
-            <strong className="font-mono uppercase text-amber-400">Oct 29 Impact:</strong>{" "}
+            <strong className="font-mono uppercase text-amber-600 dark:text-amber-400">
+              Oct 29 Impact:
+            </strong>{" "}
             {active.roleInHeist}
           </span>
         </div>
