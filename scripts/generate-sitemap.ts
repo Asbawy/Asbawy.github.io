@@ -2,7 +2,7 @@
 import { readdirSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-const BASE_URL = "https://asbawy.github.io";
+const BASE_URL = "https://asbawy.com";
 const postsDir = join(process.cwd(), "src/data/posts");
 
 async function main() {

@@ -1,6 +1,6 @@
 import { Share2 } from "lucide-react";
 
-const BASE_URL = "https://asbawy.github.io";
+const BASE_URL = "https://asbawy.com";
 
 function XIcon({ className }: { className?: string }) {
   return (

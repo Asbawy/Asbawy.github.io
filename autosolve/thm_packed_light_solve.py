@@ -3,7 +3,7 @@
 # ║              🔦  PACKED LIGHT — Auto Exploitation Script                   ║
 # ║       TryHackMe Network Forensics | PCAP C2 Extraction & XOR Decryption      ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
-# Author: Asbawy (https://asbawy.github.io)
+# Author: Asbawy (https://asbawy.com)
 # Repository: https://github.com/Asbawy/Asbawy.github.io
 #
 # ── EXECUTION INSTRUCTIONS ────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://asbawy.github.io/sitemap.xml
+Sitemap: https://asbawy.com/sitemap.xml

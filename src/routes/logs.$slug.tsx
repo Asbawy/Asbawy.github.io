@@ -28,7 +28,7 @@ export const Route = createFileRoute("/logs/$slug")({
 
   head: ({ params }) => {
     const p = getPostMeta(params.slug);
-    const url = `https://asbawy.github.io/logs/${params.slug}`;
+    const url = `https://asbawy.com/logs/${params.slug}`;
     return {
       meta: p
         ? [
@@ -38,9 +38,9 @@ export const Route = createFileRoute("/logs/$slug")({
             { property: "og:description", content: p.excerpt },
             { property: "og:type", content: "article" },
             { property: "og:url", content: url },
-            { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
+            { property: "og:image", content: "https://asbawy.com/eye-of-ra.png" },
             { name: "twitter:card", content: "summary_large_image" },
-            { name: "twitter:image", content: "https://asbawy.github.io/eye-of-ra.png" },
+            { name: "twitter:image", content: "https://asbawy.com/eye-of-ra.png" },
           ]
         : [{ title: "Asbawy Blog" }],
       links: [{ rel: "canonical", href: url }],
@@ -57,7 +57,7 @@ export const Route = createFileRoute("/logs/$slug")({
                 author: {
                   "@type": "Person",
                   name: "Asbawy",
-                  url: "https://asbawy.github.io",
+                  url: "https://asbawy.com",
                 },
                 publisher: {
                   "@type": "Person",
@@ -112,7 +112,10 @@ function PostPage() {
         <Breadcrumbs
           items={[
             { label: "Logs", href: "/logs" },
-            { label: post.category || "Research", href: `/logs?q=${encodeURIComponent(post.category || "")}` },
+            {
+              label: post.category || "Research",
+              href: `/logs?q=${encodeURIComponent(post.category || "")}`,
+            },
             { label: post.title },
           ]}
         />

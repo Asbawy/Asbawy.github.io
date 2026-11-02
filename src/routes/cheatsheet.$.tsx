@@ -32,8 +32,8 @@ export const Route = createFileRoute("/cheatsheet/$")({
   head: ({ loaderData }) => {
     if (!loaderData) return { title: "Cheatsheet Explorer" };
     const { slug, meta } = loaderData;
-    const url = `https://asbawy.github.io/cheatsheet/${slug}`;
-    const ogImage = "https://asbawy.github.io/eye-of-ra.png";
+    const url = `https://asbawy.com/cheatsheet/${slug}`;
+    const ogImage = "https://asbawy.com/eye-of-ra.png";
 
     const titleStr = meta.title ? `${meta.title} — Cheatsheet Explorer` : "Cheatsheet Explorer";
     const descStr = meta.excerpt || `Cheat sheet for ${meta.title || slug}`;
@@ -66,12 +66,12 @@ export const Route = createFileRoute("/cheatsheet/$")({
             author: {
               "@type": "Person",
               name: "Asbawy",
-              url: "https://asbawy.github.io/about",
+              url: "https://asbawy.com/about",
             },
             publisher: {
               "@type": "Person",
               name: "Asbawy",
-              url: "https://asbawy.github.io",
+              url: "https://asbawy.com",
             },
             dependencies: meta.tags?.join(", ") || "",
             proficiencyLevel: meta.difficulty || "Intermediate",
@@ -232,7 +232,6 @@ function CheatsheetViewer() {
             </button>
           </div>
         </div>
-
       </div>
 
       {/* Content layout with right rail */}

@@ -2,7 +2,7 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const BASE_URL = "https://asbawy.github.io";
+const BASE_URL = "https://asbawy.com";
 
 function getFrontmatter(content: string) {
   const match = content.match(/^---(?:\r?\n)([\s\S]*?)(?:\r?\n)---/);

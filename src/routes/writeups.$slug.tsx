@@ -40,7 +40,7 @@ export const Route = createFileRoute("/writeups/$slug")({
 
   head: ({ params }) => {
     const w = getWriteupMeta(params.slug);
-    const url = `https://asbawy.github.io/writeups/${params.slug}`;
+    const url = `https://asbawy.com/writeups/${params.slug}`;
     return {
       meta: w
         ? [
@@ -50,9 +50,9 @@ export const Route = createFileRoute("/writeups/$slug")({
             { property: "og:description", content: w.excerpt },
             { property: "og:type", content: "article" },
             { property: "og:url", content: url },
-            { property: "og:image", content: "https://asbawy.github.io/eye-of-ra.png" },
+            { property: "og:image", content: "https://asbawy.com/eye-of-ra.png" },
             { name: "twitter:card", content: "summary_large_image" },
-            { name: "twitter:image", content: "https://asbawy.github.io/eye-of-ra.png" },
+            { name: "twitter:image", content: "https://asbawy.com/eye-of-ra.png" },
           ]
         : [{ title: "Asbawy Blog" }],
       links: [{ rel: "canonical", href: url }],
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/writeups/$slug")({
                 author: {
                   "@type": "Person",
                   name: "Asbawy",
-                  url: "https://asbawy.github.io",
+                  url: "https://asbawy.com",
                 },
                 publisher: {
                   "@type": "Person",
@@ -198,7 +198,10 @@ function WriteupPage() {
         <Breadcrumbs
           items={[
             { label: "Writeups", href: "/writeups" },
-            { label: writeup.platform, href: `/writeups?platform=${encodeURIComponent(writeup.platform)}` },
+            {
+              label: writeup.platform,
+              href: `/writeups?platform=${encodeURIComponent(writeup.platform)}`,
+            },
             { label: writeup.title },
           ]}
         />

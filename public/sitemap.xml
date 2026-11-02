@@ -1,252 +1,252 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://asbawy.github.io/</loc>
+    <loc>https://asbawy.com/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs</loc>
+    <loc>https://asbawy.com/logs</loc>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups</loc>
+    <loc>https://asbawy.com/writeups</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/about</loc>
+    <loc>https://asbawy.com/about</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet</loc>
+    <loc>https://asbawy.com/cheatsheet</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/tools</loc>
+    <loc>https://asbawy.com/tools</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/stats</loc>
+    <loc>https://asbawy.com/stats</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/5G-hacking</loc>
+    <loc>https://asbawy.com/logs/5G-hacking</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/badsuccessor</loc>
+    <loc>https://asbawy.com/logs/badsuccessor</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/certighost-cve-2026-54121</loc>
+    <loc>https://asbawy.com/logs/certighost-cve-2026-54121</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/cve-2021-43798-grafana-directory-traversal</loc>
+    <loc>https://asbawy.com/logs/cve-2021-43798-grafana-directory-traversal</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/cve-2026-42945-nginx-rift</loc>
+    <loc>https://asbawy.com/logs/cve-2026-42945-nginx-rift</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/data-exfiltration-guide</loc>
+    <loc>https://asbawy.com/logs/data-exfiltration-guide</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/grammarly-dll-hijacking-blog</loc>
+    <loc>https://asbawy.com/logs/grammarly-dll-hijacking-blog</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/october-2026-binance-heist</loc>
+    <loc>https://asbawy.com/logs/october-2026-binance-heist</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/olar-device-forensics</loc>
+    <loc>https://asbawy.com/logs/olar-device-forensics</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/php-code-review</loc>
+    <loc>https://asbawy.com/logs/php-code-review</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/practical-wireless-exploitation-for-red-teams</loc>
+    <loc>https://asbawy.com/logs/practical-wireless-exploitation-for-red-teams</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/shellcode101</loc>
+    <loc>https://asbawy.com/logs/shellcode101</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/logs/weaponizing-ole-vba-macros</loc>
+    <loc>https://asbawy.com/logs/weaponizing-ole-vba-macros</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet</loc>
+    <loc>https://asbawy.com/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet/linux/privesc-enumeration</loc>
+    <loc>https://asbawy.com/cheatsheet/linux/privesc-enumeration</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet/linux/privesc-exploitation</loc>
+    <loc>https://asbawy.com/cheatsheet/linux/privesc-exploitation</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet/linux/Shell_Upgrades</loc>
+    <loc>https://asbawy.com/cheatsheet/linux/Shell_Upgrades</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet/Tools/file-transfer-techniques</loc>
+    <loc>https://asbawy.com/cheatsheet/Tools/file-transfer-techniques</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet/Tools/MSFvenom</loc>
+    <loc>https://asbawy.com/cheatsheet/Tools/MSFvenom</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/cheatsheet/Tools/NetExec</loc>
+    <loc>https://asbawy.com/cheatsheet/Tools/NetExec</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-active</loc>
+    <loc>https://asbawy.com/writeups/htb-active</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-busqueda</loc>
+    <loc>https://asbawy.com/writeups/htb-busqueda</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-curveware</loc>
+    <loc>https://asbawy.com/writeups/htb-curveware</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-forest</loc>
+    <loc>https://asbawy.com/writeups/htb-forest</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-ghostlink</loc>
+    <loc>https://asbawy.com/writeups/htb-ghostlink</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-headless</loc>
+    <loc>https://asbawy.com/writeups/htb-headless</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-hexecution</loc>
+    <loc>https://asbawy.com/writeups/htb-hexecution</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-jail</loc>
+    <loc>https://asbawy.com/writeups/htb-jail</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-neural-detonator</loc>
+    <loc>https://asbawy.com/writeups/htb-neural-detonator</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-nexus</loc>
+    <loc>https://asbawy.com/writeups/htb-nexus</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-sauna</loc>
+    <loc>https://asbawy.com/writeups/htb-sauna</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-spooky-pass</loc>
+    <loc>https://asbawy.com/writeups/htb-spooky-pass</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/htb-whiterabbit</loc>
+    <loc>https://asbawy.com/writeups/htb-whiterabbit</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-clocky</loc>
+    <loc>https://asbawy.com/writeups/thm-clocky</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-complimentary</loc>
+    <loc>https://asbawy.com/writeups/thm-complimentary</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-contrabando</loc>
+    <loc>https://asbawy.com/writeups/thm-contrabando</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-elbandito</loc>
+    <loc>https://asbawy.com/writeups/thm-elbandito</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-extract</loc>
+    <loc>https://asbawy.com/writeups/thm-extract</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-hammer</loc>
+    <loc>https://asbawy.com/writeups/thm-hammer</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-include</loc>
+    <loc>https://asbawy.com/writeups/thm-include</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-ledger</loc>
+    <loc>https://asbawy.com/writeups/thm-ledger</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-packed-light</loc>
+    <loc>https://asbawy.com/writeups/thm-packed-light</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://asbawy.github.io/writeups/thm-temple</loc>
+    <loc>https://asbawy.com/writeups/thm-temple</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
