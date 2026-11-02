@@ -34,7 +34,7 @@ export function AuthorBio() {
             >
               Asbawy
               <span className="ml-2 text-[10px] text-muted-foreground font-normal">
-                (Mohammed Al-Kasabi)
+                (Mohammed Elkasabi)
               </span>
             </Link>
             <p className="mt-1 font-mono text-[11px] text-foreground">

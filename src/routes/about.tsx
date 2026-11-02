@@ -26,7 +26,7 @@ export const Route = createFileRoute("/about")({
       {
         name: "description",
         content:
-          "Mohammed Al-Kasabi (Asbawy) — Red Team Consultant, Penetration Tester, and Bug Bounty Hunter.",
+          "Mohammed Elkasabi (Asbawy) — Red Team Consultant, Penetration Tester, and Bug Bounty Hunter.",
       },
     ],
   }),
@@ -82,7 +82,7 @@ function SegmentedSkillBar({
 }: {
   label: string;
   level: number;
-  icon: any;
+  icon: typeof Crosshair;
 }) {
   const [activeBlocks, setActiveBlocks] = useState(0);
   const totalBlocks = 20;
@@ -182,7 +182,7 @@ function AboutPage() {
       label: "linkedin.com/in/mhmmdashraf",
       href: "https://linkedin.com/in/mhmmdashraf",
     },
-    { icon: Mail, label: "eng.mhmmd@yahoo.com", href: "mailto:eng.mhmmd@yahoo.com" },
+    { icon: Mail, label: "contact@asbawy.com", href: "mailto:contact@asbawy.com" },
   ];
 
   return (
@@ -203,7 +203,7 @@ function AboutPage() {
               <div className="flex-1 space-y-4 text-center md:text-left">
                 <div className="space-y-1">
                   <h2 className="text-3xl md:text-4xl font-extrabold text-foreground">
-                    Mohammed Al-Kasabi
+                    Mohammed Elkasabi
                   </h2>
                   <p className="text-base font-medium text-emerald-400">Alias: Asbawy · Egypt</p>
                 </div>

@@ -99,7 +99,7 @@ export function CyberTerminal() {
           {
             id: `whoami-${Date.now()}`,
             type: "text",
-            content: `Mohammed Al-Kasabi (Asbawy)
+            content: `Mohammed Elkasabi (Asbawy)
 Role: Red Team Consultant & Offensive Security Researcher
 Focus: Active Directory Exploitation, Reverse Engineering, EDR Evasion, and CTF Pwning.
 GitHub: github.com/Asbawy`,
@@ -240,8 +240,7 @@ T H E   M A T R I X   H A S   Y O U .
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       if (cmdHistory.length > 0) {
-        const nextIdx =
-          historyIndex === -1 ? cmdHistory.length - 1 : Math.max(0, historyIndex - 1);
+        const nextIdx = historyIndex === -1 ? cmdHistory.length - 1 : Math.max(0, historyIndex - 1);
         setHistoryIndex(nextIdx);
         setInput(cmdHistory[nextIdx]);
       }
@@ -319,9 +318,16 @@ T H E   M A T R I X   H A S   Y O U .
         {history.map((line) => {
           if (line.type === "command") {
             return (
-              <div key={line.id} className="flex items-center gap-2 text-emerald-400 light:text-emerald-600 font-semibold">
-                <span className="text-muted-foreground light:text-zinc-500 select-none">visitor@asbawy-ops:~$</span>
-                <span className="text-emerald-300 light:text-emerald-700 font-bold">{line.content}</span>
+              <div
+                key={line.id}
+                className="flex items-center gap-2 text-emerald-400 light:text-emerald-600 font-semibold"
+              >
+                <span className="text-muted-foreground light:text-zinc-500 select-none">
+                  visitor@asbawy-ops:~$
+                </span>
+                <span className="text-emerald-300 light:text-emerald-700 font-bold">
+                  {line.content}
+                </span>
               </div>
             );
           }
