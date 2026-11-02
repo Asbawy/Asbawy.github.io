@@ -179,8 +179,8 @@ function AboutPage() {
     { icon: BookOpen, label: "asbawy.medium.com", href: "https://asbawy.medium.com" },
     {
       icon: Linkedin,
-      label: "linkedin.com/in/mhmmdashraf",
-      href: "https://linkedin.com/in/mhmmdashraf",
+      label: "linkedin.com/in/asbawy",
+      href: "https://www.linkedin.com/in/asbawy/",
     },
     { icon: Mail, label: "contact@asbawy.com", href: "mailto:contact@asbawy.com" },
   ];

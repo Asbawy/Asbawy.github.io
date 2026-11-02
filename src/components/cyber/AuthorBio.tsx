@@ -67,7 +67,7 @@ export function AuthorBio() {
                 medium
               </a>
               <a
-                href="https://linkedin.com/in/mhmmdashraf"
+                href="https://www.linkedin.com/in/asbawy/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors"

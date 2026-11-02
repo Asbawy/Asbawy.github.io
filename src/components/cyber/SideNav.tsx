@@ -118,7 +118,7 @@ export function SideNav() {
               <Github className="w-4 h-4" />
             </a>
             <a
-              href="https://linkedin.com/in/mhmmdashraf"
+              href="https://www.linkedin.com/in/asbawy/"
               target="_blank"
               rel="noreferrer"
               className="p-1.5 rounded-md hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-muted/50 transition-colors"
