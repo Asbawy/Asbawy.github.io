@@ -246,6 +246,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://asbawy.com/writeups/thm-pythonplayground</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://asbawy.com/writeups/thm-temple</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
