@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import tsConfigPaths from "vite-tsconfig-paths";
@@ -11,7 +11,35 @@ import remarkFrontmatter from "remark-frontmatter";
 import remarkMdxFrontmatter from "remark-mdx-frontmatter";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
-import rehypeHighlight from "rehype-highlight";
+import { parse as parseYaml } from "yaml";
+
+/**
+ * Serves `*.mdx?meta` as a lightweight virtual module exporting only the YAML frontmatter,
+ * allowing Rollup to keep full `.mdx` article components in separate code-split chunks.
+ */
+function mdxFrontmatterOnlyPlugin(): Plugin {
+  const prefix = "\0mdx-meta:";
+  const suffix = ".meta.js";
+  return {
+    name: "mdx-frontmatter-only",
+    enforce: "pre",
+    async resolveId(source, importer) {
+      if (!source.endsWith(".mdx?meta")) return null;
+      const cleanSource = source.slice(0, -"?meta".length);
+      const resolved = await this.resolve(cleanSource, importer, { skipSelf: true });
+      if (!resolved) return null;
+      return `${prefix}${resolved.id}${suffix}`;
+    },
+    load(id) {
+      if (!id.startsWith(prefix) || !id.endsWith(suffix)) return null;
+      const filePath = id.slice(prefix.length, -suffix.length);
+      const raw = readFileSync(filePath, "utf-8");
+      const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+      const data = match ? parseYaml(match[1]) : {};
+      return `export const frontmatter = ${JSON.stringify(data || {})};`;
+    },
+  };
+}
 
 function getPrerenderPages() {
   const pages: any[] = [];
@@ -66,6 +94,7 @@ function getPrerenderPages() {
 export default defineConfig({
   base: "/",
   plugins: [
+    mdxFrontmatterOnlyPlugin(),
     tanstackStart({
       prerender: {
         enabled: true,
@@ -80,8 +109,9 @@ export default defineConfig({
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
     react(),
     mdx({
+      exclude: /\?meta$/,
       remarkPlugins: [remarkFrontmatter, remarkMdxFrontmatter, remarkGfm],
-      rehypePlugins: [rehypeSlug, rehypeHighlight],
+      rehypePlugins: [rehypeSlug],
       providerImportSource: "@mdx-js/react",
     }),
   ],

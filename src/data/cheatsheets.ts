@@ -1,4 +1,5 @@
-import type { ComponentType } from "react";
+import { lazy, type ComponentType } from "react";
+
 export type CheatsheetMeta = {
   title?: string;
   excerpt?: string;
@@ -19,19 +20,24 @@ export type FileNode = {
   children?: FileNode[];
 };
 
-// Eager glob to get frontmatter
+// Eager glob to get frontmatter metadata only via ?meta so full MDX stays code-split
 const mdxModules = import.meta.glob<CheatsheetMeta>("./cheatsheets/**/*.mdx", {
   eager: true,
+  query: "?meta",
   import: "frontmatter",
 });
 
-// Eager glob for actual React components to remove loading delay
-const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: CheatsheetMeta }>(
+// Lazy glob for actual React components to code-split each cheatsheet
+const contentLoaders = import.meta.glob<{ default: ComponentType<any>; frontmatter: CheatsheetMeta }>(
   "./cheatsheets/**/*.mdx",
-  { eager: true },
 );
 
-export const cheatsheetFiles = Object.entries(mdxModules).map(([path, mod]) => {
+export type CheatsheetEntry = {
+  path: string;
+  meta: CheatsheetMeta;
+};
+
+export const cheatsheetFiles: CheatsheetEntry[] = Object.entries(mdxModules).map(([path, mod]) => {
   // path is like "./cheatsheets/windows/privesc.mdx"
   const cleanPath = path.replace("./cheatsheets/", "").replace(".mdx", "");
   return {
@@ -74,9 +80,37 @@ export function getCheatsheetTree(): FileNode[] {
   return root;
 }
 
-export const CheatsheetMdxComponents: Record<string, ComponentType<any>> = Object.fromEntries(
-  Object.entries(contentModules).map(([path, mod]) => {
-    const cleanPath = path.replace("./cheatsheets/", "").replace(".mdx", "");
-    return [cleanPath, mod.default];
-  }),
-);
+const loadedCheatsheetComponents: Record<string, ComponentType<any>> = {};
+const lazyCheatsheetComponents: Record<string, ComponentType<any>> = {};
+
+function findCheatsheetKey(cleanPath: string): string | undefined {
+  return Object.keys(contentLoaders).find(
+    (k) => k.replace("./cheatsheets/", "").replace(".mdx", "") === cleanPath,
+  );
+}
+
+export async function preloadCheatsheetContent(cleanPath: string): Promise<CheatsheetMeta | undefined> {
+  const key = findCheatsheetKey(cleanPath);
+  if (!key) return undefined;
+
+  const mod = await contentLoaders[key]();
+  loadedCheatsheetComponents[cleanPath] = mod.default;
+  return mod.frontmatter;
+}
+
+export function getCheatsheetComponent(cleanPath: string): ComponentType<any> {
+  if (loadedCheatsheetComponents[cleanPath]) {
+    return loadedCheatsheetComponents[cleanPath];
+  }
+  if (!lazyCheatsheetComponents[cleanPath]) {
+    const key = findCheatsheetKey(cleanPath);
+    if (key) {
+      lazyCheatsheetComponents[cleanPath] = lazy(async () => {
+        const mod = await contentLoaders[key]();
+        loadedCheatsheetComponents[cleanPath] = mod.default;
+        return { default: mod.default };
+      });
+    }
+  }
+  return lazyCheatsheetComponents[cleanPath] || (() => null);
+}

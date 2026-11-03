@@ -1,22 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { memo, Suspense, useMemo, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
-import { TerminalCode } from "@/components/cyber/TerminalCode";
-import { Mermaid } from "@/components/cyber/Mermaid";
 import {
   getWriteupMeta,
   getWriteupContent,
   writeupsMeta,
-  WriteupMdxComponents,
+  getWriteupComponent,
 } from "@/data/writeups";
-import { Suspense } from "react";
 import { ArrowLeft, Swords, Flag, Server, Globe, Terminal, Cpu, Shield } from "lucide-react";
 import {
   PlatformIcon,
-  SpoilerFlag,
-  KillChain,
-  SkillMatrix,
   CategoryIcon,
   AutoScriptBadge,
 } from "@/components/cyber/WriteupComponents";
@@ -30,6 +24,9 @@ import { ReadingProgress } from "@/components/cyber/ReadingProgress";
 import { Breadcrumbs } from "@/components/cyber/Breadcrumbs";
 
 export const Route = createFileRoute("/writeups/$slug")({
+  beforeLoad: async ({ params }) => {
+    await getWriteupContent(params.slug);
+  },
   loader: async ({ params }) => {
     const meta = getWriteupMeta(params.slug);
     if (!meta) throw notFound();
@@ -88,7 +85,7 @@ export const Route = createFileRoute("/writeups/$slug")({
   notFoundComponent: () => (
     <CyberLayout>
       <div className="p-10 font-sans text-sm text-muted-foreground">
-        // writeup not found - {" "}
+        // writeup not found -{" "}
         <Link to="/writeups" className="text-foreground hover:text-foreground/80 transition-colors">
           return to feed
         </Link>
@@ -163,6 +160,30 @@ function osIcon(os?: string) {
 
 /* ── Main Component ──────────────────────────────────── */
 
+const MemoizedWriteupMdx = memo(function MemoizedWriteupMdx({
+  slug,
+  components,
+}: {
+  slug: string;
+  components: Record<string, any>;
+}) {
+  const MDXContent = getWriteupComponent(slug) || (() => <div>Component not found</div>);
+  return (
+    <Suspense
+      fallback={
+        <div className="animate-pulse text-foreground/60 font-sans flex flex-col gap-4">
+          <div className="h-4 bg-white/10 rounded w-3/4"></div>
+          <div className="h-4 bg-white/10 rounded w-full"></div>
+          <div className="h-4 bg-white/10 rounded w-5/6"></div>
+          <div className="mt-8 text-sm">[ LOADING EXPLOIT CHAIN... ]</div>
+        </div>
+      }
+    >
+      <MDXContent components={components} />
+    </Suspense>
+  );
+});
+
 function WriteupPage() {
   const navigate = useNavigate();
   const { writeup } = Route.useLoaderData();
@@ -176,8 +197,6 @@ function WriteupPage() {
   const config = platformConfig[writeup.platform] || platformConfig.Other;
 
   const components = useSharedMdxComponents(setLightboxSrc);
-
-  const MDXContent = WriteupMdxComponents[writeup.slug] || (() => <div>Component not found</div>);
 
   // Related writeups (same platform or overlapping tags)
   const relatedWriteups = useMemo(() => {
@@ -194,7 +213,7 @@ function WriteupPage() {
     <CyberLayout>
       <ReadingProgress progress={progress} />
 
-      <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative">
         <Breadcrumbs
           items={[
             { label: "Writeups", href: "/writeups" },
@@ -292,18 +311,7 @@ function WriteupPage() {
 
             {/* MDX Content */}
             <div className="w-full text-[16px]">
-              <Suspense
-                fallback={
-                  <div className="animate-pulse text-foreground/60 font-sans flex flex-col gap-4">
-                    <div className="h-4 bg-white/10 rounded w-3/4"></div>
-                    <div className="h-4 bg-white/10 rounded w-full"></div>
-                    <div className="h-4 bg-white/10 rounded w-5/6"></div>
-                    <div className="mt-8 text-sm">[ LOADING EXPLOIT CHAIN... ]</div>
-                  </div>
-                }
-              >
-                <MDXContent components={components} />
-              </Suspense>
+              <MemoizedWriteupMdx slug={writeup.slug} components={components} />
             </div>
 
             {/* Share bottom */}
@@ -314,7 +322,7 @@ function WriteupPage() {
             <AuthorBio />
 
             <div className="mt-10 border-t border-panel-border pt-6 font-sans text-[11px] text-muted-foreground">
-              // end of writeup - {" "}
+              // end of writeup -{" "}
               <Link
                 to="/writeups"
                 className="text-foreground hover:text-foreground/80 transition-colors"

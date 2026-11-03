@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { lazy, useMemo, useState } from "react";
 import { TerminalCode } from "@/components/cyber/TerminalCode";
 import { Mermaid } from "@/components/cyber/Mermaid";
 import {
@@ -6,16 +6,35 @@ import {
   KillChain,
   SkillMatrix,
   CategoryIcon,
+} from "@/components/cyber/WriteupComponents";
+import {
   ScriptVault,
   FileAttachment,
   FileButton,
   CodeExplorerModal,
-  BufferOverflowVisualizer,
-  SstiDecisionTree,
-} from "@/components/cyber/WriteupComponents";
+} from "@/components/cyber/CodeExplorer";
 import { TerminalReplay } from "@/components/cyber/TerminalReplay";
-import { NetExecArchitecture } from "@/components/cyber/NetExecArchitecture";
-import { NetExecCommandAnatomy } from "@/components/cyber/NetExecCommandAnatomy";
+
+const BufferOverflowVisualizer = lazy(() =>
+  import("@/components/cyber/BufferOverflowVisualizer").then((m) => ({
+    default: m.BufferOverflowVisualizer,
+  })),
+);
+const SstiDecisionTree = lazy(() =>
+  import("@/components/cyber/SstiDecisionTree").then((m) => ({
+    default: m.SstiDecisionTree,
+  })),
+);
+const NetExecArchitecture = lazy(() =>
+  import("@/components/cyber/NetExecArchitecture").then((m) => ({
+    default: m.NetExecArchitecture,
+  })),
+);
+const NetExecCommandAnatomy = lazy(() =>
+  import("@/components/cyber/NetExecCommandAnatomy").then((m) => ({
+    default: m.NetExecCommandAnatomy,
+  })),
+);
 
 /**
  * Recursively extracts plain text from React nodes/children.

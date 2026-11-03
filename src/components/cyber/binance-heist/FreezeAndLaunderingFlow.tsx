@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { memo, startTransition, useState } from "react";
 import { Lock, Unlock, ArrowRight, ShieldAlert } from "lucide-react";
 import { LAUNDERING_STAGES } from "./data";
 
@@ -21,7 +21,7 @@ const FREEZE_BUCKETS = [
   },
 ];
 
-export function FreezeAndLaunderingFlow() {
+export const FreezeAndLaunderingFlow = memo(function FreezeAndLaunderingFlow() {
   const [activeStage, setActiveStage] = useState<number>(0);
   const stage = LAUNDERING_STAGES[activeStage];
 
@@ -75,8 +75,12 @@ export function FreezeAndLaunderingFlow() {
                 key={s.step}
                 type="button"
                 aria-pressed={isCurrent}
-                onClick={() => setActiveStage(idx)}
-                className={`text-left p-2.5 rounded-lg border transition-all cursor-pointer ${
+                onClick={() => {
+                  startTransition(() => {
+                    setActiveStage(idx);
+                  });
+                }}
+                className={`text-left p-2.5 rounded-lg border transition-colors cursor-pointer ${
                   isCurrent
                     ? "border-amber-400/60 bg-amber-500/12 text-amber-700 dark:text-amber-300"
                     : "border-border/60 bg-background/40 text-muted-foreground hover:text-foreground"
@@ -92,9 +96,8 @@ export function FreezeAndLaunderingFlow() {
         </div>
 
         <div
-          key={stage.step}
           aria-live="polite"
-          className="rounded-lg border border-border bg-background/50 p-4 space-y-3 animate-in fade-in duration-200"
+          className="rounded-lg border border-border bg-background/50 p-4 space-y-3"
         >
           <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
             <span className="font-bold text-amber-700 dark:text-amber-300">
@@ -126,4 +129,4 @@ export function FreezeAndLaunderingFlow() {
       </div>
     </section>
   );
-}
+});

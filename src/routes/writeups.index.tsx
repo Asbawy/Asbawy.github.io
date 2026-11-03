@@ -1,13 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { memo, startTransition, useMemo, useState } from "react";
 import {
   Swords,
-  Shield,
   Flag,
-  Terminal,
   Server,
   Globe,
-  Sparkles,
   Cpu,
   Clock,
   Search,
@@ -16,8 +13,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { CyberLayout } from "@/components/cyber/Layout";
-import { writeupsMeta, getPlatformStats } from "@/data/writeups";
-import { CategoryIcon, AutoScriptBadge } from "@/components/cyber/WriteupComponents";
+import { writeupsMeta, getPlatformStats, type WriteupMeta } from "@/data/writeups";
+import { AutoScriptBadge } from "@/components/cyber/WriteupComponents";
 
 export const Route = createFileRoute("/writeups/")({
   head: () => ({
@@ -113,6 +110,90 @@ function difficultyAccent(d: string) {
   }
 }
 
+const WriteupCard = memo(function WriteupCard({ w }: { w: WriteupMeta }) {
+  const cfg = platformConfig[w.platform] || platformConfig.Other;
+  return (
+    <Link
+      to="/writeups/$slug"
+      params={{ slug: w.slug }}
+      className="group relative flex flex-col justify-between rounded-xl bg-card border border-border overflow-hidden hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all duration-300"
+    >
+      {/* Left difficulty accent bar */}
+      <div
+        className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${difficultyAccent(w.difficulty)} group-hover:w-[4px] transition-all duration-300`}
+      />
+
+      {/* Hover glow overlay */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-cyan-500/[0.03] transition-opacity duration-500 pointer-events-none" />
+
+      <div className="relative z-10 p-6 space-y-4">
+        {/* Top Row: Badges */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${cfg.bg} ${cfg.color} ${cfg.border} border`}
+            >
+              <cfg.icon className="w-3 h-3" />
+              {w.platform}
+            </span>
+
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] ${difficultyBg(w.difficulty)}`}
+            >
+              {w.difficulty}
+            </span>
+          </div>
+
+          {w.hasAutoScript && <AutoScriptBadge size="sm" />}
+        </div>
+
+        {/* Title */}
+        <h2 className="text-lg font-bold text-foreground group-hover:text-emerald-400 transition-colors duration-300 leading-snug line-clamp-2">
+          {w.title}
+        </h2>
+
+        {/* Excerpt */}
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{w.excerpt}</p>
+
+        {/* Metadata */}
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {w.date && (
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3 h-3 opacity-60" />
+              {w.date}
+            </span>
+          )}
+          {w.os && (
+            <span className="flex items-center gap-1.5">
+              <Cpu className="w-3 h-3 opacity-60" />
+              {w.os}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Tags Row */}
+      <div className="relative z-10 mx-6 py-4 border-t border-border/60 flex items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5">
+          {w.tags.slice(0, 3).map((t) => (
+            <span
+              key={t}
+              className="text-[10px] text-muted-foreground bg-muted/60 border border-border/60 px-2 py-0.5 rounded-md font-medium"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0">
+          <span>Read</span>
+          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" />
+        </div>
+      </div>
+    </Link>
+  );
+});
+
 function WriteupsIndex() {
   const stats = getPlatformStats();
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
@@ -120,6 +201,7 @@ function WriteupsIndex() {
   const [platformFilter, setPlatformFilter] = useState<string | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deferredQuery, setDeferredQuery] = useState("");
 
   const machineCount = useMemo(() => writeupsMeta.filter((w) => w.type === "Machine").length, []);
   const challengeCount = useMemo(
@@ -147,8 +229,8 @@ function WriteupsIndex() {
       );
     if (platformFilter) result = result.filter((w) => w.platform === platformFilter);
     if (difficultyFilter) result = result.filter((w) => w.difficulty === difficultyFilter);
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (deferredQuery.trim()) {
+      const q = deferredQuery.toLowerCase();
       result = result.filter(
         (w) =>
           w.title.toLowerCase().includes(q) ||
@@ -158,7 +240,7 @@ function WriteupsIndex() {
       );
     }
     return result;
-  }, [typeFilter, categoryFilter, platformFilter, difficultyFilter, searchQuery]);
+  }, [typeFilter, categoryFilter, platformFilter, difficultyFilter, deferredQuery]);
 
   const hasActiveFilter =
     Boolean(typeFilter) ||
@@ -168,11 +250,14 @@ function WriteupsIndex() {
     Boolean(searchQuery.trim());
 
   const clearFilters = () => {
-    setTypeFilter(null);
-    setCategoryFilter(null);
-    setPlatformFilter(null);
-    setDifficultyFilter(null);
     setSearchQuery("");
+    startTransition(() => {
+      setTypeFilter(null);
+      setCategoryFilter(null);
+      setPlatformFilter(null);
+      setDifficultyFilter(null);
+      setDeferredQuery("");
+    });
   };
 
   return (
@@ -197,7 +282,11 @@ function WriteupsIndex() {
           {/* Platform Stat Cards */}
           <div className="grid grid-cols-3 gap-3">
             <button
-              onClick={() => setPlatformFilter(null)}
+              onClick={() => {
+                startTransition(() => {
+                  setPlatformFilter(null);
+                });
+              }}
               className={`group/stat relative flex items-center justify-between p-5 rounded-xl border text-left transition-all duration-300 cursor-pointer overflow-hidden ${
                 !platformFilter
                   ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/40 shadow-[0_0_20px_rgba(52,211,153,0.12)]"
@@ -221,7 +310,11 @@ function WriteupsIndex() {
               return (
                 <button
                   key={platform}
-                  onClick={() => setPlatformFilter(isActive ? null : platform)}
+                  onClick={() => {
+                    startTransition(() => {
+                      setPlatformFilter(isActive ? null : platform);
+                    });
+                  }}
                   className={`group/stat relative flex items-center justify-between p-5 rounded-xl border text-left transition-all duration-300 cursor-pointer overflow-hidden ${
                     isActive
                       ? `${cfg.bg} ${cfg.border} ${cfg.color} ${cfg.glow}`
@@ -229,19 +322,26 @@ function WriteupsIndex() {
                   }`}
                 >
                   {/* Top color accent strip */}
-                  <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${
-                    platform === "HackTheBox" ? "from-[#9FEF00]/80 to-[#9FEF00]/20"
-                    : platform === "TryHackMe" ? "from-[#FF3E3E]/80 to-[#FF3E3E]/20"
-                    : platform === "VulnHub" ? "from-[#4FC3F7]/80 to-[#4FC3F7]/20"
-                    : "from-[#C792EA]/80 to-[#C792EA]/20"
-                  }`} />
+                  <div
+                    className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${
+                      platform === "HackTheBox"
+                        ? "from-[#9FEF00]/80 to-[#9FEF00]/20"
+                        : platform === "TryHackMe"
+                          ? "from-[#FF3E3E]/80 to-[#FF3E3E]/20"
+                          : platform === "VulnHub"
+                            ? "from-[#4FC3F7]/80 to-[#4FC3F7]/20"
+                            : "from-[#C792EA]/80 to-[#C792EA]/20"
+                    }`}
+                  />
                   <div className="relative z-10">
                     <div className="text-3xl font-extrabold tabular-nums">{count}</div>
                     <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mt-1">
                       {platform}
                     </div>
                   </div>
-                  <cfg.icon className={`w-6 h-6 ${cfg.color} opacity-40 group-hover/stat:opacity-100 group-hover/stat:scale-110 transition-all duration-300`} />
+                  <cfg.icon
+                    className={`w-6 h-6 ${cfg.color} opacity-40 group-hover/stat:opacity-100 group-hover/stat:scale-110 transition-all duration-300`}
+                  />
                 </button>
               );
             })}
@@ -254,7 +354,11 @@ function WriteupsIndex() {
               {/* Type Pill Tabs */}
               <div className="flex items-center gap-1 bg-muted/40 rounded-full p-1 border border-border/60">
                 <button
-                  onClick={() => setTypeFilter(null)}
+                  onClick={() => {
+                    startTransition(() => {
+                      setTypeFilter(null);
+                    });
+                  }}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
                     !typeFilter
                       ? "bg-emerald-500/15 text-emerald-400 font-semibold shadow-[0_0_10px_rgba(52,211,153,0.15)]"
@@ -264,7 +368,11 @@ function WriteupsIndex() {
                   All ({writeupsMeta.length})
                 </button>
                 <button
-                  onClick={() => setTypeFilter(typeFilter === "Machine" ? null : "Machine")}
+                  onClick={() => {
+                    startTransition(() => {
+                      setTypeFilter(typeFilter === "Machine" ? null : "Machine");
+                    });
+                  }}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
                     typeFilter === "Machine"
                       ? "bg-emerald-500/15 text-emerald-400 font-semibold shadow-[0_0_10px_rgba(52,211,153,0.15)]"
@@ -274,7 +382,11 @@ function WriteupsIndex() {
                   Machines ({machineCount})
                 </button>
                 <button
-                  onClick={() => setTypeFilter(typeFilter === "Challenge" ? null : "Challenge")}
+                  onClick={() => {
+                    startTransition(() => {
+                      setTypeFilter(typeFilter === "Challenge" ? null : "Challenge");
+                    });
+                  }}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
                     typeFilter === "Challenge"
                       ? "bg-emerald-500/15 text-emerald-400 font-semibold shadow-[0_0_10px_rgba(52,211,153,0.15)]"
@@ -292,13 +404,24 @@ function WriteupsIndex() {
                   <input
                     type="text"
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSearchQuery(val);
+                      startTransition(() => {
+                        setDeferredQuery(val);
+                      });
+                    }}
                     placeholder="Search writeups..."
                     className="w-full bg-muted/60 border border-border/60 text-foreground placeholder:text-muted-foreground rounded-full pl-10 pr-9 py-1.5 text-sm focus:outline-none focus:border-emerald-400 focus:shadow-[0_0_12px_rgba(52,211,153,0.15)] transition-all"
                   />
                   {searchQuery && (
                     <button
-                      onClick={() => setSearchQuery("")}
+                      onClick={() => {
+                        setSearchQuery("");
+                        startTransition(() => {
+                          setDeferredQuery("");
+                        });
+                      }}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                     >
                       <X className="h-3.5 w-3.5" />
@@ -320,13 +443,19 @@ function WriteupsIndex() {
 
             {/* Bottom Row: Difficulty Pills */}
             <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
-              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mr-1">Difficulty</span>
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-widest mr-1">
+                Difficulty
+              </span>
               {["Very Easy", "Easy", "Medium", "Hard", "Insane"].map((d) => {
                 const isActive = difficultyFilter === d;
                 return (
                   <button
                     key={d}
-                    onClick={() => setDifficultyFilter(isActive ? null : d)}
+                    onClick={() => {
+                      startTransition(() => {
+                        setDifficultyFilter(isActive ? null : d);
+                      });
+                    }}
                     className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                       isActive
                         ? difficultyBg(d)
@@ -350,7 +479,11 @@ function WriteupsIndex() {
                   return (
                     <button
                       key={c}
-                      onClick={() => setCategoryFilter(isActive ? null : c)}
+                      onClick={() => {
+                        startTransition(() => {
+                          setCategoryFilter(isActive ? null : c);
+                        });
+                      }}
                       className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
                         isActive
                           ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40 font-semibold shadow-[0_0_10px_rgba(6,182,212,0.2)]"
@@ -368,90 +501,9 @@ function WriteupsIndex() {
           {/* Cards Grid */}
           {filteredWriteups.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredWriteups.map((w) => {
-                const cfg = platformConfig[w.platform] || platformConfig.Other;
-                return (
-                  <Link
-                    key={w.slug}
-                    to="/writeups/$slug"
-                    params={{ slug: w.slug }}
-                    className="group relative flex flex-col justify-between rounded-xl bg-card border border-border overflow-hidden hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all duration-300"
-                  >
-                    {/* Left difficulty accent bar */}
-                    <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${difficultyAccent(w.difficulty)} group-hover:w-[4px] transition-all duration-300`} />
-
-                    {/* Hover glow overlay */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-gradient-to-br from-emerald-500/[0.03] via-transparent to-cyan-500/[0.03] transition-opacity duration-500 pointer-events-none" />
-
-                    <div className="relative z-10 p-6 space-y-4">
-                      {/* Top Row: Badges */}
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${cfg.bg} ${cfg.color} ${cfg.border} border`}
-                          >
-                            <cfg.icon className="w-3 h-3" />
-                            {w.platform}
-                          </span>
-
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] ${difficultyBg(w.difficulty)}`}
-                          >
-                            {w.difficulty}
-                          </span>
-                        </div>
-
-                        {w.hasAutoScript && <AutoScriptBadge size="sm" />}
-                      </div>
-
-                      {/* Title */}
-                      <h2 className="text-lg font-bold text-foreground group-hover:text-emerald-400 transition-colors duration-300 leading-snug line-clamp-2">
-                        {w.title}
-                      </h2>
-
-                      {/* Excerpt */}
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-                        {w.excerpt}
-                      </p>
-
-                      {/* Metadata */}
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        {w.date && (
-                          <span className="flex items-center gap-1.5">
-                            <Clock className="w-3 h-3 opacity-60" />
-                            {w.date}
-                          </span>
-                        )}
-                        {w.os && (
-                          <span className="flex items-center gap-1.5">
-                            <Cpu className="w-3 h-3 opacity-60" />
-                            {w.os}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Bottom Tags Row */}
-                    <div className="relative z-10 mx-6 py-4 border-t border-border/60 flex items-center justify-between gap-2">
-                      <div className="flex flex-wrap gap-1.5">
-                        {w.tags.slice(0, 3).map((t) => (
-                          <span
-                            key={t}
-                            className="text-[10px] text-muted-foreground bg-muted/60 border border-border/60 px-2 py-0.5 rounded-md font-medium"
-                          >
-                            #{t}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0">
-                        <span>Read</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" />
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+              {filteredWriteups.map((w) => (
+                <WriteupCard key={w.slug} w={w} />
+              ))}
             </div>
           ) : (
             <div className="py-20 text-center rounded-2xl border border-dashed border-border bg-card space-y-3">

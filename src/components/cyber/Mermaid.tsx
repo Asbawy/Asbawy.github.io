@@ -1,65 +1,69 @@
-import { useEffect, useRef, useState } from "react";
-import mermaid from "mermaid";
+import React, { useEffect, useRef, useState } from "react";
 import { Panel } from "./Layout";
 import { Copy, Check, Maximize, Minimize } from "lucide-react";
 
-let mermaidInitialized = false;
+let mermaidPromise: Promise<typeof import("mermaid").default> | null = null;
 
-function initMermaid() {
-  if (mermaidInitialized) return;
-  mermaidInitialized = true;
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: "base",
-    themeVariables: {
-      darkMode: true,
-      background: "transparent",
-      primaryColor: "rgba(0, 255, 136, 0.08)",
-      primaryTextColor: "#00ff88",
-      primaryBorderColor: "#00ff88",
-      lineColor: "#00ff88",
-      secondaryColor: "rgba(0, 255, 136, 0.04)",
-      tertiaryColor: "rgba(0, 255, 136, 0.02)",
-      fontFamily: "JetBrains Mono, monospace",
-      fontSize: "13px",
-      // Sequence diagram
-      actorTextColor: "#00ff88",
-      actorBorder: "#00ff88",
-      actorBkg: "rgba(0, 255, 136, 0.06)",
-      actorLineColor: "#00ff8866",
-      signalColor: "#00ff88",
-      signalTextColor: "#e0e0e0",
-      noteBkgColor: "rgba(0, 255, 136, 0.08)",
-      noteTextColor: "#e0e0e0",
-      noteBorderColor: "#00ff8844",
-      activationBorderColor: "#00ff88",
-      activationBkgColor: "rgba(0, 255, 136, 0.1)",
-      sequenceNumberColor: "#000",
-      // Flowchart
-      nodeBorder: "#00ff88",
-      clusterBkg: "rgba(0, 255, 136, 0.04)",
-      clusterBorder: "#00ff8844",
-      titleColor: "#00ff88",
-      edgeLabelBackground: "transparent",
-    },
-    flowchart: {
-      padding: 16,
-      htmlLabels: true,
-      curve: "basis",
-    },
-    sequence: {
-      mirrorActors: false,
-      actorMargin: 80,
-      messageMargin: 40,
-      boxMargin: 8,
-      useMaxWidth: false,
-    },
-  });
+function getMermaid() {
+  if (!mermaidPromise) {
+    mermaidPromise = import("mermaid").then((mod) => {
+      const m = mod.default;
+      m.initialize({
+        startOnLoad: false,
+        theme: "base",
+        themeVariables: {
+          darkMode: true,
+          background: "transparent",
+          primaryColor: "rgba(0, 255, 136, 0.08)",
+          primaryTextColor: "#00ff88",
+          primaryBorderColor: "#00ff88",
+          lineColor: "#00ff88",
+          secondaryColor: "rgba(0, 255, 136, 0.04)",
+          tertiaryColor: "rgba(0, 255, 136, 0.02)",
+          fontFamily: "JetBrains Mono, monospace",
+          fontSize: "13px",
+          // Sequence diagram
+          actorTextColor: "#00ff88",
+          actorBorder: "#00ff88",
+          actorBkg: "rgba(0, 255, 136, 0.06)",
+          actorLineColor: "#00ff8866",
+          signalColor: "#00ff88",
+          signalTextColor: "#e0e0e0",
+          noteBkgColor: "rgba(0, 255, 136, 0.08)",
+          noteTextColor: "#e0e0e0",
+          noteBorderColor: "#00ff8844",
+          activationBorderColor: "#00ff88",
+          activationBkgColor: "rgba(0, 255, 136, 0.1)",
+          sequenceNumberColor: "#000",
+          // Flowchart
+          nodeBorder: "#00ff88",
+          clusterBkg: "rgba(0, 255, 136, 0.04)",
+          clusterBorder: "#00ff8844",
+          titleColor: "#00ff88",
+          edgeLabelBackground: "transparent",
+        },
+        flowchart: {
+          padding: 16,
+          htmlLabels: true,
+          curve: "basis",
+        },
+        sequence: {
+          mirrorActors: false,
+          actorMargin: 80,
+          messageMargin: 40,
+          boxMargin: 8,
+          useMaxWidth: false,
+        },
+      });
+      return m;
+    });
+  }
+  return mermaidPromise;
 }
 
 let renderCounter = 0;
 
-export function Mermaid({ chart }: { chart: string }) {
+export const Mermaid = React.memo(function Mermaid({ chart }: { chart: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -67,17 +71,14 @@ export function Mermaid({ chart }: { chart: string }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    initMermaid();
-
+    let cancelled = false;
     const id = `mermaid-render-${++renderCounter}`;
     const trimmed = chart.trim();
 
-    mermaid
-      .render(id, trimmed)
+    getMermaid()
+      .then((mermaid) => mermaid.render(id, trimmed))
       .then((result) => {
-        // Post-process the SVG to fix layout issues:
-        // 1. Remove hardcoded width/height to make it responsive
-        // 2. Ensure proper viewBox for tight fit
+        if (cancelled) return;
         let processedSvg = result.svg;
 
         // Remove fixed width/height attributes and let viewBox control sizing
@@ -96,9 +97,14 @@ export function Mermaid({ chart }: { chart: string }) {
         setError("");
       })
       .catch((e) => {
+        if (cancelled) return;
         console.error("Mermaid render error:", e);
         setError(e?.message || "Failed to render diagram");
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [chart]);
 
   const handleCopy = () => {
@@ -160,4 +166,4 @@ export function Mermaid({ chart }: { chart: string }) {
       )}
     </Panel>
   );
-}
+});

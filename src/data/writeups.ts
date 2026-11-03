@@ -1,4 +1,5 @@
-import type { ComponentType } from "react";
+import { lazy, type ComponentType } from "react";
+
 export type WriteupMeta = {
   slug: string;
   title: string;
@@ -29,15 +30,16 @@ export type WriteupMeta = {
 
 export type Writeup = WriteupMeta;
 
-// Eager: load the modules to get their frontmatter export.
+// Eager: load only frontmatter metadata export via ?meta so full MDX stays code-split.
 const mdxModules = import.meta.glob<WriteupMeta>("./writeups/*.mdx", {
   eager: true,
+  query: "?meta",
   import: "frontmatter",
 });
 
-const contentModules = import.meta.glob<{ default: ComponentType; frontmatter: WriteupMeta }>(
+// Lazy: code-split each writeup MDX into its own on-demand chunk.
+const contentLoaders = import.meta.glob<{ default: ComponentType<any>; frontmatter: WriteupMeta }>(
   "./writeups/*.mdx",
-  { eager: true },
 );
 
 export const writeupsMeta: WriteupMeta[] = Object.values(mdxModules)
@@ -49,19 +51,37 @@ export function getWriteupMeta(slug: string): WriteupMeta | undefined {
   return writeupsMeta.find((p) => p.slug === slug);
 }
 
-export const WriteupMdxComponents: Record<string, ComponentType<any>> = Object.fromEntries(
-  Object.entries(contentModules).map(([path, mod]) => {
-    const slug = path.replace("./writeups/", "").replace(".mdx", "");
-    return [slug, mod.default];
-  }),
-);
+const loadedWriteupComponents: Record<string, ComponentType<any>> = {};
+const lazyWriteupComponents: Record<string, ComponentType<any>> = {};
+
+function findWriteupKey(slug: string): string | undefined {
+  return Object.keys(contentLoaders).find((k) => k.endsWith(`/${slug}.mdx`));
+}
 
 export async function getWriteupContent(slug: string): Promise<Writeup | undefined> {
-  const key = Object.keys(contentModules).find((k) => k.includes(`/${slug}.mdx`));
+  const key = findWriteupKey(slug);
   if (!key) return undefined;
 
-  const mod = contentModules[key];
-  return mod.frontmatter as Writeup;
+  const mod = await contentLoaders[key]();
+  loadedWriteupComponents[slug] = mod.default;
+  return (mod.frontmatter || getWriteupMeta(slug)) as Writeup;
+}
+
+export function getWriteupComponent(slug: string): ComponentType<any> {
+  if (loadedWriteupComponents[slug]) {
+    return loadedWriteupComponents[slug];
+  }
+  if (!lazyWriteupComponents[slug]) {
+    const key = findWriteupKey(slug);
+    if (key) {
+      lazyWriteupComponents[slug] = lazy(async () => {
+        const mod = await contentLoaders[key]();
+        loadedWriteupComponents[slug] = mod.default;
+        return { default: mod.default };
+      });
+    }
+  }
+  return lazyWriteupComponents[slug] || (() => null);
 }
 
 // Helper: group writeups by platform

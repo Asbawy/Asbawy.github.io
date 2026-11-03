@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { memo, useMemo } from "react";
 import {
   Swords,
   BookOpen,
@@ -11,12 +12,12 @@ import {
   Flame,
 } from "lucide-react";
 import { CyberLayout } from "@/components/cyber/Layout";
-import { postsMeta } from "@/data/posts";
-import { cheatsheetFiles } from "@/data/cheatsheets";
-import { writeupsMeta } from "@/data/writeups";
+import { postsMeta, type PostMeta } from "@/data/posts";
+import { cheatsheetFiles, type CheatsheetEntry } from "@/data/cheatsheets";
+import { writeupsMeta, type WriteupMeta } from "@/data/writeups";
 import { AutoScriptBadge } from "@/components/cyber/WriteupComponents";
 import { CyberTerminal } from "@/components/cyber/CyberTerminal";
-import { HeistCardPreview } from "@/components/cyber/BinanceHeistVisuals";
+import { HeistCardPreview } from "@/components/cyber/binance-heist/HeistCardPreview";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,6 +38,263 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+const HomePostCard = memo(function HomePostCard({ p }: { p: PostMeta }) {
+  const isBinanceHeist = p.slug === "october-2026-binance-heist";
+  const sevStyle = (() => {
+    switch (p.severity?.toLowerCase()) {
+      case "critical":
+        return "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 dark:border-rose-500/35";
+      case "high":
+        return "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 dark:border-amber-500/35";
+      case "medium":
+        return "bg-yellow-500/15 text-yellow-800 dark:text-yellow-300 border-yellow-500/40 dark:border-yellow-500/35";
+      default:
+        return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40 dark:border-emerald-500/35";
+    }
+  })();
+
+  return (
+    <Link
+      to="/logs/$slug"
+      params={{ slug: p.slug }}
+      className={`group relative overflow-hidden flex flex-col justify-between rounded-xl border bg-card p-5 hover:-translate-y-1 transition-all duration-200 ${
+        isBinanceHeist
+          ? "md:col-span-2 border-amber-500/45 dark:border-amber-500/35 hover:border-amber-500/80 dark:hover:border-amber-400/60 shadow-[0_8px_30px_rgba(245,158,11,0.10)] dark:shadow-[0_10px_35px_rgba(244,63,94,0.12)]"
+          : "border-border hover:border-cyan-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
+      }`}
+    >
+      {isBinanceHeist && (
+        <>
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-rose-500 via-amber-400 to-cyan-400" />
+          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-rose-500/[0.06] blur-3xl pointer-events-none" />
+        </>
+      )}
+
+      <div className="relative z-10 space-y-2.5">
+        <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-800 dark:text-cyan-400 border border-cyan-500/35 dark:border-cyan-500/30 text-[11px] font-semibold">
+              {p.category}
+            </span>
+            {p.severity && (
+              <span
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${sevStyle}`}
+              >
+                {p.severity.toLowerCase() === "critical" && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400 animate-pulse" />
+                )}
+                {p.severity}
+              </span>
+            )}
+            {isBinanceHeist && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40 dark:border-amber-500/35 text-[10px] font-mono font-bold uppercase tracking-wider">
+                <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                Featured Threat Intel
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5 text-muted-foreground font-mono text-[11px]">
+            {p.readTime && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3 opacity-60" />
+                {p.readTime}
+              </span>
+            )}
+            <span>{p.date}</span>
+          </div>
+        </div>
+
+        <h3
+          className={`font-bold text-foreground transition-colors leading-snug ${
+            isBinanceHeist
+              ? "text-xl md:text-2xl group-hover:text-amber-700 dark:group-hover:text-amber-300"
+              : "text-lg group-hover:text-cyan-700 dark:group-hover:text-cyan-400"
+          }`}
+        >
+          {p.title}
+        </h3>
+
+        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{p.excerpt}</p>
+
+        {isBinanceHeist && <HeistCardPreview variant="compact" />}
+      </div>
+
+      <div className="relative z-10 mt-4 pt-3 border-t border-border flex items-center justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {p.tags.slice(0, isBinanceHeist ? 6 : 3).map((t) => (
+            <span
+              key={t}
+              className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+        <span
+          className={`text-xs font-semibold flex items-center gap-1 transition-all ${
+            isBinanceHeist
+              ? "text-amber-700 dark:text-amber-300 opacity-100"
+              : "text-cyan-700 dark:text-cyan-400 opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          {isBinanceHeist && <Flame className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />}
+          <span>{isBinanceHeist ? "Explore Interactive Report" : "Read"}</span>
+          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+        </span>
+      </div>
+    </Link>
+  );
+});
+
+const HomeWriteupCard = memo(function HomeWriteupCard({ w }: { w: WriteupMeta }) {
+  const diffColor = (() => {
+    switch (w.difficulty.toLowerCase()) {
+      case "very easy":
+        return "bg-cyan-500/15 text-cyan-300 border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.2)] font-semibold";
+      case "easy":
+        return "bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-semibold";
+      case "medium":
+        return "bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] font-semibold";
+      case "hard":
+        return "bg-rose-500/15 text-rose-300 border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)] font-semibold";
+      case "insane":
+        return "bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.35)] font-semibold";
+      default:
+        return "bg-muted text-muted-foreground border-border";
+    }
+  })();
+
+  const platformStyle = (() => {
+    switch (w.platform) {
+      case "HackTheBox":
+        return "bg-[#9FEF00]/10 text-[#9FEF00] border-[#9FEF00]/30";
+      case "TryHackMe":
+        return "bg-[#FF3E3E]/10 text-[#FF3E3E] border-[#FF3E3E]/30";
+      case "VulnHub":
+        return "bg-[#4FC3F7]/10 text-[#4FC3F7] border-[#4FC3F7]/30";
+      default:
+        return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+    }
+  })();
+
+  return (
+    <Link
+      to="/writeups/$slug"
+      params={{ slug: w.slug }}
+      className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-200"
+    >
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${platformStyle}`}
+            >
+              <Swords className="w-3 h-3" />
+              {w.platform}
+            </span>
+
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] ${diffColor}`}
+            >
+              {w.difficulty}
+            </span>
+
+            {w.category && (
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full border border-border/80 bg-muted/60 text-muted-foreground text-[10px] font-medium">
+                {w.category}
+              </span>
+            )}
+          </div>
+
+          {w.hasAutoScript && <AutoScriptBadge size="sm" />}
+        </div>
+
+        <h3 className="text-lg font-bold text-foreground group-hover:text-emerald-400 transition-colors leading-snug">
+          {w.title}
+        </h3>
+
+        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">{w.excerpt}</p>
+
+        <div className="flex items-center gap-3 text-xs text-muted-foreground/70 font-mono">
+          {w.date && (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3 h-3 opacity-60" />
+              {w.date}
+            </span>
+          )}
+          {w.os && (
+            <span className="flex items-center gap-1">
+              <Cpu className="w-3 h-3 opacity-60" />
+              {w.os}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {w.tags.slice(0, 3).map((t) => (
+            <span
+              key={t}
+              className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+        <span className="text-xs text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
+          <span>Read</span>
+          <ArrowRight className="w-3 h-3" />
+        </span>
+      </div>
+    </Link>
+  );
+});
+
+const HomeCheatsheetCard = memo(function HomeCheatsheetCard({ file }: { file: CheatsheetEntry }) {
+  return (
+    <Link
+      to="/cheatsheet/$"
+      params={{ _splat: file.path }}
+      className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 hover:-translate-y-1 hover:border-fuchsia-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-200"
+    >
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between text-xs">
+          <span className="px-2.5 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30 text-[11px] font-semibold">
+            {file.meta.category || "General"}
+          </span>
+          <span className="text-muted-foreground">{file.meta.readTime || "5 min"}</span>
+        </div>
+
+        <h3 className="text-lg font-bold text-foreground group-hover:text-fuchsia-400 transition-colors leading-snug">
+          {file.meta.title || file.path.split("/").pop()}
+        </h3>
+
+        <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+          {file.meta.excerpt}
+        </p>
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {file.meta.tags?.slice(0, 3).map((t) => (
+            <span
+              key={t}
+              className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+        <span className="text-xs text-fuchsia-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+          Read →
+        </span>
+      </div>
+    </Link>
+  );
+});
+
 function Index() {
   const triggerSearch = () => {
     document.dispatchEvent(
@@ -44,13 +302,17 @@ function Index() {
     );
   };
 
-  const sortedCheatsheets = [...cheatsheetFiles]
-    .sort((a, b) => {
-      const dateA = new Date(a.meta.updated || a.meta.date || "1970-01-01").getTime();
-      const dateB = new Date(b.meta.updated || b.meta.date || "1970-01-01").getTime();
-      return dateB - dateA;
-    })
-    .slice(0, 4);
+  const sortedCheatsheets = useMemo(
+    () =>
+      [...cheatsheetFiles]
+        .sort((a, b) => {
+          const dateA = new Date(a.meta.updated || a.meta.date || "1970-01-01").getTime();
+          const dateB = new Date(b.meta.updated || b.meta.date || "1970-01-01").getTime();
+          return dateB - dateA;
+        })
+        .slice(0, 4),
+    [],
+  );
 
   return (
     <CyberLayout>
@@ -58,8 +320,6 @@ function Index() {
         <div className="mx-auto max-w-6xl space-y-12">
           {/* Hero Section */}
           <div className="rounded-2xl border border-border bg-card p-8 md:p-10 font-sans shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-300">
-            {/* Subtle Terminal Prompt Header */}
-
             {/* Title & Subtitle */}
             <div className="space-y-2">
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground font-sans">
@@ -151,119 +411,9 @@ function Index() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {postsMeta.slice(0, 5).map((p) => {
-                const isBinanceHeist = p.slug === "october-2026-binance-heist";
-                const sevStyle = (() => {
-                  switch (p.severity?.toLowerCase()) {
-                    case "critical":
-                      return "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 dark:border-rose-500/35";
-                    case "high":
-                      return "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40 dark:border-amber-500/35";
-                    case "medium":
-                      return "bg-yellow-500/15 text-yellow-800 dark:text-yellow-300 border-yellow-500/40 dark:border-yellow-500/35";
-                    default:
-                      return "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/40 dark:border-emerald-500/35";
-                  }
-                })();
-
-                return (
-                  <Link
-                    key={p.slug}
-                    to="/logs/$slug"
-                    params={{ slug: p.slug }}
-                    className={`group relative overflow-hidden flex flex-col justify-between rounded-xl border bg-card p-5 hover:-translate-y-1 transition-all duration-200 ${
-                      isBinanceHeist
-                        ? "md:col-span-2 border-amber-500/45 dark:border-amber-500/35 hover:border-amber-500/80 dark:hover:border-amber-400/60 shadow-[0_8px_30px_rgba(245,158,11,0.10)] dark:shadow-[0_10px_35px_rgba(244,63,94,0.12)]"
-                        : "border-border hover:border-cyan-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
-                    }`}
-                  >
-                    {isBinanceHeist && (
-                      <>
-                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-rose-500 via-amber-400 to-cyan-400" />
-                        <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-rose-500/[0.06] blur-3xl pointer-events-none" />
-                      </>
-                    )}
-
-                    <div className="relative z-10 space-y-2.5">
-                      <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/15 text-cyan-800 dark:text-cyan-400 border border-cyan-500/35 dark:border-cyan-500/30 text-[11px] font-semibold">
-                            {p.category}
-                          </span>
-                          {p.severity && (
-                            <span
-                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${sevStyle}`}
-                            >
-                              {p.severity.toLowerCase() === "critical" && (
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400 animate-pulse" />
-                              )}
-                              {p.severity}
-                            </span>
-                          )}
-                          {isBinanceHeist && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/40 dark:border-amber-500/35 text-[10px] font-mono font-bold uppercase tracking-wider">
-                              <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-                              Featured Threat Intel
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2.5 text-muted-foreground font-mono text-[11px]">
-                          {p.readTime && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3 opacity-60" />
-                              {p.readTime}
-                            </span>
-                          )}
-                          <span>{p.date}</span>
-                        </div>
-                      </div>
-
-                      <h3
-                        className={`font-bold text-foreground transition-colors leading-snug ${
-                          isBinanceHeist
-                            ? "text-xl md:text-2xl group-hover:text-amber-700 dark:group-hover:text-amber-300"
-                            : "text-lg group-hover:text-cyan-700 dark:group-hover:text-cyan-400"
-                        }`}
-                      >
-                        {p.title}
-                      </h3>
-
-                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                        {p.excerpt}
-                      </p>
-
-                      {isBinanceHeist && <HeistCardPreview variant="compact" />}
-                    </div>
-
-                    <div className="relative z-10 mt-4 pt-3 border-t border-border flex items-center justify-between">
-                      <div className="flex flex-wrap gap-1.5">
-                        {p.tags.slice(0, isBinanceHeist ? 6 : 3).map((t) => (
-                          <span
-                            key={t}
-                            className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
-                          >
-                            #{t}
-                          </span>
-                        ))}
-                      </div>
-                      <span
-                        className={`text-xs font-semibold flex items-center gap-1 transition-all ${
-                          isBinanceHeist
-                            ? "text-amber-700 dark:text-amber-300 opacity-100"
-                            : "text-cyan-700 dark:text-cyan-400 opacity-0 group-hover:opacity-100"
-                        }`}
-                      >
-                        {isBinanceHeist && (
-                          <Flame className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                        )}
-                        <span>{isBinanceHeist ? "Explore Interactive Report" : "Read"}</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+              {postsMeta.slice(0, 5).map((p) => (
+                <HomePostCard key={p.slug} p={p} />
+              ))}
             </div>
           </div>
 
@@ -284,117 +434,9 @@ function Index() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {writeupsMeta.slice(0, 4).map((w) => {
-                const diffColor = (() => {
-                  switch (w.difficulty.toLowerCase()) {
-                    case "very easy":
-                      return "bg-cyan-500/15 text-cyan-300 border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.2)] font-semibold";
-                    case "easy":
-                      return "bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)] font-semibold";
-                    case "medium":
-                      return "bg-amber-500/15 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)] font-semibold";
-                    case "hard":
-                      return "bg-rose-500/15 text-rose-300 border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)] font-semibold";
-                    case "insane":
-                      return "bg-purple-500/20 text-purple-300 border-purple-500/50 shadow-[0_0_12px_rgba(168,85,247,0.35)] font-semibold";
-                    default:
-                      return "bg-muted text-muted-foreground border-border";
-                  }
-                })();
-
-                const platformStyle = (() => {
-                  switch (w.platform) {
-                    case "HackTheBox":
-                      return "bg-[#9FEF00]/10 text-[#9FEF00] border-[#9FEF00]/30";
-                    case "TryHackMe":
-                      return "bg-[#FF3E3E]/10 text-[#FF3E3E] border-[#FF3E3E]/30";
-                    case "VulnHub":
-                      return "bg-[#4FC3F7]/10 text-[#4FC3F7] border-[#4FC3F7]/30";
-                    default:
-                      return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-                  }
-                })();
-
-                return (
-                  <Link
-                    key={w.slug}
-                    to="/writeups/$slug"
-                    params={{ slug: w.slug }}
-                    className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-200"
-                  >
-                    <div className="space-y-3">
-                      {/* Top Row: Badges + AutoSolve Badge */}
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${platformStyle}`}
-                          >
-                            <Swords className="w-3 h-3" />
-                            {w.platform}
-                          </span>
-
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] ${diffColor}`}
-                          >
-                            {w.difficulty}
-                          </span>
-
-                          {w.category && (
-                            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full border border-border/80 bg-muted/60 text-muted-foreground text-[10px] font-medium">
-                              {w.category}
-                            </span>
-                          )}
-                        </div>
-
-                        {w.hasAutoScript && <AutoScriptBadge size="sm" />}
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="text-lg font-bold text-foreground group-hover:text-emerald-400 transition-colors leading-snug">
-                        {w.title}
-                      </h3>
-
-                      {/* Excerpt */}
-                      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                        {w.excerpt}
-                      </p>
-
-                      {/* Metadata Row */}
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground/70 font-mono">
-                        {w.date && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 opacity-60" />
-                            {w.date}
-                          </span>
-                        )}
-                        {w.os && (
-                          <span className="flex items-center gap-1">
-                            <Cpu className="w-3 h-3 opacity-60" />
-                            {w.os}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                      <div className="flex flex-wrap gap-1.5">
-                        {w.tags.slice(0, 3).map((t) => (
-                          <span
-                            key={t}
-                            className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
-                          >
-                            #{t}
-                          </span>
-                        ))}
-                      </div>
-                      <span className="text-xs text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium flex items-center gap-1">
-                        <span>Read</span>
-                        <ArrowRight className="w-3 h-3" />
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+              {writeupsMeta.slice(0, 4).map((w) => (
+                <HomeWriteupCard key={w.slug} w={w} />
+              ))}
             </div>
           </div>
 
@@ -416,45 +458,7 @@ function Index() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {sortedCheatsheets.map((file) => (
-                <Link
-                  key={file.path}
-                  to="/cheatsheet/$"
-                  params={{ _splat: file.path }}
-                  className="group flex flex-col justify-between rounded-xl border border-border bg-card p-5 hover:-translate-y-1 hover:border-fuchsia-500/40 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] transition-all duration-200"
-                >
-                  <div className="space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="px-2.5 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30 text-[11px] font-semibold">
-                        {file.meta.category || "General"}
-                      </span>
-                      <span className="text-muted-foreground">{file.meta.readTime || "5 min"}</span>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-foreground group-hover:text-fuchsia-400 transition-colors leading-snug">
-                      {file.meta.title || file.path.split("/").pop()}
-                    </h3>
-
-                    <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                      {file.meta.excerpt}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                    <div className="flex flex-wrap gap-1.5">
-                      {file.meta.tags?.slice(0, 3).map((t) => (
-                        <span
-                          key={t}
-                          className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border"
-                        >
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-xs text-fuchsia-400 opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                      Read →
-                    </span>
-                  </div>
-                </Link>
+                <HomeCheatsheetCard key={file.path} file={file} />
               ))}
             </div>
           </div>

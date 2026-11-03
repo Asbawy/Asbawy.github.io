@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import { createFileRoute, notFound, Link, useNavigate } from "@tanstack/react-router";
-import { Suspense, useMemo, useEffect, useState } from "react";
+import { memo, Suspense, useMemo, useEffect, useState } from "react";
 import {
   FileText,
   ChevronRight,
@@ -8,14 +8,16 @@ import {
   Check,
   ArrowLeft,
   ArrowUp,
-  Terminal,
-  Shield,
   Clock,
   ArrowRight,
   BookOpen,
 } from "lucide-react";
 import { useSharedMdxComponents } from "@/components/cyber/SharedMdxComponents";
-import { cheatsheetFiles, CheatsheetMdxComponents } from "@/data/cheatsheets";
+import {
+  cheatsheetFiles,
+  preloadCheatsheetContent,
+  getCheatsheetComponent,
+} from "@/data/cheatsheets";
 import { useArticleToc } from "@/hooks/use-article-toc";
 import { TableOfContents } from "@/components/cyber/TableOfContents";
 import { getRelatedCheatsheets } from "@/lib/related-cheatsheets";
@@ -23,10 +25,15 @@ import { Panel, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/La
 import { ReadingProgress } from "@/components/cyber/ReadingProgress";
 
 export const Route = createFileRoute("/cheatsheet/$")({
+  beforeLoad: async ({ params }) => {
+    const slug = params._splat || "";
+    if (slug) await preloadCheatsheetContent(slug);
+  },
   loader: async ({ params }) => {
     const slug = params._splat || "";
     const meta = cheatsheetFiles.find((c) => c.path === slug);
     if (!meta || !slug) throw notFound();
+    await preloadCheatsheetContent(slug);
     return { slug, meta: meta.meta };
   },
   head: ({ loaderData }) => {
@@ -95,10 +102,31 @@ export const Route = createFileRoute("/cheatsheet/$")({
   ),
 });
 
+const MemoizedCheatsheetMdx = memo(function MemoizedCheatsheetMdx({
+  slug,
+  components,
+}: {
+  slug: string;
+  components: Record<string, any>;
+}) {
+  const MDXContent = getCheatsheetComponent(slug) || (() => <div>Component not found</div>);
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center gap-2 animate-pulse text-foreground font-sans text-sm py-8">
+          <span className="inline-block w-2 h-4 bg-foreground/80 animate-pulse" />
+          Reading sector...
+        </div>
+      }
+    >
+      <MDXContent components={components} />
+    </Suspense>
+  );
+});
+
 function CheatsheetViewer() {
   const navigate = useNavigate();
   const { slug, meta } = Route.useLoaderData();
-  const MDXContent = CheatsheetMdxComponents[slug] || (() => <div>Component not found</div>);
 
   const breadcrumbs = slug.split("/");
 
@@ -114,13 +142,6 @@ function CheatsheetViewer() {
 
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleJumpToSection = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    }
   };
 
   // Save to recently viewed list on mount / change
@@ -312,16 +333,7 @@ function CheatsheetViewer() {
 
               {/* MDX Content wrapper */}
               <div id="cheatsheet-article" className="prose prose-invert max-w-none">
-                <Suspense
-                  fallback={
-                    <div className="flex items-center gap-2 animate-pulse text-foreground font-sans text-sm py-8">
-                      <span className="inline-block w-2 h-4 bg-foreground/80 animate-pulse" />
-                      Reading sector...
-                    </div>
-                  }
-                >
-                  <MDXContent components={components} />
-                </Suspense>
+                <MemoizedCheatsheetMdx slug={slug} components={components} />
               </div>
 
               {/* Sequential Prev/Next Navigation */}

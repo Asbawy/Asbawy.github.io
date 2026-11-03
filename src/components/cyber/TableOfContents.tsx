@@ -1,13 +1,13 @@
-import React, { useMemo } from "react";
+import React, { startTransition, useEffect, useMemo, useRef } from "react";
 import { TocHeading } from "@/hooks/use-article-toc";
 import { ChevronRight, ListTree } from "lucide-react";
 
 interface TableOfContentsProps {
   headings: TocHeading[];
   activeId: string;
-  progress: number;
+  progress?: number;
   title?: string;
-  accentColor?: string; // Tailwind color class or hex string for custom accent styling
+  accentColor?: string;
 }
 
 interface TocTreeGroup {
@@ -38,14 +38,45 @@ function buildTocTree(headings: TocHeading[]): TocTreeGroup[] {
   return tree;
 }
 
-export const TableOfContents: React.FC<TableOfContentsProps> = ({
+export const TableOfContents: React.FC<TableOfContentsProps> = React.memo(function TableOfContents({
   headings,
   activeId,
-  progress,
+  progress: propProgress,
   title = "table of contents",
   accentColor = "bg-accent-primary",
-}) => {
+}) {
   const tree = useMemo(() => buildTocTree(headings), [headings]);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (propProgress !== undefined && barRef.current) {
+      barRef.current.style.width = `${propProgress}%`;
+      return;
+    }
+
+    let rafId = 0;
+    const updateProgress = () => {
+      rafId = 0;
+      if (!barRef.current) return;
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = total > 0 ? Math.min(100, Math.max(0, (scrollY / total) * 100)) : 0;
+      barRef.current.style.width = `${pct}%`;
+    };
+
+    const handleScroll = () => {
+      if (!rafId) {
+        rafId = requestAnimationFrame(updateProgress);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    updateProgress();
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [propProgress]);
 
   if (!headings || headings.length === 0) {
     return null;
@@ -57,12 +88,13 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
 
   const handleHeadingClick = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
     e.preventDefault();
-    const targetEl = document.getElementById(id);
-    if (targetEl) {
-      targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
-      // Update hash without jumping
-      window.history.pushState(null, "", `#${id}`);
-    }
+    startTransition(() => {
+      const targetEl = document.getElementById(id);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        window.history.pushState(null, "", `#${id}`);
+      }
+    });
   };
 
   return (
@@ -82,9 +114,10 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
       {/* Progress Bar */}
       <div className="mb-4 h-1 w-full overflow-hidden rounded-full bg-white/[0.06] p-0.5">
         <div
-          className={`h-full rounded-full transition-all duration-200 ${accentColor}`}
+          ref={barRef}
+          className={`h-full rounded-full transition-[width] duration-150 ${accentColor}`}
           style={{
-            width: `${progress}%`,
+            width: `${propProgress ?? 0}%`,
             boxShadow: "0 0 10px currentColor",
           }}
         />
@@ -129,9 +162,8 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
               {/* Children Branch (H3 / H4) */}
               {group.children.length > 0 && (
                 <div className="relative ml-3.5 mt-1 space-y-1 border-l border-white/10 pl-3">
-                  {group.children.map((child, childIdx) => {
+                  {group.children.map((child) => {
                     const isChildSelfActive = activeId === child.id;
-                    const isLast = childIdx === group.children.length - 1;
 
                     return (
                       <div key={child.id} className="relative flex items-center">
@@ -171,4 +203,4 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
       </div>
     </nav>
   );
-};
+});

@@ -1,6 +1,94 @@
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import hljs from "highlight.js";
+import React, { useRef, useState, useMemo } from "react";
+import hljs from "highlight.js/lib/core";
+import bash from "highlight.js/lib/languages/bash";
+import shell from "highlight.js/lib/languages/shell";
+import powershell from "highlight.js/lib/languages/powershell";
+import dos from "highlight.js/lib/languages/dos";
+import python from "highlight.js/lib/languages/python";
+import javascript from "highlight.js/lib/languages/javascript";
+import typescript from "highlight.js/lib/languages/typescript";
+import json from "highlight.js/lib/languages/json";
+import xml from "highlight.js/lib/languages/xml";
+import css from "highlight.js/lib/languages/css";
+import c from "highlight.js/lib/languages/c";
+import cpp from "highlight.js/lib/languages/cpp";
+import csharp from "highlight.js/lib/languages/csharp";
+import go from "highlight.js/lib/languages/go";
+import rust from "highlight.js/lib/languages/rust";
+import php from "highlight.js/lib/languages/php";
+import ruby from "highlight.js/lib/languages/ruby";
+import perl from "highlight.js/lib/languages/perl";
+import java from "highlight.js/lib/languages/java";
+import sql from "highlight.js/lib/languages/sql";
+import yaml from "highlight.js/lib/languages/yaml";
+import ini from "highlight.js/lib/languages/ini";
+import dockerfile from "highlight.js/lib/languages/dockerfile";
+import nginx from "highlight.js/lib/languages/nginx";
+import http from "highlight.js/lib/languages/http";
+import diff from "highlight.js/lib/languages/diff";
+import x86asm from "highlight.js/lib/languages/x86asm";
+import vbnet from "highlight.js/lib/languages/vbnet";
+import plaintext from "highlight.js/lib/languages/plaintext";
 import { Check, Copy, WrapText, ListOrdered, ChevronDown, ChevronUp } from "lucide-react";
+
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("sh", bash);
+hljs.registerLanguage("zsh", bash);
+hljs.registerLanguage("shell", shell);
+hljs.registerLanguage("console", shell);
+hljs.registerLanguage("powershell", powershell);
+hljs.registerLanguage("ps", powershell);
+hljs.registerLanguage("ps1", powershell);
+hljs.registerLanguage("pwsh", powershell);
+hljs.registerLanguage("dos", dos);
+hljs.registerLanguage("cmd", dos);
+hljs.registerLanguage("bat", dos);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("py", python);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("js", javascript);
+hljs.registerLanguage("jsx", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("ts", typescript);
+hljs.registerLanguage("tsx", typescript);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("xml", xml);
+hljs.registerLanguage("html", xml);
+hljs.registerLanguage("svg", xml);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("c", c);
+hljs.registerLanguage("cpp", cpp);
+hljs.registerLanguage("csharp", csharp);
+hljs.registerLanguage("cs", csharp);
+hljs.registerLanguage("go", go);
+hljs.registerLanguage("rust", rust);
+hljs.registerLanguage("rs", rust);
+hljs.registerLanguage("php", php);
+hljs.registerLanguage("ruby", ruby);
+hljs.registerLanguage("rb", ruby);
+hljs.registerLanguage("perl", perl);
+hljs.registerLanguage("java", java);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("yaml", yaml);
+hljs.registerLanguage("yml", yaml);
+hljs.registerLanguage("ini", ini);
+hljs.registerLanguage("toml", ini);
+hljs.registerLanguage("dockerfile", dockerfile);
+hljs.registerLanguage("nginx", nginx);
+hljs.registerLanguage("http", http);
+hljs.registerLanguage("diff", diff);
+hljs.registerLanguage("x86asm", x86asm);
+hljs.registerLanguage("asm", x86asm);
+hljs.registerLanguage("nasm", x86asm);
+hljs.registerLanguage("vbnet", vbnet);
+hljs.registerLanguage("vba", vbnet);
+hljs.registerLanguage("vb", vbnet);
+hljs.registerLanguage("vbs", vbnet);
+hljs.registerLanguage("plaintext", plaintext);
+hljs.registerLanguage("text", plaintext);
+hljs.registerLanguage("txt", plaintext);
+
+export { hljs };
 
 const COLLAPSE_LINE_THRESHOLD = 10;
 
@@ -8,11 +96,14 @@ const COLLAPSE_LINE_THRESHOLD = 10;
  * Recursively extracts plain text from React nodes/children, preventing "[object Object]" outputs.
  */
 function getNodeText(node: React.ReactNode): string {
+  if (typeof node === "string") {
+    return node;
+  }
+  if (typeof node === "number") {
+    return String(node);
+  }
   if (node === null || node === undefined || typeof node === "boolean") {
     return "";
-  }
-  if (typeof node === "string" || typeof node === "number") {
-    return String(node);
   }
   if (Array.isArray(node)) {
     return node.map(getNodeText).join("");
@@ -47,31 +138,31 @@ function parseLineHighlight(metastring?: string): Set<number> {
   return highlighted;
 }
 
-const SHELL_LANGUAGES = new Set(["bash", "powershell", "cmd", "shell", "sh"]);
+const SHELL_LANGUAGES = new Set(["bash", "powershell", "cmd", "shell", "sh", "zsh", "pwsh", "ps1"]);
+
+// Classes to skip - never re-color tokens inside comments or strings
+const SKIP_CLASSES = ["hljs-comment", "hljs-string", "hljs-meta"];
+
+const MASTER_SHELL_PATTERN = new RegExp(
+  [
+    `((?:asbawy@kali:[~\\/a-zA-Z0-9_.-]*[\\$#])|(?:[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.-]+:[~\\/a-zA-Z0-9_.-]*[\\$#]))`,
+    `((?:^|\\s+)#.*)`,
+    `(https?://[^\\s'"<>&]+|ftp://[^\\s'"<>&]+)`,
+    `(\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(?:/\\d{1,2})?\\b)`,
+    `(\\b(?:Get|Set|New|Add|Remove|Clear|Import|Export|Start|Stop|Restart|Enable|Disable|Invoke|Register|Unregister|Test|Update|Find|Install|Uninstall|Save|Publish|Write|Read|Out|Enter|Exit|Connect|Disconnect|Move|Copy|Rename|Select|Where|ForEach|Sort|Group|Measure|Compare|Join|Split|Format|ConvertTo|ConvertFrom|Convert|Assert|Wait|Use|Show|Hide|Protect|Unprotect|Grant|Revoke|Block|Unblock|Send|Receive|Approve|Deny|Debug|Trace|Confirm|Submit|Undo|Redo|Open|Close|Lock|Unlock|Watch|Resolve|Expand|Compress|Push|Pop|Suspend|Resume|Reset|Checkpoint|Restore|Repair|Optimize|Mount|Dismount|Merge|Publish|Limit|Initialize|Request|Sync)-[A-Z][a-zA-Z]+\\b)`,
+    `(\\b(?:msfvenom|grep|awk|sed|find|xargs|bloodyAD|Rubeus\\.exe|getTGT\\.py|gets4uTicket\\.py|impacket-psexec|impacket-secretsdump|impacket-getTGT|impacket-getST|impacket-ticketer|impacket-ntlmrelayx|dsacls|secretsdump|ticketer|SharpGPOAbuse|Certify|Certipy|ntlmrelayx|PetitPotam|bloodyad|crackmapexec|evil-winrm|bloodhound-python|kerbrute|mimikatz|hashcat|john|python3?|bash|sh|sudo|cmd|powershell|pwsh|curl|wget|scp|rsync|nc|ncat|socat|ssh|net|copy|move|del|type|certutil(?:\\.exe)?|bitsadmin|impacket-smbserver|ruby|php|perl|xxd|base64|openssl|chisel|nmap|proxychains|smbclient|rpcclient|ldapsearch|winrs|wmic|cat|ls|cd|echo|chmod|chown|tar|mkdir|rm|mv|cp|ping|ifconfig|ip|whoami|id|hostname|uname|iwr|iex|IEX|IWR)\\b)`,
+    `(\\$(?:[a-zA-Z_]\\w*(?::[a-zA-Z_]\\w*)?|_))`,
+    `(\\B-{1,2}[a-zA-Z][a-zA-Z0-9_]*)`,
+    `(\\|)`,
+  ].join("|"),
+  "g",
+);
 
 function highlightShellCommands(html: string): string {
   if (!html || typeof document === "undefined") return html;
 
   const temp = document.createElement("div");
   temp.innerHTML = html;
-
-  // Classes to skip - never re-color tokens inside comments or strings
-  const SKIP_CLASSES = ["hljs-comment", "hljs-string", "hljs-meta"];
-
-  const masterPattern = new RegExp(
-    [
-      `((?:asbawy@kali:[~\\/a-zA-Z0-9_.-]*[\\$#])|(?:[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.-]+:[~\\/a-zA-Z0-9_.-]*[\\$#]))`,
-      `((?:^|\\s+)#.*)`,
-      `(https?://[^\\s'"<>&]+|ftp://[^\\s'"<>&]+)`,
-      `(\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(?:/\\d{1,2})?\\b)`,
-      `(\\b(?:Get|Set|New|Add|Remove|Clear|Import|Export|Start|Stop|Restart|Enable|Disable|Invoke|Register|Unregister|Test|Update|Find|Install|Uninstall|Save|Publish|Write|Read|Out|Enter|Exit|Connect|Disconnect|Move|Copy|Rename|Select|Where|ForEach|Sort|Group|Measure|Compare|Join|Split|Format|ConvertTo|ConvertFrom|Convert|Assert|Wait|Use|Show|Hide|Protect|Unprotect|Grant|Revoke|Block|Unblock|Send|Receive|Approve|Deny|Debug|Trace|Confirm|Submit|Undo|Redo|Open|Close|Lock|Unlock|Watch|Resolve|Expand|Compress|Push|Pop|Suspend|Resume|Reset|Checkpoint|Restore|Repair|Optimize|Mount|Dismount|Merge|Publish|Limit|Initialize|Request|Sync)-[A-Z][a-zA-Z]+\\b)`,
-      `(\\b(?:msfvenom|grep|awk|sed|find|xargs|bloodyAD|Rubeus\\.exe|getTGT\\.py|gets4uTicket\\.py|impacket-psexec|impacket-secretsdump|impacket-getTGT|impacket-getST|impacket-ticketer|impacket-ntlmrelayx|dsacls|secretsdump|ticketer|SharpGPOAbuse|Certify|Certipy|ntlmrelayx|PetitPotam|bloodyad|crackmapexec|evil-winrm|bloodhound-python|kerbrute|mimikatz|hashcat|john|python3?|bash|sh|sudo|cmd|powershell|pwsh|curl|wget|scp|rsync|nc|ncat|socat|ssh|net|copy|move|del|type|certutil(?:\\.exe)?|bitsadmin|impacket-smbserver|ruby|php|perl|xxd|base64|openssl|chisel|nmap|proxychains|smbclient|rpcclient|ldapsearch|winrs|wmic|cat|ls|cd|echo|chmod|chown|tar|mkdir|rm|mv|cp|ping|ifconfig|ip|whoami|id|hostname|uname|iwr|iex|IEX|IWR)\\b)`,
-      `(\\$(?:[a-zA-Z_]\\w*(?::[a-zA-Z_]\\w*)?|_))`,
-      `(\\B-{1,2}[a-zA-Z][a-zA-Z0-9_]*)`,
-      `(\\|)`,
-    ].join("|"),
-    "g",
-  );
 
   const walk = (node: Node) => {
     if (node.nodeType === Node.ELEMENT_NODE) {
@@ -82,15 +173,15 @@ function highlightShellCommands(html: string): string {
       const text = node.nodeValue;
       if (!text || !text.trim()) return;
 
-      masterPattern.lastIndex = 0;
-      if (!masterPattern.test(text)) return;
-      masterPattern.lastIndex = 0;
+      MASTER_SHELL_PATTERN.lastIndex = 0;
+      if (!MASTER_SHELL_PATTERN.test(text)) return;
+      MASTER_SHELL_PATTERN.lastIndex = 0;
 
       const frag = document.createDocumentFragment();
       let lastIndex = 0;
       let match: RegExpExecArray | null;
 
-      while ((match = masterPattern.exec(text)) !== null) {
+      while ((match = MASTER_SHELL_PATTERN.exec(text)) !== null) {
         const [full, prompt, comment, url, ip, psCmdlet, command, psVar, option, pipe] = match;
         const matchStart = match.index;
 
@@ -188,7 +279,7 @@ function splitHtmlIntoLines(html: string): string[] {
   return lines;
 }
 
-export function TerminalCode({
+export const TerminalCode = React.memo(function TerminalCode({
   title = "bash",
   metastring,
   children,
@@ -211,12 +302,19 @@ export function TerminalCode({
 
   // Compute processed lines with balanced HTML highlighting
   const processedLines = useMemo(() => {
+    const normalizedLang = title.toLowerCase().trim();
     let highlightedHtml = "";
     try {
-      if (hljs.getLanguage(title)) {
-        highlightedHtml = hljs.highlight(rawCodeString, { language: title }).value;
+      if (normalizedLang && normalizedLang !== "code" && hljs.getLanguage(normalizedLang)) {
+        highlightedHtml = hljs.highlight(rawCodeString, {
+          language: normalizedLang,
+          ignoreIllegals: true,
+        }).value;
       } else {
-        highlightedHtml = hljs.highlightAuto(rawCodeString).value;
+        highlightedHtml = rawCodeString
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
       }
     } catch {
       highlightedHtml = rawCodeString
@@ -225,7 +323,7 @@ export function TerminalCode({
         .replace(/>/g, "&gt;");
     }
 
-    const isShell = SHELL_LANGUAGES.has(title.toLowerCase());
+    const isShell = SHELL_LANGUAGES.has(normalizedLang);
     if (isShell) {
       highlightedHtml = highlightShellCommands(highlightedHtml);
     }
@@ -396,4 +494,4 @@ export function TerminalCode({
       )}
     </div>
   );
-}
+});

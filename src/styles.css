@@ -1,4 +1,20 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/inter-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/jetbrains-mono-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 @import "tailwindcss" source(none);
 @import "tw-animate-css";
@@ -78,11 +94,11 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ── Custom Dark Theme (Default) ────────────────────────────────── */
+/* â”€â”€ Custom Dark Theme (Default) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 :root {
   --radius: 0.625rem;
 
-  /* 🎨 User Base Theme Colors - Minimalist Retro */
+  /* ðŸŽ¨ User Base Theme Colors - Minimalist Retro */
   --bg-primary: #09090b;
   /* zinc-950 */
   --bg-secondary: #141417;
@@ -193,7 +209,7 @@
   --sidebar-ring: var(--accent-primary);
 }
 
-/* ── Light Mode ────────────────────────────────── */
+/* â”€â”€ Light Mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .light {
   --radius: 0.625rem;
   --bg-primary: #f4f4f6;
@@ -290,7 +306,7 @@
   --code-prompt: #dc2626;
 }
 
-/* ── Dark Mode Class override ───────────────────────────────────── */
+/* â”€â”€ Dark Mode Class override â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .dark {
   --radius: 0.625rem;
   --bg-primary: #09090b;
@@ -533,7 +549,7 @@
 }
 
 .caret::after {
-  content: "▊";
+  content: "â–Š";
   margin-left: 2px;
   color: var(--foreground);
   animation: blink-caret 1s steps(1) infinite;
@@ -579,7 +595,7 @@
   background: rgba(255, 250, 240, 0.25);
 }
 
-/* ── Dark-mode highlight.js tweaks (Tokyo Night is the base) ── */
+/* â”€â”€ Dark-mode highlight.js tweaks (Tokyo Night is the base) â”€â”€ */
 .dark .hljs,
 :root .hljs {
   background: transparent !important;
@@ -590,7 +606,7 @@
   font-style: italic;
 }
 
-/* ── Light mode overrides for highlight.js ── */
+/* â”€â”€ Light mode overrides for highlight.js â”€â”€ */
 .light .hljs {
   color: #24292e !important;
   background: transparent !important;
@@ -719,7 +735,7 @@
   }
 }
 
-/* ── Cyberpunk Theme Switch Animations (View Transitions API) ── */
+/* â”€â”€ Cyberpunk Theme Switch Animations (View Transitions API) â”€â”€ */
 ::view-transition-group(root) {
   animation-duration: 0.6s;
 }
@@ -798,7 +814,7 @@
   transition-delay: 0s !important;
 }
 
-/* ── Cheatsheet Reference Library Custom Styles ─────────────────── */
+/* â”€â”€ Cheatsheet Reference Library Custom Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .cheatsheet-card-hover {
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -819,7 +835,7 @@
   transform: translateY(-1px);
 }
 
-/* ── Code Explorer High-Contrast Syntax Highlighting ─────────────────── */
+/* â”€â”€ Code Explorer High-Contrast Syntax Highlighting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .code-explorer-viewer {
   color: #e2e8f0;
 }
@@ -877,7 +893,7 @@
   color: #e6edf3 !important;
 }
 
-/* ── Light Mode Code Explorer Syntax Override ─────────────────── */
+/* â”€â”€ Light Mode Code Explorer Syntax Override â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 :is(.light *) .code-explorer-viewer,
 .light .code-explorer-viewer {
   color: #0f172a !important;

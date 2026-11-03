@@ -1,3 +1,4 @@
+import { memo, startTransition } from "react";
 import { SideNav, TopBar } from "./SideNav";
 import { CommandPalette } from "./CommandPalette";
 import { postsMeta } from "@/data/posts";
@@ -12,13 +13,15 @@ export function handleTagClick(tag: string, navigate: any) {
     c.meta.tags?.some((t) => t.toLowerCase().trim() === normalizedTag),
   );
 
-  if (hasPosts && !hasCheatsheets) {
-    navigate({ to: "/logs", search: { tag } });
-  } else if (!hasPosts && hasCheatsheets) {
-    navigate({ to: "/cheatsheet", search: { q: tag } });
-  } else {
-    navigate({ to: "/logs", search: { tag } });
-  }
+  startTransition(() => {
+    if (hasPosts && !hasCheatsheets) {
+      navigate({ to: "/logs", search: { tag } });
+    } else if (!hasPosts && hasCheatsheets) {
+      navigate({ to: "/cheatsheet", search: { q: tag } });
+    } else {
+      navigate({ to: "/logs", search: { tag } });
+    }
+  });
 }
 
 export function CyberLayout({ children }: { children: React.ReactNode }) {
@@ -37,7 +40,7 @@ export function CyberLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Panel({
+export const Panel = memo(function Panel({
   title,
   right,
   children,
@@ -62,7 +65,7 @@ export function Panel({
       <div className="p-4">{children}</div>
     </section>
   );
-}
+});
 
 const TAG_COLORS: Record<string, string> = {
   // OS & Platform Tags
@@ -153,7 +156,7 @@ function getTagColor(tag: string): string {
   return TAG_COLORS[normalized] || "#6B7280";
 }
 
-export function Tag({
+export const Tag = memo(function Tag({
   children,
   variant = "default",
   onClick,
@@ -186,9 +189,9 @@ export function Tag({
       {children}
     </span>
   );
-}
+});
 
-export function tagVariantFor(tag: string) {
+export function tagVariantFor(_tag: string) {
   // Kept for API backward-compatibility, as inline colors are resolved dynamically now.
   return "default" as const;
 }

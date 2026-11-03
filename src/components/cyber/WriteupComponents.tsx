@@ -419,19 +419,4 @@ export function AutoScriptBadge({ size = "sm" }: { size?: "sm" | "md" }) {
   );
 }
 
-/* ── Code Explorer & Exploit Artifacts ───────────────── */
-
-export {
-  CodeExplorerModal,
-  ScriptVault,
-  FileAttachment,
-  FileButton,
-  detectLanguage,
-} from "./CodeExplorer";
-export type { AttachedFile, ScriptVaultProps, FileAttachmentProps, FileButtonProps } from "./CodeExplorer";
-
-/* ── Interactive Stack & Binary Exploitation Visualizers ── */
-export { BufferOverflowVisualizer } from "./BufferOverflowVisualizer";
-export { SstiDecisionTree } from "./SstiDecisionTree";
-
 

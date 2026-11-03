@@ -1,11 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { memo, Suspense, useState } from "react";
 import { CyberLayout, Panel, Tag, tagVariantFor, handleTagClick } from "@/components/cyber/Layout";
-import { TerminalCode } from "@/components/cyber/TerminalCode";
-import { Mermaid } from "@/components/cyber/Mermaid";
-import { getPostMeta, getPostContent, postsMeta, MdxComponents } from "@/data/posts";
-import { Suspense } from "react";
+import { getPostMeta, getPostContent, postsMeta, getPostComponent } from "@/data/posts";
 import { ArrowLeft } from "lucide-react";
 import { ImageLightbox } from "@/components/cyber/ImageLightbox";
 import { ShareButtons } from "@/components/cyber/ShareButtons";
@@ -18,6 +15,9 @@ import { ReadingProgress } from "@/components/cyber/ReadingProgress";
 import { Breadcrumbs } from "@/components/cyber/Breadcrumbs";
 
 export const Route = createFileRoute("/logs/$slug")({
+  beforeLoad: async ({ params }) => {
+    await getPostContent(params.slug);
+  },
   loader: async ({ params }) => {
     const meta = getPostMeta(params.slug);
     if (!meta) throw notFound();
@@ -76,7 +76,7 @@ export const Route = createFileRoute("/logs/$slug")({
   notFoundComponent: () => (
     <CyberLayout>
       <div className="p-10 font-sans text-sm text-muted-foreground">
-        // post not found - {" "}
+        // post not found -{" "}
         <Link to="/logs" className="text-foreground hover:text-foreground/80 transition-colors">
           return to feed
         </Link>
@@ -92,6 +92,25 @@ export const Route = createFileRoute("/logs/$slug")({
   component: PostPage,
 });
 
+const MemoizedPostMdx = memo(function MemoizedPostMdx({
+  slug,
+  components,
+}: {
+  slug: string;
+  components: Record<string, any>;
+}) {
+  const MDXContent = getPostComponent(slug) || (() => <div>Component not found</div>);
+  return (
+    <Suspense
+      fallback={
+        <div className="animate-pulse text-foreground/60 font-sans">Loading core modules...</div>
+      }
+    >
+      <MDXContent components={components} />
+    </Suspense>
+  );
+});
+
 function PostPage() {
   const navigate = useNavigate();
   const { post } = Route.useLoaderData();
@@ -103,12 +122,10 @@ function PostPage() {
   } = useArticleToc("article", [2, 3], post.slug);
   const components = useSharedMdxComponents(setLightboxSrc);
 
-  const MDXContent = MdxComponents[post.slug] || (() => <div>Component not found</div>);
-
   return (
     <CyberLayout>
       <ReadingProgress progress={progress} />
-      <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <article className="px-6 md:px-10 py-10 max-w-7xl mx-auto glass-panel rounded-xl my-6 relative">
         <Breadcrumbs
           items={[
             { label: "Logs", href: "/logs" },
@@ -181,15 +198,7 @@ function PostPage() {
 
             {/* MDX Content */}
             <div className="mt-6">
-              <Suspense
-                fallback={
-                  <div className="animate-pulse text-foreground/60 font-sans">
-                    Loading core modules...
-                  </div>
-                }
-              >
-                <MDXContent components={components} />
-              </Suspense>
+              <MemoizedPostMdx slug={post.slug} components={components} />
             </div>
 
             {/* Share Buttons - Bottom */}
@@ -201,7 +210,7 @@ function PostPage() {
             <AuthorBio />
 
             <div className="mt-10 border-t border-panel-border pt-6 font-sans text-[11px] text-muted-foreground">
-              // end of post - {" "}
+              // end of post -{" "}
               <Link
                 to="/logs"
                 className="text-foreground hover:text-foreground/80 transition-colors"

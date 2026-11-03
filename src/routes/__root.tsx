@@ -8,7 +8,6 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 
-import "highlight.js/styles/github-dark.css";
 import appCss from "../styles.css?url";
 import { CyberBackground } from "@/components/cyber/MatrixBackground";
 import { BackToTop } from "@/components/cyber/BackToTop";
@@ -117,6 +116,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "google-site-verification", content: "-wRV8UzJbo8W6toGN1s2sXQCwhjDhT_qUoeUTUCgt0g" },
     ],
     links: [
+      {
+        rel: "preload",
+        href: "/fonts/inter-latin.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        href: "/fonts/jetbrains-mono-latin.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
       {
         rel: "stylesheet",
         href: appCss,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import hljs from "highlight.js";
+import { hljs } from "./TerminalCode";
 import {
   FileCode2,
   Terminal,
@@ -290,9 +290,9 @@ export function CodeExplorerModal({
   const lang = activeFile ? detectLanguage(activeFile.name, activeFile.language) : "plaintext";
   const langStyle = getLanguageColor(lang);
 
-  // High-accuracy multi-line syntax highlighting
+  // High-accuracy multi-line syntax highlighting (deferred until modal is open)
   const highlightedLines = useMemo(() => {
-    if (!activeFile?.code) return [];
+    if (!isOpen || !activeFile?.code) return [];
     try {
       const codeString = activeFile.code;
       const validLanguage = hljs.getLanguage(lang) ? lang : "plaintext";
@@ -310,7 +310,7 @@ export function CodeExplorerModal({
         raw: line,
       }));
     }
-  }, [activeFile, lang]);
+  }, [isOpen, activeFile, lang]);
 
   const handleCopy = () => {
     if (!activeFile) return;
