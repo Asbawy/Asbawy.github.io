@@ -35,7 +35,7 @@ export const Route = createFileRoute("/cheatsheet/$")({
     const url = `https://asbawy.com/cheatsheet/${slug}`;
     const ogImage = "https://asbawy.com/eye-of-ra.png";
 
-    const titleStr = meta.title ? `${meta.title} — Cheatsheet Explorer` : "Cheatsheet Explorer";
+    const titleStr = meta.title ? `${meta.title} - Cheatsheet Explorer` : "Cheatsheet Explorer";
     const descStr = meta.excerpt || `Cheat sheet for ${meta.title || slug}`;
 
     return {

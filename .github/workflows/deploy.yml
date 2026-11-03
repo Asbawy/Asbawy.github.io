@@ -38,7 +38,7 @@ jobs:
           test -f dist/client/index.html
           if grep -q '/src/start.ts' dist/client/index.html; then
             echo "ERROR: dist/client/index.html is still the dev template."
-            echo "GitHub Pages cannot run /src/start.ts — the production build did not prerender."
+            echo "GitHub Pages cannot run /src/start.ts - the production build did not prerender."
             exit 1
           fi
           if ! grep -q 'min-h-screen' dist/client/index.html; then

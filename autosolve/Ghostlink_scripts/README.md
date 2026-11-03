@@ -1,8 +1,8 @@
 # 👻 Ghostlink Exploit Toolkit (`/autosolve/Ghostlink_scripts`)
 
-A modular exploit and automation suite developed for the **HackTheBox — Ghostlink** machine (Windows Active Directory / Hard).
+A modular exploit and automation suite developed for the **HackTheBox - Ghostlink** machine (Windows Active Directory / Hard).
 
-Full technical writeup: [Ghostlink — HackTheBox Machine Writeup](https://asbawy.com/writeups/htb-ghostlink)
+Full technical writeup: [Ghostlink - HackTheBox Machine Writeup](https://asbawy.com/writeups/htb-ghostlink)
 
 ---
 

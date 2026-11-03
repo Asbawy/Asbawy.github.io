@@ -4,7 +4,7 @@
     <title>Asbawy Blog</title>
     <description>Security cheatsheets, quick references, and field notes by Asbawy.</description>
     <link>https://asbawy.com</link>
-    <lastBuildDate>Tue, 03 Nov 2026 08:18:02 GMT</lastBuildDate>
+    <lastBuildDate>Tue, 03 Nov 2026 08:29:06 GMT</lastBuildDate>
     
     <item>
       <title><![CDATA[The Twenty-Minute Billionaire: Inside the $6.36 Billion Binance Heist]]></title>
@@ -32,7 +32,7 @@
   
     <item>
       <title><![CDATA[CertiGhost (CVE-2026-54121): How a Low-Privileged AD User Impersonated a Domain Controller via AD CS]]></title>
-      <description><![CDATA[A deep dive into CVE-2026-54121 — the CertiGhost vulnerability that let any Domain User forge a Domain Controller certificate through an AD CS chase fallback, escalate to DCSync, and fully compromise the domain.]]></description>
+      <description><![CDATA[A deep dive into CVE-2026-54121 - the CertiGhost vulnerability that let any Domain User forge a Domain Controller certificate through an AD CS chase fallback, escalate to DCSync, and fully compromise the domain.]]></description>
       <link>https://asbawy.com/logs/certighost-cve-2026-54121</link>
       <guid>https://asbawy.com/logs/certighost-cve-2026-54121</guid>
       <pubDate>Fri, 24 Jul 2026 00:00:00 GMT</pubDate>
@@ -72,7 +72,7 @@
   
     <item>
       <title><![CDATA[Active Directory Enumeration & Attacks Cheatsheet]]></title>
-      <description><![CDATA[A comprehensive reference for AD enumeration and attack paths — covering external/internal recon, password spraying, network poisoning, credentialed enumeration, ACL abuse, Kerberos attacks, delegation abuse, lateral movement, domain dominance, GPO exploitation, ADCS misconfigurations, cross-forest trust abuse, and advanced exploits. Designed for Red Team engagements.]]></description>
+      <description><![CDATA[A comprehensive reference for AD enumeration and attack paths - covering external/internal recon, password spraying, network poisoning, credentialed enumeration, ACL abuse, Kerberos attacks, delegation abuse, lateral movement, domain dominance, GPO exploitation, ADCS misconfigurations, cross-forest trust abuse, and advanced exploits. Designed for Red Team engagements.]]></description>
       <link>https://asbawy.com/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet</link>
       <guid>https://asbawy.com/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet</guid>
       <pubDate>Mon, 15 Jun 2026 00:00:00 GMT</pubDate>
@@ -120,15 +120,15 @@
   
     <item>
       <title><![CDATA[Linux Privilege Escalation: Enumeration Cheatsheet]]></title>
-      <description><![CDATA[Copy-paste-ready enumeration commands covering every critical Linux privesc vector — OS, users, network, files, capabilities, and scheduled tasks. Built for Red Teamers, pentesters, and CTF players.]]></description>
+      <description><![CDATA[Copy-paste-ready enumeration commands covering every critical Linux privesc vector - OS, users, network, files, capabilities, and scheduled tasks. Built for Red Teamers, pentesters, and CTF players.]]></description>
       <link>https://asbawy.com/cheatsheet/linux/privesc-enumeration</link>
       <guid>https://asbawy.com/cheatsheet/linux/privesc-enumeration</guid>
       <pubDate>Fri, 05 Jun 2026 00:00:00 GMT</pubDate>
     </item>
   
     <item>
-      <title><![CDATA[CVE-2026-42945 — NGINX Rift: The 18-Year-Old RCE Hiding in Plain Sight]]></title>
-      <description><![CDATA[A critical heap buffer overflow in ngx_http_rewrite_module — hiding since 2008, CVSS 9.2, unauthenticated RCE from a single crafted request.]]></description>
+      <title><![CDATA[CVE-2026-42945 - NGINX Rift: The 18-Year-Old RCE Hiding in Plain Sight]]></title>
+      <description><![CDATA[A critical heap buffer overflow in ngx_http_rewrite_module - hiding since 2008, CVSS 9.2, unauthenticated RCE from a single crafted request.]]></description>
       <link>https://asbawy.com/logs/cve-2026-42945-nginx-rift</link>
       <guid>https://asbawy.com/logs/cve-2026-42945-nginx-rift</guid>
       <pubDate>Thu, 04 Jun 2026 00:00:00 GMT</pubDate>
@@ -136,7 +136,7 @@
   
     <item>
       <title><![CDATA[Legacy Lethality: Weaponizing OLE & VBA Macros in the GenAI Era]]></title>
-      <description><![CDATA[Enterprise endpoints keep falling to attack primitives from the early 1990s. OLE and VBA macros still dominate initial access because legacy interoperability requirements override security posture. Finance, HR, and operations depend on macro-enabled workflows, and generative AI has collapsed the skill barrier—Q1 2026 telemetry shows over 60% of macro-based malware uses AI-generated obfuscation. This post covers the full attack lifecycle: trigger mechanisms, obfuscation, in-process payload injection, direct syscalls from VBA, XLM abuse, OLE weaponization without macros, and the CVE-2026-21509 kill-bit bypass.]]></description>
+      <description><![CDATA[Enterprise endpoints keep falling to attack primitives from the early 1990s. OLE and VBA macros still dominate initial access because legacy interoperability requirements override security posture. Finance, HR, and operations depend on macro-enabled workflows, and generative AI has collapsed the skill barrier - Q1 2026 telemetry shows over 60% of macro-based malware uses AI-generated obfuscation. This post covers the full attack lifecycle: trigger mechanisms, obfuscation, in-process payload injection, direct syscalls from VBA, XLM abuse, OLE weaponization without macros, and the CVE-2026-21509 kill-bit bypass.]]></description>
       <link>https://asbawy.com/logs/weaponizing-ole-vba-macros</link>
       <guid>https://asbawy.com/logs/weaponizing-ole-vba-macros</guid>
       <pubDate>Wed, 03 Jun 2026 00:00:00 GMT</pubDate>
@@ -152,7 +152,7 @@
   
     <item>
       <title><![CDATA[Data Exfiltration Guide]]></title>
-      <description><![CDATA[A comprehensive red-team reference covering data exfiltration techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS — including advanced IP-over-DNS tunneling with Iodine and HTTP tunneling with Neo-reGeorg — with operational security notes and detection guidance for each method.]]></description>
+      <description><![CDATA[A comprehensive red-team reference covering data exfiltration techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS - including advanced IP-over-DNS tunneling with Iodine and HTTP tunneling with Neo-reGeorg - with operational security notes and detection guidance for each method.]]></description>
       <link>https://asbawy.com/logs/data-exfiltration-guide</link>
       <guid>https://asbawy.com/logs/data-exfiltration-guide</guid>
       <pubDate>Wed, 13 May 2026 00:00:00 GMT</pubDate>
@@ -160,7 +160,7 @@
   
     <item>
       <title><![CDATA[CVE-2021-43798 Grafana Directory Traversal Deep Dive]]></title>
-      <description><![CDATA[Deep dive into CVE-2021-43798 — unauthenticated directory traversal in Grafana 8.x via /public/plugins/. Covers root cause, manual exploitation, URL normalization pitfalls, high-value loot targets, and automation with GrafTraverse.]]></description>
+      <description><![CDATA[Deep dive into CVE-2021-43798 - unauthenticated directory traversal in Grafana 8.x via /public/plugins/. Covers root cause, manual exploitation, URL normalization pitfalls, high-value loot targets, and automation with GrafTraverse.]]></description>
       <link>https://asbawy.com/logs/cve-2021-43798-grafana-directory-traversal</link>
       <guid>https://asbawy.com/logs/cve-2021-43798-grafana-directory-traversal</guid>
       <pubDate>Thu, 12 Jan 2023 00:00:00 GMT</pubDate>

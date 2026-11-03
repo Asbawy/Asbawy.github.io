@@ -11,7 +11,7 @@
 
 ---
 
-_"Take time to learn. Take more time to practice. Open your mind and your imagination — this is true power."_
+_"Take time to learn. Take more time to practice. Open your mind and your imagination - this is true power."_
 
 </div>
 
@@ -35,7 +35,7 @@ Real security research, red teaming, and exploit development do not have predefi
   └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1. Stop Copy-Pasting Flags — Own the Root Cause
+### 1. Stop Copy-Pasting Flags - Own the Root Cause
 
 - **A flag is just a string; understanding is permanent.** When you compromise a machine or solve a challenge, do not immediately move on.
 - Ask yourself:
@@ -50,9 +50,9 @@ Real security research, red teaming, and exploit development do not have predefi
 - Spend **20% of your time studying concepts** and **80% of your time in the trenches**: debugging binaries in GDB/WinDbg, inspecting raw network packets in Wireshark, reading source code, and configuring vulnerable environments from scratch.
 - Treat every lab machine as an enterprise infrastructure. Enumerate thoroughly, map relationships, and understand the ecosystem.
 
-### 3. Open Your Mind & Your Imagination — This is True Power
+### 3. Open Your Mind & Your Imagination - This is True Power
 
-- Top-tier security researchers and red teamers do not just run scanners—they **imagine possibilities**.
+- Top-tier security researchers and red teamers do not just run scanners - they **imagine possibilities**.
 - **Imagination** allows you to see how a seemingly benign feature (such as an unvalidated redirect, an exposed LDAP attribute, or an orphan COM object) can be chained with a secondary misconfiguration to achieve domain dominance.
 - Never stop questioning assumptions: _"What happens if I send negative integers? What if this certificate template is requested by a machine account? What if I replace this DLL during service startup?"_
 
@@ -75,12 +75,12 @@ In-depth technical deep-dives into vulnerability research, exploit development, 
 | Post / Article Title                                                                                          | Category    | Description                                                                                                                                                              |
 | :------------------------------------------------------------------------------------------------------------ | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **[The Twenty-Minute Billionaire: Inside the $6.36 Billion Binance Heist](/logs/october-2026-binance-heist)** | `Web`       | Threat intelligence reconstruction of the Oct 29, 2026 Binance breach: DevOps container pivot, 50-nonce EIP-7702 hijack, TraderTraitor attribution, and $3B freeze race. |
-| **[NGINX Rift (CVE-2026-42945): The 18-Year-Old RCE Hiding in Plain Sight](/logs/cve-2026-42945-nginx-rift)** | `Web`       | Critical heap buffer overflow in `ngx_http_rewrite_module` (CVSS 9.2)—unauthenticated RCE via a single crafted request.                                                  |
+| **[NGINX Rift (CVE-2026-42945): The 18-Year-Old RCE Hiding in Plain Sight](/logs/cve-2026-42945-nginx-rift)** | `Web`       | Critical heap buffer overflow in `ngx_http_rewrite_module` (CVSS 9.2) - unauthenticated RCE via a single crafted request.                                                  |
 | **[CertiGhost (CVE-2026-54121): AD CS Low-Priv to DC Impersonation](/logs/certighost-cve-2026-54121)**        | `Windows`   | AD CS chase fallback flaw enabling low-privileged Domain Users to forge Domain Controller certificates and escalate to DCSync.                                           |
 | **[BadSuccessor: dMSA Privilege Escalation in Windows Server 2025](/logs/badsuccessor)**                      | `Windows`   | Technical breakdown of dMSA migration mechanics in Windows Server 2025 and vectors for full domain compromise.                                                           |
 | **[Hijacking Grammarly Desktop: Silent Code Execution via Missing DLL](/logs/grammarly-dll-hijacking-blog)**  | `Windows`   | Exploiting user-writable application folder DLL loading in Grammarly Desktop for silent code execution and persistence.                                                  |
 | **[Battlefield Forensics: Anatomy of the IDF OLAR Radio System](/logs/olar-device-forensics)**                | `Forensics` | Hardware reverse engineering, firmware extraction, memory analysis, and cryptographic inspection of tactical military radio systems.                                     |
-| **[Source Code Review: Unearthing Critical Flaws in PHP](/logs/php-code-review)**                             | `Web`       | Practical guide to auditing PHP codebases—identifying type juggling, deserialization, and logic bugs to construct functional exploits.                                   |
+| **[Source Code Review: Unearthing Critical Flaws in PHP](/logs/php-code-review)**                             | `Web`       | Practical guide to auditing PHP codebases - identifying type juggling, deserialization, and logic bugs to construct functional exploits.                                   |
 | **[The Art of Data Exfiltration: DNS, ICMP, and HTTPS Tunneling](/logs/data-exfiltration-guide)**             | `Network`   | Red-team exfiltration playbook covering Iodine IP-over-DNS, Neo-reGeorg HTTP tunneling, ICMP payloads, OPSEC, and detection.                                             |
 | **[Practical Wireless Exploitation for Red Teams](/logs/practical-wireless-exploitation-for-red-teams)**      | `Network`   | Advanced wireless ops covering enterprise Wi-Fi infiltration, BLE MITM, RFID cloning, and IoT device vulnerabilities.                                                    |
 | **[A Technical Dive into 5G Hacking](/logs/5G-hacking)**                                                      | `Network`   | A complete technical breakdown of 5G Standalone (SA) vulnerabilities, covering RAN hardware exploitation, SBI web vulnerability chains, and Kubernetes CNF compromise.   |
@@ -136,15 +136,15 @@ Standalone, fully automated exploit and solver scripts for lab machines and chal
 
 | Script Name                                                                      | Target / Lab                  |  Language  | Description                                                                                                                                                                                              |
 | :------------------------------------------------------------------------------- | :---------------------------- | :--------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **[`htb_busqueda_solve.py`](./autosolve/htb_busqueda_solve.py)**                 | HackTheBox — Busqueda         | `Python 3` | Searchor 2.4.0 eval() RCE, `.git/config` cred harvesting, SSH password reuse, and sudo relative `./full-checkup.sh` path hijack.                                                                         |
-| **[`Ghostlink_scripts/`](./autosolve/Ghostlink_scripts/)**                       | HackTheBox — Ghostlink        | `Python 3` | Modular exploit toolkit: MQTT coercion, custom thread-locked HTTP relay bridge, double-encoded traversal, Gogs CVE-2025-8110 symlink RCE, and ADCS ESC11.                                                |
-| **[`htb_hexecution_solve.py`](./autosolve/htb_hexecution_solve.py)**             | HackTheBox — Hexecution       | `Python 3` | Custom VM bytecode parsing (`recipe.asm`), AES256 extraction, permutation inversion, and emulation.                                                                                                      |
-| **[`Jail_scripts/`](./autosolve/Jail_scripts/)**                                 | HackTheBox — Jail             | `Python 3` | Modular exploit toolkit: 32-bit stack BOF with pointer leak, NFS UID 1000 SUID binary, sudo rvim Python escape, and RSA Wiener attack.                                                                   |
-| **[`htb_neural_detonator_solve.py`](./autosolve/htb_neural_detonator_solve.py)** | HackTheBox — Neural Detonator | `Python 3` | Automated Keras (`mlcious.keras`) extraction, Lambda bytecode disassembly, weight XOR key derivation, and bias decryption.                                                                               |
-| **[`htb_nexus_solve.py`](./autosolve/htb_nexus_solve.py)**                       | HackTheBox — Nexus            | `Python 3` | Gitea git history DB credential leak, Krayin CRM TinyMCE file upload RCE, production `.env` password harvest, SSH reuse, and root gitea-template-sync timer traversal via crafted git `..` tree objects. |
-| **[`thm_packed_light_solve.py`](./autosolve/thm_packed_light_solve.py)**         | TryHackMe — Packed Light      | `Python 3` | PCAP C2 payload extraction, XOR keylogger cryptanalysis, and keystroke cookie stream decryption.                                                                                                         |
-| **[`thm_complimentary_exploit.sh`](./autosolve/thm_complimentary_exploit.sh)**   | TryHackMe — Complimentary     |   `Bash`   | Cognito Identity Pool ID extraction, temporary AWS credentials exchange, and DynamoDB scan.                                                                                                              |
-| **[`thm_pythonplayground_solve.py`](./autosolve/thm_pythonplayground_solve.py)** | TryHackMe — Python Playground | `Python 3` | Client-side base-26 decoding, Python sandbox escape to container root, SSH credential reuse, and pure-Python Baron Samedit (CVE-2021-3156) heap overflow.                                                |
+| **[`htb_busqueda_solve.py`](./autosolve/htb_busqueda_solve.py)**                 | HackTheBox - Busqueda         | `Python 3` | Searchor 2.4.0 eval() RCE, `.git/config` cred harvesting, SSH password reuse, and sudo relative `./full-checkup.sh` path hijack.                                                                         |
+| **[`Ghostlink_scripts/`](./autosolve/Ghostlink_scripts/)**                       | HackTheBox - Ghostlink        | `Python 3` | Modular exploit toolkit: MQTT coercion, custom thread-locked HTTP relay bridge, double-encoded traversal, Gogs CVE-2025-8110 symlink RCE, and ADCS ESC11.                                                |
+| **[`htb_hexecution_solve.py`](./autosolve/htb_hexecution_solve.py)**             | HackTheBox - Hexecution       | `Python 3` | Custom VM bytecode parsing (`recipe.asm`), AES256 extraction, permutation inversion, and emulation.                                                                                                      |
+| **[`Jail_scripts/`](./autosolve/Jail_scripts/)**                                 | HackTheBox - Jail             | `Python 3` | Modular exploit toolkit: 32-bit stack BOF with pointer leak, NFS UID 1000 SUID binary, sudo rvim Python escape, and RSA Wiener attack.                                                                   |
+| **[`htb_neural_detonator_solve.py`](./autosolve/htb_neural_detonator_solve.py)** | HackTheBox - Neural Detonator | `Python 3` | Automated Keras (`mlcious.keras`) extraction, Lambda bytecode disassembly, weight XOR key derivation, and bias decryption.                                                                               |
+| **[`htb_nexus_solve.py`](./autosolve/htb_nexus_solve.py)**                       | HackTheBox - Nexus            | `Python 3` | Gitea git history DB credential leak, Krayin CRM TinyMCE file upload RCE, production `.env` password harvest, SSH reuse, and root gitea-template-sync timer traversal via crafted git `..` tree objects. |
+| **[`thm_packed_light_solve.py`](./autosolve/thm_packed_light_solve.py)**         | TryHackMe - Packed Light      | `Python 3` | PCAP C2 payload extraction, XOR keylogger cryptanalysis, and keystroke cookie stream decryption.                                                                                                         |
+| **[`thm_complimentary_exploit.sh`](./autosolve/thm_complimentary_exploit.sh)**   | TryHackMe - Complimentary     |   `Bash`   | Cognito Identity Pool ID extraction, temporary AWS credentials exchange, and DynamoDB scan.                                                                                                              |
+| **[`thm_pythonplayground_solve.py`](./autosolve/thm_pythonplayground_solve.py)** | TryHackMe - Python Playground | `Python 3` | Client-side base-26 decoding, Python sandbox escape to container root, SSH credential reuse, and pure-Python Baron Samedit (CVE-2021-3156) heap overflow.                                                |
 
 ---
 
@@ -154,14 +154,14 @@ High-signal, actionable references structured for rapid deployment during engage
 
 - **[Active Directory Comprehensive Cheatsheet](/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet)**
   - Full attack lifecycle: External/internal recon, password spraying, network poisoning, BloodHound/Pharaohound mapping, Kerberoasting, AS-REP Roasting, NTLM Relaying, AD CS (Certified Pre-Owned), DCSync, GPO exploitation, and domain persistence.
-- **[Linux Privilege Escalation — Enumeration](/cheatsheet/linux/privesc-enumeration)**
+- **[Linux Privilege Escalation - Enumeration](/cheatsheet/linux/privesc-enumeration)**
   - Copy-paste-ready enumeration commands covering SUID/SGID binaries, cron jobs, writable system paths, kernel exploits, capabilities, and NFS root squashing.
-- **[Linux Privilege Escalation — Exploitation](/cheatsheet/linux/privesc-exploitation)**
+- **[Linux Privilege Escalation - Exploitation](/cheatsheet/linux/privesc-exploitation)**
   - Step-by-step kill chains for sudo abuse, SUID/capabilities, PATH hijacking, cron exploitation, NFS `no_root_squash`, and runtime process hunting with `pspy`.
 - **[Linux Shell Upgrades](/cheatsheet/linux/Shell_Upgrades)**
   - Upgrading basic reverse shells to fully interactive TTYs using Penelope, `python/pty`, `socat`, `stty raw -echo`, and SSH tunneling.
 - **[MSFvenom Payload Cheat Sheet](/cheatsheet/Tools/MSFvenom)**
-  - Payload generation across Windows, Linux, macOS, Web, and Mobile—staged vs. stageless selection, encoding, encryption, bad-character handling, template injection, and handlers.
+  - Payload generation across Windows, Linux, macOS, Web, and Mobile - staged vs. stageless selection, encoding, encryption, bad-character handling, template injection, and handlers.
 - **[File Transfer Techniques](/cheatsheet/Tools/file-transfer-techniques)**
   - Living-off-the-land techniques for moving tools and exfiltrating loot across Linux & Windows using HTTP/S, SMB, FTP, SCP, Netcat, PowerShell, `certutil`, and `bitsadmin`.
 
@@ -174,7 +174,7 @@ Locally built offensive tooling designed for speed, accuracy, and operational se
 | Tool Name                                                                                                    | Language | Description & GitHub Repository                                                                                                                                     |
 | :----------------------------------------------------------------------------------------------------------- | :------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **[pharaohound](https://github.com/Asbawy/pharaohound)**                                                     | `Python` | Lightweight, CLI-first Active Directory & Azure analysis engine that stream-parses raw BloodHound JSON data to map attack paths and generate exploitation commands. |
-| **[dedjs](https://github.com/Asbawy/dedjs)**                                                                 | `Python` | Context-aware JavaScript static analysis tool for bug bounty and pentesting—correlating user-controlled sources with dangerous sinks to eliminate false positives.  |
+| **[dedjs](https://github.com/Asbawy/dedjs)**                                                                 | `Python` | Context-aware JavaScript static analysis tool for bug bounty and pentesting - correlating user-controlled sources with dangerous sinks to eliminate false positives.  |
 | **[dedjwt](https://github.com/Asbawy/dedjwt)**                                                               | `Python` | High-performance Python tool designed for rapid JWT token secret brute-forcing and token tampering.                                                                 |
 | **[NFR](https://github.com/Asbawy/NFR)**                                                                     | `Python` | Multithreaded race condition testing automation for identifying concurrency vulnerabilities in web APIs.                                                            |
 | **[GrafTraverse-CVE-2021-43798](https://github.com/Asbawy/GrafTraverse-CVE-2021-43798)**                     | `Python` | Automated exploitation framework for Grafana directory traversal (CVE-2021-43798) with custom file extraction payloads.                                             |

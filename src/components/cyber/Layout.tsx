@@ -53,7 +53,7 @@ export function Panel({
       {title && (
         <header className="flex items-center justify-between border-b border-glass-border bg-foreground/[0.02] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
           <span className="flex items-center gap-2">
-            <span className="text-foreground/30">—</span>
+            <span className="text-foreground/30">-</span>
             {title}
           </span>
           {right}

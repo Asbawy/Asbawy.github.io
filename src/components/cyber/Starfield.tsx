@@ -26,7 +26,7 @@ interface ShootingStar {
 }
 
 /**
- * Starfield — An ultra-crisp ambient cyber starfield canvas background.
+ * Starfield - An ultra-crisp ambient cyber starfield canvas background.
  * - Adapts dynamically to light and dark theme with tailored palettes.
  * - Multi-depth star layers (faint background, twinkling midground, glowing cyber beacons).
  * - Subtle 4-point diffraction flares on prominent stars.

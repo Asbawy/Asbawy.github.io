@@ -19,13 +19,13 @@ import { AlertTriangle, ShieldAlert, Terminal, Zap } from "lucide-react";
 
 ## The First 10 Minutes of Triage
 
-When you first gain access to a PHP codebase, your goal isn't to read every file—that would take forever. Instead, you need to **triage** the application: quickly find the most valuable targets and map out where attacks can happen.
+When you first gain access to a PHP codebase, your goal isn't to read every file - that would take forever. Instead, you need to **triage** the application: quickly find the most valuable targets and map out where attacks can happen.
 
 ### Initial Triage: The "Kill Chain" Files
 
 Two files tell you almost everything you need to know about an application's security posture:
 
-**1. `.env` — The Secrets Vault**
+**1. `.env` - The Secrets Vault**
 It often contains:
 
 - Database usernames and passwords
@@ -33,7 +33,7 @@ It often contains:
 - Encryption keys (`APP_KEY`)
 - Debug settings
 
-**2. `composer.json` — The Dependency Map**
+**2. `composer.json` - The Dependency Map**
 This reveals:
 
 - Exact framework versions (Laravel, Symfony, etc.)
@@ -63,11 +63,11 @@ If an attacker gets this key, they can forge admin cookies or craft malicious se
 
 ### Attack Surface Mapping: Finding the Doors
 
-Routing files are like a building's floor plan—they show you every entrance. Check these files:
+Routing files are like a building's floor plan - they show you every entrance. Check these files:
 
-- `routes/web.php` — Regular web pages
-- `routes/api.php` — API endpoints
-- `routes/index.php` — Legacy or custom routing
+- `routes/web.php` - Regular web pages
+- `routes/api.php` - API endpoints
+- `routes/index.php` - Legacy or custom routing
 
 **What you're hunting for:** Endpoints placed **outside** authentication middleware groups. These are "unlocked doors" that anyone can walk through.
 
@@ -85,7 +85,7 @@ Route::middleware(['auth'])->group(function () {
 
 ## Understanding Data Flow
 
-Before diving into specific bugs, you need to understand how data moves through an application. These four concepts are the foundation of **taint analysis**—tracking dangerous data from entry to execution.
+Before diving into specific bugs, you need to understand how data moves through an application. These four concepts are the foundation of **taint analysis** - tracking dangerous data from entry to execution.
 
 ```mermaid
 graph LR
@@ -130,7 +130,7 @@ PHP has some unique behaviors that create security holes. Understanding these is
 
 ### 1. Loose Comparison (`= =` vs `= = =`)
 
-PHP's `= =` compares values **after converting types**. This creates "Magic Hashes"—different strings that PHP thinks are equal.
+PHP's `= =` compares values **after converting types**. This creates "Magic Hashes" - different strings that PHP thinks are equal.
 
 ```php
 // These two MD5 hashes both start with "0e" followed by ONLY numbers
@@ -169,7 +169,7 @@ PHP's old random functions are **predictable**:
 | Function    | Why It's Dangerous                          |
 | ----------- | ------------------------------------------- |
 | `rand()`    | Uses a weak algorithm, easily predicted     |
-| `mt_rand()` | Mersenne Twister—mathematically predictable |
+| `mt_rand()` | Mersenne Twister - mathematically predictable |
 | `uniqid()`  | Based on system time (microseconds)         |
 
 An attacker who observes a few tokens can calculate future ones. This breaks password reset tokens, session IDs, and API keys.
@@ -179,7 +179,7 @@ An attacker who observes a few tokens can calculate future ones. This breaks pas
 PHP can treat URLs and special streams like file paths. The most dangerous is `php://filter`:
 
 ```php
-// This doesn't execute the file—it returns its source code as base64
+// This doesn't execute the file - it returns its source code as base64
 include('php://filter/convert.base64-encode/resource=config/database.php');
 ```
 
@@ -409,7 +409,7 @@ curl -s "http://vuln.com/users?sort=(SELECT+IF(1=1,SLEEP(5),0))"
 
 ## Automating the Hunt
 
-### ripgrep (`rg`) — Find Danger Instantly
+### ripgrep (`rg`) - Find Danger Instantly
 
 ```bash
 # Command Execution Sinks

@@ -22,7 +22,7 @@ import { CategoryIcon, AutoScriptBadge } from "@/components/cyber/WriteupCompone
 export const Route = createFileRoute("/writeups/")({
   head: () => ({
     meta: [
-      { title: "Writeups — Asbawy" },
+      { title: "Writeups - Asbawy" },
       {
         name: "description",
         content: "CTF writeups, HackTheBox walkthroughs, TryHackMe challenges, and more by Asbawy.",
@@ -190,7 +190,7 @@ function WriteupsIndex() {
               </h1>
             </div>
             <p className="text-base md:text-lg text-muted-foreground max-w-2xl leading-relaxed">
-              Detailed walkthroughs covering the full kill chain — from recon to root.
+              Detailed walkthroughs covering the full kill chain - from recon to root.
             </p>
           </div>
 

@@ -69,8 +69,8 @@ export function JwtDecoder() {
           }`}
         >
           {alg === "none"
-            ? "⚠ alg=none detected — signature bypass possible"
-            : `✓ alg=${alg} — verify against secret/key`}
+            ? "⚠ alg=none detected - signature bypass possible"
+            : `✓ alg=${alg} - verify against secret/key`}
         </div>
       )}
     </Panel>

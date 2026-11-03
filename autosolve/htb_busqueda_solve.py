@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-htb_busqueda_solve.py — autonomous solve for HTB Busqueda.
+htb_busqueda_solve.py - autonomous solve for HTB Busqueda.
 
 Chain:
   1. Discovery   : locate the RCE endpoint on the Flask/Searchor app
@@ -56,7 +56,7 @@ def main():
     out = rce(target, "id")
     print(f"      id -> {out.strip()}")
     if "svc" not in out:
-        print("    [!] RCE did not return 'svc' — aborting.")
+        print("    [!] RCE did not return 'svc' - aborting.")
         return 1
 
     # step 2 : harvest git config via RCE

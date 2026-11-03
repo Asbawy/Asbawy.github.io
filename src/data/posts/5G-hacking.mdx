@@ -37,11 +37,11 @@ import {
 
 ## Summary
 
-5G Standalone (<Term name="5G SA" />) is not an upgrade — it is a full rebuild of the mobile network into a cloud-native, HTTP/2, Kubernetes-based distributed system. This collapses radio, transport, and core into one attack surface that no single discipline can cover alone.
+5G Standalone (<Term name="5G SA" />) is not an upgrade - it is a full rebuild of the mobile network into a cloud-native, HTTP/2, Kubernetes-based distributed system. This collapses radio, transport, and core into one attack surface that no single discipline can cover alone.
 
 For red teamers, this changes everything. The same <Term name="SSRF">SSRF</Term> that pops a web app now chains into <Term name="NRF">NRF</Term> poisoning and lawful intercept abuse. The same Kubernetes <Term>LFI</Term> now yields cluster-admin over an entire 5G core. The same JTAG/<Term>UART</Term> toolkit that owns IoT firmware now extracts <Term>IPsec</Term> <Term>PSKs</Term> from <Term name="BBU">BBUs</Term> and tunnels into the operator's transport network.
 
-This article is a field manual — covering <Term name="RAN">RAN</Term> hardware exploitation, <Term name="SBI">SBI</Term> web vulnerability chains, <Term name="5G-AKA">5G-AKA</Term> crypto weaknesses, <Term name="HSM">HSM</Term> side channels, Kubernetes <Term name="CNF">CNF</Term> compromise, and full kill-chain scenarios. It extends the research of Arthur Naullet and Maxime Gautier (Orange Cyberdefense), and every technique maps to <Term name="3GPP">3GPP</Term> specs and open-source tooling.
+This article is a field manual - covering <Term name="RAN">RAN</Term> hardware exploitation, <Term name="SBI">SBI</Term> web vulnerability chains, <Term name="5G-AKA">5G-AKA</Term> crypto weaknesses, <Term name="HSM">HSM</Term> side channels, Kubernetes <Term name="CNF">CNF</Term> compromise, and full kill-chain scenarios. It extends the research of Arthur Naullet and Maxime Gautier (Orange Cyberdefense), and every technique maps to <Term name="3GPP">3GPP</Term> specs and open-source tooling.
 
 ### Threat Actors Targeting Telecoms
 
@@ -96,9 +96,9 @@ Because these services live across separate VLANs and radio interfaces, effectiv
 ### 2.2 Asset Enumeration
 
 - **<Term>gNodeB</Term> <Term>OAM</Term>:** HTTP/HTTPS with default creds (`admin/admin`, `root/root`), SSH on non-standard ports, vendor MML consoles
-- **<Term>MML</Term> ports:** Ericsson MML on TCP 5000/5001, Huawei LMT on 22/23, Nokia C-Lesh on proprietary ports — all frequently vulnerable to command injection
+- **<Term>MML</Term> ports:** Ericsson MML on TCP 5000/5001, Huawei LMT on 22/23, Nokia C-Lesh on proprietary ports - all frequently vulnerable to command injection
 - **<Term>NETCONF</Term>/<Term>YANG</Term> (TCP 830):** Often vendor-default creds, accepts `<edit-config>` pushing rogue configs to <Term>gNBs</Term>
-- **SFTP jump hosts:** Store firmware in cleartext, accept SSH keys from compromised field-engineer laptops — poison one firmware image, backdoor 10,000 <Term>BBUs</Term>
+- **SFTP jump hosts:** Store firmware in cleartext, accept SSH keys from compromised field-engineer laptops - poison one firmware image, backdoor 10,000 <Term>BBUs</Term>
 
 ### 2.3 Hybrid Testing Matrix
 
@@ -157,7 +157,7 @@ Cell tower baseband units (<Term>BBU</Term>) are a critical physical entry point
 1. **Serial Console Access:** Locate debug pins on the main circuit board (<Term>UART</Term>). Connect a hardware debugger (like a Bus Pirate) to view the boot logs and memory addresses.
 2. **Dump the Firmware:** Use a hardware flasher to physically read the memory chip (<Term>SPI</Term> flash) and save the firmware to a file (`flashrom -r bbu_flash.bin`).
 3. **Extract the Filesystem:** Run `binwalk` on the extracted firmware to unpack the Linux filesystem (often SquashFS).
-4. **Steal VPN Keys:** Search the extracted files for hidden <Term>IPsec</Term> keys (often found in `/etc/ipsec.secrets`). Using these stolen keys, you can connect your own laptop directly to the carrier's internal transport network — bypassing all firewalls.
+4. **Steal VPN Keys:** Search the extracted files for hidden <Term>IPsec</Term> keys (often found in `/etc/ipsec.secrets`). Using these stolen keys, you can connect your own laptop directly to the carrier's internal transport network - bypassing all firewalls.
 
 ### 3.3 Fronthaul Network Attacks
 
@@ -191,12 +191,12 @@ The "fronthaul" network connects the antennas to the processing units. Surprisin
 
 <Term>SBI</Term> custom headers (TS 29.500) that are routinely mishandled:
 
-- `3gpp-Sbi-Target-apiRoot` — tells <Term>SCP</Term> where to forward → arbitrary SSRF
-- `3gpp-Sbi-Callback` — async event callback URL → blind SSRF to internal services
-- `3gpp-Sbi-Discovery-*` — NF discovery via <Term>NRF</Term> → internal topology leak
-- `3gpp-Sbi-Routing-Binding` — SCP routing → traffic redirection to attacker NF
+- `3gpp-Sbi-Target-apiRoot` - tells <Term>SCP</Term> where to forward → arbitrary SSRF
+- `3gpp-Sbi-Callback` - async event callback URL → blind SSRF to internal services
+- `3gpp-Sbi-Discovery-*` - NF discovery via <Term>NRF</Term> → internal topology leak
+- `3gpp-Sbi-Routing-Binding` - SCP routing → traffic redirection to attacker NF
 
-**Example — Callback SSRF:**
+**Example - Callback SSRF:**
 
 ```http
 POST /npcf-smpolicycontrol/v1/sm-policies HTTP/2
@@ -223,7 +223,7 @@ The Network Exposure Function (<Term>NEF</Term>) is designed to be the gateway f
 The gap between spec and deployment is enormous:
 
 - **Self-signed cert acceptance:** Many Open5GS/free5GC deployments ship with `verify: false`
-- **<Term>OAuth2</Term> scope escalation:** NFs check `iss`/`exp` but not `scope` — a <Term>NEF</Term> <Term>JWT</Term> works against <Term>UDM</Term>
+- **<Term>OAuth2</Term> scope escalation:** NFs check `iss`/`exp` but not `scope` - a <Term>NEF</Term> <Term>JWT</Term> works against <Term>UDM</Term>
 - **<Term>JWT</Term> `alg=none`:** Still present in some Java-based vendor NFs using older `nimbus-jose-jwt`
 - **<Term>N32</Term>/<Term>SEPP</Term> misconfiguration:** <Term>SEPPs</Term> accepting self-signed peer certs → pivot from roaming partner into home network
 
@@ -250,7 +250,7 @@ This attack creates a hidden "man-in-the-middle" inside the 5G core network.
 
 ## 5. Cryptography and <Term>HSM</Term> Flaws
 
-5G crypto is spec'd in TS 33.501. The primitives are sound — the implementations are not.
+5G crypto is spec'd in TS 33.501. The primitives are sound - the implementations are not.
 
 <FiveGKeyHierarchy />
 
@@ -260,14 +260,14 @@ This attack creates a hidden "man-in-the-middle" inside the 5G core network.
 
 While the <Term>5G-AKA</Term> authentication protocol introduced new protections to stop fake cell towers, real-world software and hardware implementations still suffer from critical weaknesses:
 
-- **Cheating the Math (Milenage Weakness):** Some phone chips intentionally take shortcuts in the complex authentication math to save battery and processing power. Attackers can send a deliberately corrupted signal—and because the chip skips the full math check, it connects to the fake tower anyway.
+- **Cheating the Math (Milenage Weakness):** Some phone chips intentionally take shortcuts in the complex authentication math to save battery and processing power. Attackers can send a deliberately corrupted signal - and because the chip skips the full math check, it connects to the fake tower anyway.
 - **Predictable Random Numbers (<Term>RAND</Term>):** Security relies on generating truly random numbers. If a carrier's security hardware (<Term>HSM</Term>) uses a weak or predictable random number generator, an attacker who observes just one authentication sequence can mathematically predict all future secret keys.
 - **The "Fast-Reauth" Loophole:** To speed up connections, 5G allows a "fast re-authentication" token. If an attacker steals just one of these tokens using a fake tower, they can often reuse it indefinitely to hijack connections because many network operators forget to configure them to expire.
 
 ### 5.2 <Term>SUCI</Term> De-anonymization
 
 <Term>SUCI</Term> protects the <Term>SUPI</Term> via <Term>ECIES</Term> encryption. But TS 33.501
-mandates a NULL-scheme fallback — and many <Term>UEs</Term> ship without operator public keys,
+mandates a NULL-scheme fallback - and many <Term>UEs</Term> ship without operator public keys,
 defaulting to NULL. The <Term>SUPI</Term> goes in cleartext.
 
 <SuciFlow />
@@ -465,7 +465,7 @@ These are the tools you need to build a working 5G hacking lab:
 
 Understanding attacker evasion techniques helps defenders know what to watch for:
 
-- **Silencing Logs:** Attackers can change the logging verbosity of a 5G app to `ERROR` before performing sensitive operations, then change it back after. Only errors are logged — normal reconnaissance activity is invisible.
+- **Silencing Logs:** Attackers can change the logging verbosity of a 5G app to `ERROR` before performing sensitive operations, then change it back after. Only errors are logged - normal reconnaissance activity is invisible.
 - **Exploiting SIEM Lag:** Most security monitoring systems take 30-60 seconds to ingest and process logs. If an attacker completes their operation within that window, alerts fire *after* the damage is done.
 - **Blending In:** Instead of blasting thousands of requests at once (which is easy to detect), smart attackers spread their operations across hours or days, mimicking normal network traffic patterns.
 - **Reusing Debug Pods:** Almost every production 5G core has at least one vendor debug container running with elevated privileges. Attackers reuse these existing pods instead of deploying their own, leaving no deployment logs.
@@ -475,7 +475,7 @@ Understanding attacker evasion techniques helps defenders know what to watch for
 
 ## 10. Conclusion
 
-For thirty years, telecom security relied on proprietary protocols and closed hardware. That era is over. 5G Standalone rebuilt the mobile network on HTTP/2, REST APIs, <Term>OAuth2</Term>, mutual TLS, Kubernetes, <Term>Helm</Term>, and Linux containers — inheriting every vulnerability those technologies have ever produced.
+For thirty years, telecom security relied on proprietary protocols and closed hardware. That era is over. 5G Standalone rebuilt the mobile network on HTTP/2, REST APIs, <Term>OAuth2</Term>, mutual TLS, Kubernetes, <Term>Helm</Term>, and Linux containers - inheriting every vulnerability those technologies have ever produced.
 
 A web pentester who learns the 5G architecture spec (TS 23.501) can find core network vulnerabilities within a week. A Kubernetes red teamer who understands the <Term>NRF</Term> can compromise a national carrier within a month. The cross-disciplinary attacker wins.
 
@@ -484,78 +484,78 @@ A web pentester who learns the 5G architecture spec (TS 23.501) can find core ne
 
 #### 3GPP Specifications
 
-1. 3GPP TS 23.501 — _System Architecture for the 5G System (5GS)_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/23501.htm)
-2. 3GPP TS 23.502 — _Procedures for the 5G System (5GS)_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/23502.htm)
-3. 3GPP TS 33.501 — _Security Architecture and Procedures for 5G System_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33501.htm)
-4. 3GPP TS 29.500 — _5G System; Technical Realization of Service Based Architecture_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29500.htm)
-5. 3GPP TS 29.510 — _Network Function Repository Services_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29510.htm)
-6. 3GPP TS 29.503 — _Unified Data Management Services_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29503.htm)
-7. 3GPP TS 29.502 — _Session Management Services_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29502.htm)
-8. 3GPP TS 33.310 — _Network Domain Security (NDS); Authentication Framework (AF)_, v17.3.0, 2023. [3gpp.org](https://www.3gpp.org/dynareport/33310.htm)
-9. 3GPP TS 33.126 — _Lawful Interception (LI); LI Requirements_, v18.2.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33126.htm)
-10. 3GPP TS 33.127 — _Lawful Interception (LI); LI Architecture and Functions_, v18.3.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33127.htm)
-11. 3GPP TS 29.910 — _Domain Name System Procedures; Stage 3_, v17.0.0, 2022. [3gpp.org](https://www.3gpp.org/dynareport/29910.htm)
-12. 3GPP TS 28.541 — _Management and Orchestration; 5G Network Resource Model (NRM)_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/28541.htm)
-13. 3GPP TR 33.809 — _Study on 5G Security Enhancements_, v18.0.0, 2023. [3gpp.org](https://www.3gpp.org/dynareport/33809.htm)
-14. 3GPP TS 35.206 — _Specification of the Milenage Algorithm Set_, v17.0.0, 2022. [3gpp.org](https://www.3gpp.org/dynareport/35206.htm)
+1. 3GPP TS 23.501 - _System Architecture for the 5G System (5GS)_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/23501.htm)
+2. 3GPP TS 23.502 - _Procedures for the 5G System (5GS)_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/23502.htm)
+3. 3GPP TS 33.501 - _Security Architecture and Procedures for 5G System_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33501.htm)
+4. 3GPP TS 29.500 - _5G System; Technical Realization of Service Based Architecture_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29500.htm)
+5. 3GPP TS 29.510 - _Network Function Repository Services_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29510.htm)
+6. 3GPP TS 29.503 - _Unified Data Management Services_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29503.htm)
+7. 3GPP TS 29.502 - _Session Management Services_, v18.6.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/29502.htm)
+8. 3GPP TS 33.310 - _Network Domain Security (NDS); Authentication Framework (AF)_, v17.3.0, 2023. [3gpp.org](https://www.3gpp.org/dynareport/33310.htm)
+9. 3GPP TS 33.126 - _Lawful Interception (LI); LI Requirements_, v18.2.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33126.htm)
+10. 3GPP TS 33.127 - _Lawful Interception (LI); LI Architecture and Functions_, v18.3.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/33127.htm)
+11. 3GPP TS 29.910 - _Domain Name System Procedures; Stage 3_, v17.0.0, 2022. [3gpp.org](https://www.3gpp.org/dynareport/29910.htm)
+12. 3GPP TS 28.541 - _Management and Orchestration; 5G Network Resource Model (NRM)_, v18.5.0, 2024. [3gpp.org](https://www.3gpp.org/dynareport/28541.htm)
+13. 3GPP TR 33.809 - _Study on 5G Security Enhancements_, v18.0.0, 2023. [3gpp.org](https://www.3gpp.org/dynareport/33809.htm)
+14. 3GPP TS 35.206 - _Specification of the Milenage Algorithm Set_, v17.0.0, 2022. [3gpp.org](https://www.3gpp.org/dynareport/35206.htm)
 
 #### Conference Talks and Presentations
 
-15. Naullet, A. & Gautier, M. — _Unmasking the 5G Core: A Practical Red Team Approach_, Hexacon 2023. [Orange Cyberdefense Research](https://www.orangecyberdefense.com/global/research)
-16. Naullet, A. & Gautier, M. — _5G Core Network Hacking_, Black Hat EU 2023. [blackhat.com](https://www.blackhat.com/eu-23/briefings/schedule/)
-17. Beer, I. & Groß, S. — _A Deep Dive into an NSO Zero-Click iMessage Exploit_, Project Zero, 2021. [googleprojectzero.blogspot.com](https://googleprojectzero.blogspot.com/2021/12/a-deep-dive-into-nso-zero-click.html)
-18. Weinmann, R.-P. — _Baseband Attacks: Remote Exploitation of Memory Corruption in Cellular Protocol Stacks_, USENIX WOOT 2012. [usenix.org](https://www.usenix.org/conference/woot12/workshop-program)
-19. Golde, N., Redon, K., & Seifert, J.-P. — _Let Me Answer That for You: Exploiting Broadcast Information in Cellular Networks_, USENIX Security 2013. [usenix.org](https://www.usenix.org/conference/usenixsecurity13)
-20. SRLabs — _Rooting SIM Cards_, Black Hat USA 2013. [srlabs.de](https://srlabs.de/bites/rooting-sim-cards/)
-21. Michau, B. & Muzat, C. — _How to not Break LTE Crypto_, SSTIC 2016. [sstic.org](https://www.sstic.org/2016/)
-22. Positive Technologies — _5G Standalone Core Security Research_, 2021. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-core-security/)
-23. ERNW — _5G Security Evaluation_, Troopers Conference 2020. [ernw.de](https://www.ernw.de/research.html)
-24. Altaf Shaik — _Practical Attacks Against 5G Networks_, DEF CON 31 Telecom Village, 2023. [defcon.org](https://www.defcon.org/html/defcon-31/dc-31-villages.html)
-25. Karsten Nohl — _Mobile Self-Defense_, 31C3, 2014. [media.ccc.de](https://media.ccc.de/v/31c3-6249-mobile_self_defense)
-26. Yuwei Zheng & Haoqi Shan — _Ghost Telephonist Impersonates You_, DEF CON 25, 2017. [defcon.org](https://www.defcon.org/html/defcon-25/dc-25-speakers.html)
+15. Naullet, A. & Gautier, M. - _Unmasking the 5G Core: A Practical Red Team Approach_, Hexacon 2023. [Orange Cyberdefense Research](https://www.orangecyberdefense.com/global/research)
+16. Naullet, A. & Gautier, M. - _5G Core Network Hacking_, Black Hat EU 2023. [blackhat.com](https://www.blackhat.com/eu-23/briefings/schedule/)
+17. Beer, I. & Groß, S. - _A Deep Dive into an NSO Zero-Click iMessage Exploit_, Project Zero, 2021. [googleprojectzero.blogspot.com](https://googleprojectzero.blogspot.com/2021/12/a-deep-dive-into-nso-zero-click.html)
+18. Weinmann, R.-P. - _Baseband Attacks: Remote Exploitation of Memory Corruption in Cellular Protocol Stacks_, USENIX WOOT 2012. [usenix.org](https://www.usenix.org/conference/woot12/workshop-program)
+19. Golde, N., Redon, K., & Seifert, J.-P. - _Let Me Answer That for You: Exploiting Broadcast Information in Cellular Networks_, USENIX Security 2013. [usenix.org](https://www.usenix.org/conference/usenixsecurity13)
+20. SRLabs - _Rooting SIM Cards_, Black Hat USA 2013. [srlabs.de](https://srlabs.de/bites/rooting-sim-cards/)
+21. Michau, B. & Muzat, C. - _How to not Break LTE Crypto_, SSTIC 2016. [sstic.org](https://www.sstic.org/2016/)
+22. Positive Technologies - _5G Standalone Core Security Research_, 2021. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-core-security/)
+23. ERNW - _5G Security Evaluation_, Troopers Conference 2020. [ernw.de](https://www.ernw.de/research.html)
+24. Altaf Shaik - _Practical Attacks Against 5G Networks_, DEF CON 31 Telecom Village, 2023. [defcon.org](https://www.defcon.org/html/defcon-31/dc-31-villages.html)
+25. Karsten Nohl - _Mobile Self-Defense_, 31C3, 2014. [media.ccc.de](https://media.ccc.de/v/31c3-6249-mobile_self_defense)
+26. Yuwei Zheng & Haoqi Shan - _Ghost Telephonist Impersonates You_, DEF CON 25, 2017. [defcon.org](https://www.defcon.org/html/defcon-25/dc-25-speakers.html)
 
 #### Industry Reports and Threat Intelligence
 
-27. ENISA — _Threat Landscape for 5G Networks_, 2024. [enisa.europa.eu](https://www.enisa.europa.eu/publications/enisa-threat-landscape-report-for-5g-networks)
-28. ENISA — _5G Supplement: Security of Open RAN_, 2024. [enisa.europa.eu](https://www.enisa.europa.eu/publications/5g-supplement-security-of-open-ran)
-29. CISA — _Enhanced Visibility and Hardening Guidance for Communications Infrastructure_, 2024. [cisa.gov](https://www.cisa.gov/news-events/alerts/2024/12/04/cisa-and-partners-release-joint-guidance-salt-typhoon)
-30. Mandiant — _APT41: A Dual Espionage and Cyber Crime Operation_, 2022. [mandiant.com](https://www.mandiant.com/resources/apt41-dual-espionage-and-cyber-crime-operation)
-31. Recorded Future — _Chinese State-Sponsored Cyber Espionage Targeting Telecoms_, Insikt Group, 2024. [recordedfuture.com](https://www.recordedfuture.com/research)
-32. CrowdStrike — _2024 Global Threat Report: Telecom Sector Analysis_, 2024. [crowdstrike.com](https://www.crowdstrike.com/global-threat-report/)
-33. Positive Technologies — _5G SA Core Network Security Assessment_, 2021. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-standalone-core-security-assessment-2021/)
-34. Positive Technologies — _Vulnerabilities in 5G Networks_, 2020. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-network-vulnerabilities-2020/)
-35. AdaptiveMobile Security — _Simjacker Technical Report_, 2019. [simjacker.com](https://simjacker.com/)
-36. SRLabs — _SIM Toolkit Security_, 2019. [srlabs.de](https://srlabs.de/bites/sim-toolkit-security/)
-37. Nokia — _Threat Intelligence Report: Telecoms_, 2024. [nokia.com](https://www.nokia.com/networks/security-portfolio/threat-intelligence-report/)
-38. Ericsson — _Security in 5G RAN and Core Deployments_, 2023. [ericsson.com](https://www.ericsson.com/en/reports-and-papers/white-papers/security-in-5g-ran-and-core-deployments)
-39. Orange Cyberdefense — _Security Navigator 2024_, 2024. [orangecyberdefense.com](https://www.orangecyberdefense.com/global/security-navigator)
-40. EFF — _Gotta Catch 'Em All: Understanding How IMSI-Catchers Exploit Cell Networks_, 2019. [eff.org](https://www.eff.org/wp/gotta-catch-em-all-understanding-how-imsi-catchers-exploit-cell-networks)
+27. ENISA - _Threat Landscape for 5G Networks_, 2024. [enisa.europa.eu](https://www.enisa.europa.eu/publications/enisa-threat-landscape-report-for-5g-networks)
+28. ENISA - _5G Supplement: Security of Open RAN_, 2024. [enisa.europa.eu](https://www.enisa.europa.eu/publications/5g-supplement-security-of-open-ran)
+29. CISA - _Enhanced Visibility and Hardening Guidance for Communications Infrastructure_, 2024. [cisa.gov](https://www.cisa.gov/news-events/alerts/2024/12/04/cisa-and-partners-release-joint-guidance-salt-typhoon)
+30. Mandiant - _APT41: A Dual Espionage and Cyber Crime Operation_, 2022. [mandiant.com](https://www.mandiant.com/resources/apt41-dual-espionage-and-cyber-crime-operation)
+31. Recorded Future - _Chinese State-Sponsored Cyber Espionage Targeting Telecoms_, Insikt Group, 2024. [recordedfuture.com](https://www.recordedfuture.com/research)
+32. CrowdStrike - _2024 Global Threat Report: Telecom Sector Analysis_, 2024. [crowdstrike.com](https://www.crowdstrike.com/global-threat-report/)
+33. Positive Technologies - _5G SA Core Network Security Assessment_, 2021. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-standalone-core-security-assessment-2021/)
+34. Positive Technologies - _Vulnerabilities in 5G Networks_, 2020. [ptsecurity.com](https://www.ptsecurity.com/ww-en/analytics/5g-network-vulnerabilities-2020/)
+35. AdaptiveMobile Security - _Simjacker Technical Report_, 2019. [simjacker.com](https://simjacker.com/)
+36. SRLabs - _SIM Toolkit Security_, 2019. [srlabs.de](https://srlabs.de/bites/sim-toolkit-security/)
+37. Nokia - _Threat Intelligence Report: Telecoms_, 2024. [nokia.com](https://www.nokia.com/networks/security-portfolio/threat-intelligence-report/)
+38. Ericsson - _Security in 5G RAN and Core Deployments_, 2023. [ericsson.com](https://www.ericsson.com/en/reports-and-papers/white-papers/security-in-5g-ran-and-core-deployments)
+39. Orange Cyberdefense - _Security Navigator 2024_, 2024. [orangecyberdefense.com](https://www.orangecyberdefense.com/global/security-navigator)
+40. EFF - _Gotta Catch 'Em All: Understanding How IMSI-Catchers Exploit Cell Networks_, 2019. [eff.org](https://www.eff.org/wp/gotta-catch-em-all-understanding-how-imsi-catchers-exploit-cell-networks)
 
 #### CVEs and Security Advisories
 
-41. CVE-2021-45462 — Open5GS UPF GTP-U denial of service via crafted packet (v2.4.0). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2021-45462)
-42. CVE-2023-24033 — Samsung Exynos baseband Internet-to-Baseband RCE, discovered by Google Project Zero. [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-24033)
-43. CVE-2019-14378 — QEMU SLiRP networking heap buffer overflow during IP packet reassembly (potential VM escape). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2019-14378)
-44. CVE-2021-3748 — QEMU virtio-net use-after-free (potential guest-to-host escape). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2021-3748)
-45. CVE-2023-20198 — Cisco IOS XE web UI privilege escalation (used against telecom edge routers). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-20198)
-46. CVE-2022-22947 — Spring Cloud Gateway RCE via SpEL injection (impacts Java-based NFs). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2022-22947)
-47. CVE-2023-44487 — HTTP/2 Rapid Reset DoS (affects all HTTP/2 SBI endpoints). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-44487)
+41. CVE-2021-45462 - Open5GS UPF GTP-U denial of service via crafted packet (v2.4.0). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2021-45462)
+42. CVE-2023-24033 - Samsung Exynos baseband Internet-to-Baseband RCE, discovered by Google Project Zero. [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-24033)
+43. CVE-2019-14378 - QEMU SLiRP networking heap buffer overflow during IP packet reassembly (potential VM escape). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2019-14378)
+44. CVE-2021-3748 - QEMU virtio-net use-after-free (potential guest-to-host escape). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2021-3748)
+45. CVE-2023-20198 - Cisco IOS XE web UI privilege escalation (used against telecom edge routers). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-20198)
+46. CVE-2022-22947 - Spring Cloud Gateway RCE via SpEL injection (impacts Java-based NFs). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2022-22947)
+47. CVE-2023-44487 - HTTP/2 Rapid Reset DoS (affects all HTTP/2 SBI endpoints). [nvd.nist.gov](https://nvd.nist.gov/vuln/detail/CVE-2023-44487)
 
 #### Regulatory and Standards Guidance
 
-48. GSMA FS.07 — _SIM Security Guidelines_, 2023. [gsma.com](https://www.gsma.com/security/resources/fs-07-sim-security-guidelines/)
-49. GSMA FS.15 — _Network Equipment Security Assurance Scheme_, 2023. [gsma.com](https://www.gsma.com/security/network-equipment-security-assurance-scheme/)
-50. GSMA FS.31 — _Baseline Security Controls for 5G_, 2023. [gsma.com](https://www.gsma.com/security/resources/fs-31-baseline-security-controls/)
-51. NIST SP 800-207 — _Zero Trust Architecture_, 2020. [nist.gov](https://csrc.nist.gov/publications/detail/sp/800-207/final)
-52. NIST SP 1800-33 — _5G Cybersecurity_, 2023. [nist.gov](https://www.nccoe.nist.gov/5g-cybersecurity)
-53. EU Toolbox — _EU Coordinated Risk Assessment of 5G Networks Security_, 2020. [ec.europa.eu](https://digital-strategy.ec.europa.eu/en/library/eu-toolbox-5g-security)
-54. O-RAN Alliance — _O-RAN Security Requirements and Threat Model_, WG11, 2023. [o-ran.org](https://www.o-ran.org/specifications)
+48. GSMA FS.07 - _SIM Security Guidelines_, 2023. [gsma.com](https://www.gsma.com/security/resources/fs-07-sim-security-guidelines/)
+49. GSMA FS.15 - _Network Equipment Security Assurance Scheme_, 2023. [gsma.com](https://www.gsma.com/security/network-equipment-security-assurance-scheme/)
+50. GSMA FS.31 - _Baseline Security Controls for 5G_, 2023. [gsma.com](https://www.gsma.com/security/resources/fs-31-baseline-security-controls/)
+51. NIST SP 800-207 - _Zero Trust Architecture_, 2020. [nist.gov](https://csrc.nist.gov/publications/detail/sp/800-207/final)
+52. NIST SP 1800-33 - _5G Cybersecurity_, 2023. [nist.gov](https://www.nccoe.nist.gov/5g-cybersecurity)
+53. EU Toolbox - _EU Coordinated Risk Assessment of 5G Networks Security_, 2020. [ec.europa.eu](https://digital-strategy.ec.europa.eu/en/library/eu-toolbox-5g-security)
+54. O-RAN Alliance - _O-RAN Security Requirements and Threat Model_, WG11, 2023. [o-ran.org](https://www.o-ran.org/specifications)
 
 #### Books
 
-55. Liyanage, M., Ahmad, I., Abro, A.B., Gurtov, A., & Ylianttila, M. — _A Comprehensive Guide to 5G Security_, Wiley, 2018. ISBN: 978-1119293040
-56. Penttinen, J. — _5G Explained: Security and Deployment of Advanced Mobile Communications_, Wiley, 2019. ISBN: 978-1119275688
-57. Schneider, P. & Horn, G. — _Towards 5G Security_, IEEE TrustCom 2015. [doi:10.1109/Trustcom.2015.499](https://doi.org/10.1109/Trustcom.2015.499)
-58. Rao, M. & Prasad, N. — _Telecom Infrastructure Security for Operators_, CRC Press, 2022. ISBN: 978-1032047812
+55. Liyanage, M., Ahmad, I., Abro, A.B., Gurtov, A., & Ylianttila, M. - _A Comprehensive Guide to 5G Security_, Wiley, 2018. ISBN: 978-1119293040
+56. Penttinen, J. - _5G Explained: Security and Deployment of Advanced Mobile Communications_, Wiley, 2019. ISBN: 978-1119275688
+57. Schneider, P. & Horn, G. - _Towards 5G Security_, IEEE TrustCom 2015. [doi:10.1109/Trustcom.2015.499](https://doi.org/10.1109/Trustcom.2015.499)
+58. Rao, M. & Prasad, N. - _Telecom Infrastructure Security for Operators_, CRC Press, 2022. ISBN: 978-1032047812
 
 

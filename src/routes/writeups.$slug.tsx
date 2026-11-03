@@ -44,7 +44,7 @@ export const Route = createFileRoute("/writeups/$slug")({
     return {
       meta: w
         ? [
-            { title: `${w.title} — Asbawy Blog` },
+            { title: `${w.title} - Asbawy Blog` },
             { name: "description", content: w.excerpt },
             { property: "og:title", content: w.title },
             { property: "og:description", content: w.excerpt },
@@ -88,7 +88,7 @@ export const Route = createFileRoute("/writeups/$slug")({
   notFoundComponent: () => (
     <CyberLayout>
       <div className="p-10 font-sans text-sm text-muted-foreground">
-        // writeup not found —{" "}
+        // writeup not found - {" "}
         <Link to="/writeups" className="text-foreground hover:text-foreground/80 transition-colors">
           return to feed
         </Link>
@@ -314,7 +314,7 @@ function WriteupPage() {
             <AuthorBio />
 
             <div className="mt-10 border-t border-panel-border pt-6 font-sans text-[11px] text-muted-foreground">
-              // end of writeup —{" "}
+              // end of writeup - {" "}
               <Link
                 to="/writeups"
                 className="text-foreground hover:text-foreground/80 transition-colors"

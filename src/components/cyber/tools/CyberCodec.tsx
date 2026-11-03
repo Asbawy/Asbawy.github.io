@@ -204,7 +204,7 @@ export function CyberCodec() {
           {conversions.jwtData.alg === "none" && (
             <div className="flex items-center gap-2 p-3 rounded-lg border border-destructive/40 bg-destructive/10 text-destructive text-xs font-mono">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>WARNING: alg=none detected — potential signature verification bypass!</span>
+              <span>WARNING: alg=none detected - potential signature verification bypass!</span>
             </div>
           )}
 

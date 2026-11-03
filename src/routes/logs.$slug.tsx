@@ -32,7 +32,7 @@ export const Route = createFileRoute("/logs/$slug")({
     return {
       meta: p
         ? [
-            { title: `${p.title} — Asbawy Blog` },
+            { title: `${p.title} - Asbawy Blog` },
             { name: "description", content: p.excerpt },
             { property: "og:title", content: p.title },
             { property: "og:description", content: p.excerpt },
@@ -76,7 +76,7 @@ export const Route = createFileRoute("/logs/$slug")({
   notFoundComponent: () => (
     <CyberLayout>
       <div className="p-10 font-sans text-sm text-muted-foreground">
-        // post not found —{" "}
+        // post not found - {" "}
         <Link to="/logs" className="text-foreground hover:text-foreground/80 transition-colors">
           return to feed
         </Link>
@@ -201,7 +201,7 @@ function PostPage() {
             <AuthorBio />
 
             <div className="mt-10 border-t border-panel-border pt-6 font-sans text-[11px] text-muted-foreground">
-              // end of post —{" "}
+              // end of post - {" "}
               <Link
                 to="/logs"
                 className="text-foreground hover:text-foreground/80 transition-colors"

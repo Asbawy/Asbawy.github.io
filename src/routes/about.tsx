@@ -22,11 +22,11 @@ import { useState, useEffect, useRef } from "react";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About — Asbawy" },
+      { title: "About - Asbawy" },
       {
         name: "description",
         content:
-          "Mohammed Elkasabi (Asbawy) — Red Team Consultant, Penetration Tester, and Bug Bounty Hunter.",
+          "Mohammed Elkasabi (Asbawy) - Red Team Consultant, Penetration Tester, and Bug Bounty Hunter.",
       },
     ],
   }),
@@ -320,7 +320,7 @@ function AboutPage() {
             <div className="flex items-center gap-2 border-b border-border pb-3">
               <Crosshair className="w-5 h-5 text-amber-400" />
               <h2 className="text-lg font-bold text-foreground">
-                Bounty Board — Neutralized Targets
+                Bounty Board - Neutralized Targets
               </h2>
             </div>
             <p className="text-xs text-muted-foreground flex items-center gap-2">

@@ -1,6 +1,6 @@
 ---
 slug: "htb-forest"
-title: "Forest — HackTheBox Machine Writeup"
+title: "Forest - HackTheBox Machine Writeup"
 date: "2026-08-09"
 platform: "HackTheBox"
 type: "Machine"
@@ -84,7 +84,7 @@ PORT      STATE SERVICE      VERSION
 ```
 
 <Callout type="info">
-  **Key Observation:** This is a Windows Server 2016 Domain Controller (hostname: FOREST, domain: htb.local). WinRM on port 5985 is open — this will be our foothold and lateral movement channel.
+  **Key Observation:** This is a Windows Server 2016 Domain Controller (hostname: FOREST, domain: htb.local). WinRM on port 5985 is open - this will be our foothold and lateral movement channel.
 </Callout>
 
 ### RPC Username Enumeration
@@ -105,10 +105,10 @@ user:[santi] rid:[0x480]
 ```
 
 <Callout type="warning">
-  **Target Identified:** `svc-alfresco` is a service account — prime candidate for Kerberos attacks. Also note the Exchange-related infrastructure hints (Exchange Windows Permissions groups exist in the domain).
+  **Target Identified:** `svc-alfresco` is a service account - prime candidate for Kerberos attacks. Also note the Exchange-related infrastructure hints (Exchange Windows Permissions groups exist in the domain).
 </Callout>
 
-## Initial Access — AS-REP Roasting
+## Initial Access - AS-REP Roasting
 
 ### AS-REP Roast Attack
 
@@ -140,7 +140,7 @@ asbawy@kali:~$ crackmapexec winrm 10.129.95.210 -u svc-alfresco -p 's3rvice'
 WINRM  10.129.95.210 5985  FOREST  [+] htb.local\svc-alfresco:s3rvice (Pwn3d!)
 ```
 
-### Foothold — Evil-WinRM
+### Foothold - Evil-WinRM
 
 ```bash
 asbawy@kali:~$ evil-winrm -i 10.129.95.210 -u svc-alfresco -p 's3rvice'
@@ -160,7 +160,7 @@ type C:\Users\svc-alfresco\Desktop\user.txt
 This is where we pivot from manual enumeration to automated AD attack path analysis.
 
 <Callout type="warning">
-  **Why [pharaohound](https://github.com/asbawy/pharaohound/) over BloodHound?** [pharaohound](https://github.com/asbawy/pharaohound/) eliminates the Neo4j database + BloodHound GUI overhead. It has its own LDAP collector, streams JSON files with parallel workers, and generates copy-paste-ready exploitation commands — no graph queries, no Neo4j OOM crashes, no manual path hunting.
+  **Why [pharaohound](https://github.com/asbawy/pharaohound/) over BloodHound?** [pharaohound](https://github.com/asbawy/pharaohound/) eliminates the Neo4j database + BloodHound GUI overhead. It has its own LDAP collector, streams JSON files with parallel workers, and generates copy-paste-ready exploitation commands - no graph queries, no Neo4j OOM crashes, no manual path hunting.
 </Callout>
 
 ### Collection
@@ -193,8 +193,8 @@ asbawy@kali:~$ pharaohound collect \
   [✓] Users: 31 objects
   [✓] Groups: 72 objects
   [✓] Computers: 2 objects
-  [!] msDS-AllowedToActOnBehalfOfOtherIdentity unsupported — retrying (legacy DC)
-  [!] ms-Mcs-AdmPwd unsupported — retrying (no LAPS)
+  [!] msDS-AllowedToActOnBehalfOfOtherIdentity unsupported - retrying (legacy DC)
+  [!] ms-Mcs-AdmPwd unsupported - retrying (no LAPS)
   [✓] Computers: 2 objects (0.2s)
   [✓] Gpos: 2 objects
   [✓] Ous: 15 objects
@@ -206,7 +206,7 @@ asbawy@kali:~$ pharaohound collect \
 ```
 
 <Callout type="info">
-  **pharaohound handled the legacy DC schema automatically.** The retry mechanism dropped unsupported LAPS/msDS attributes and continued — 242 objects collected in under 2 seconds.
+  **pharaohound handled the legacy DC schema automatically.** The retry mechanism dropped unsupported LAPS/msDS attributes and continued - 242 objects collected in under 2 seconds.
 </Callout>
 
 ### Analysis
@@ -219,7 +219,7 @@ asbawy@kali:~$ pharaohound pha-collect/ -o pharaohound-report/ --format both --a
 
 ```
 ☥  R I S K   A S S E S S M E N T
-  Risk Level: HIGH — Multiple critical paths to Domain Admin
+  Risk Level: HIGH - Multiple critical paths to Domain Admin
 
   ▲ Critical │ 3
   ◆ High     │ 4
@@ -360,4 +360,4 @@ type C:\Users\Administrator\Desktop\root.txt
 
 ## References
 
-- [pharaohound — AD Collection & Analysis Framework](https://github.com/Asbawy/pharaohound)
+- [pharaohound - AD Collection & Analysis Framework](https://github.com/Asbawy/pharaohound)

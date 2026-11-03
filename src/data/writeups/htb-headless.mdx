@@ -1,6 +1,6 @@
 ---
 slug: "htb-headless"
-title: "Headless — HackTheBox Writeup"
+title: "Headless - HackTheBox Writeup"
 date: "2026-07-18"
 platform: "HackTheBox"
 type: "Machine"
@@ -36,7 +36,7 @@ import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
     },
     {
       phase: "Foothold",
-      title: "Blind XSS — Admin Cookie Exfiltration",
+      title: "Blind XSS - Admin Cookie Exfiltration",
       desc: "Triggered hacking detection by injecting XSS in the message body, while the real XSS payload in the User-Agent header stole the admin's is_admin cookie when the admin reviewed the flagged request.",
       technique: "Blind XSS via Header Injection",
       tools: ["curl", "Python HTTP Server"],
@@ -50,7 +50,7 @@ import { KillChain, SpoilerFlag } from "@/components/cyber/WriteupComponents";
     },
     {
       phase: "PrivEsc",
-      title: "Sudo Script — PAM Backdoor Injection",
+      title: "Sudo Script - PAM Backdoor Injection",
       desc: "dvir could run /usr/bin/syscheck as root via sudo. The script called ./initdb.sh using a relative path. Created a malicious initdb.sh that injects pam_permit.so into /etc/pam.d/su, then used su to escalate to root with any password.",
       technique: "PAM Authentication Backdoor via Relative Path Hijack",
       tools: ["sudo", "bash", "sed"],
@@ -79,7 +79,7 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 ```
 
 <Callout type="info">
-  Only two ports open — SSH and a Python Werkzeug web application on port 5000. The Werkzeug
+  Only two ports open - SSH and a Python Werkzeug web application on port 5000. The Werkzeug
   framework hints at a Flask-based application.
 </Callout>
 
@@ -95,8 +95,8 @@ gobuster dir -u http://10.129.41.89:5000 -w /usr/share/seclists/Discovery/Web-Co
 
 Key findings:
 
-- `/dashboard` — returns **401 Unauthorized** (requires `is_admin` cookie)
-- `/support` — public contact form with fields: first name, last name, email, phone, message
+- `/dashboard` - returns **401 Unauthorized** (requires `is_admin` cookie)
+- `/support` - public contact form with fields: first name, last name, email, phone, message
 
 <Callout type="warning">
   The application sets a cookie `is_admin=InVzZXIi...` (base64 of "user") without the `HttpOnly`
@@ -111,7 +111,7 @@ Key findings:
 
 ### Step 1: Trigger the Hacking Detection
 
-The `/support` form has an input sanitization feature — when it detects HTML/script tags in the **message body**, it triggers a "Hacking Attempt Detected" alert. This alert displays the full HTTP request headers and is reviewed by an admin bot.
+The `/support` form has an input sanitization feature - when it detects HTML/script tags in the **message body**, it triggers a "Hacking Attempt Detected" alert. This alert displays the full HTTP request headers and is reviewed by an admin bot.
 
 The key insight: **the XSS payload goes in the User-Agent header**, while the message body contains a decoy tag just to trigger the detection.
 
@@ -134,7 +134,7 @@ curl -X POST http://10.129.41.89:5000/support \
 <Callout type="info">
   **Why this works:** The message body `<script>test</script>` triggers the hacking detection
   system. The admin bot reviews the flagged request and renders the page containing all request
-  headers — including our malicious User-Agent. Since the `is_admin` cookie lacks the `HttpOnly`
+  headers - including our malicious User-Agent. Since the `is_admin` cookie lacks the `HttpOnly`
   flag, `document.cookie` captures it and sends it to our listener.
 </Callout>
 
@@ -149,7 +149,7 @@ Within seconds, the admin bot triggers the XSS and we receive a callback:
 **Stolen cookie:** `is_admin=ImFkbWluIg.dmzDkZNEm6CK0oyL1fbM-SnXpH0`
 
 <Callout type="info">
-  Decoding the cookie value: `ImFkbWluIg` is base64 for `"admin"` — the original user cookie was
+  Decoding the cookie value: `ImFkbWluIg` is base64 for `"admin"` - the original user cookie was
   `InVzZXIi` (base64 for `"user"`). The application uses a signed cookie with a Flask itsdangerous
   token.
 </Callout>
@@ -273,9 +273,9 @@ exit 0
   & Recon](/cheatsheet/linux/privesc-enumeration).
 </Callout>
 
-### Exploitation — PAM Backdoor Injection via Relative Path Hijack
+### Exploitation - PAM Backdoor Injection via Relative Path Hijack
 
-Instead of the typical SUID bash or reverse shell approach, we abuse the relative path vulnerability to inject a **PAM authentication backdoor**. This modifies the system's authentication stack so that `su root` succeeds with any password — a stealthier and more elegant escalation.
+Instead of the typical SUID bash or reverse shell approach, we abuse the relative path vulnerability to inject a **PAM authentication backdoor**. This modifies the system's authentication stack so that `su root` succeeds with any password - a stealthier and more elegant escalation.
 
 **Step 1:** Craft `initdb.sh` to inject `pam_permit.so` into `/etc/pam.d/su`:
 
@@ -290,12 +290,12 @@ dvir@headless:~$ chmod +x initdb.sh
 
 <Callout type="info">
   **Why PAM?** The `pam_permit.so` module unconditionally succeeds authentication. By inserting it
-  as the first `auth` rule with `sufficient`, PAM short-circuits — it never reaches the real
+  as the first `auth` rule with `sufficient`, PAM short-circuits - it never reaches the real
   password check. Unlike SUID bash, this leaves no suspicious file permissions behind and survives
   reboots.
 </Callout>
 
-**Step 2:** Trigger the payload — run syscheck from our home directory where `./initdb.sh` resolves to our backdoor:
+**Step 2:** Trigger the payload - run syscheck from our home directory where `./initdb.sh` resolves to our backdoor:
 
 ```bash
 dvir@headless:~$ sudo /usr/bin/syscheck
@@ -318,7 +318,7 @@ auth sufficient pam_permit.so
 #
 ```
 
-**Step 4:** Escalate — `su` now accepts anything as a valid password:
+**Step 4:** Escalate - `su` now accepts anything as a valid password:
 
 ```bash
 dvir@headless:~$ su root -c 'whoami && cat /root/root.txt'
@@ -330,7 +330,7 @@ a244939a6b0c136f7b53d76e1dee9f9f
 <SpoilerFlag label="Root Flag" flag="a244939a6b0c136f7b53d76e1dee9f9f" />
 
 <Callout type="warning">
-  **Why this is dangerous in the real world:** A PAM backdoor is persistent — it survives across
+  **Why this is dangerous in the real world:** A PAM backdoor is persistent - it survives across
   reboots and doesn't show up in typical checks like `find / -perm -4000` (SUID hunting) or process
   monitoring. It only becomes visible if an admin audits `/etc/pam.d/` configs directly.
 </Callout>
@@ -339,9 +339,9 @@ a244939a6b0c136f7b53d76e1dee9f9f
 
 ## References
 
-- [OWASP — Cross-Site Scripting (XSS)](https://owasp.org/www-community/attacks/xss/)
-- [OWASP — Command Injection](https://owasp.org/www-community/attacks/Command_Injection)
-- [GTFOBins — Sudo](https://gtfobins.github.io/gtfobins/bash/#sudo)
-- [HackTricks — Linux Privilege Escalation](https://book.hacktricks.xyz/linux-hardening/privilege-escalation)
+- [OWASP - Cross-Site Scripting (XSS)](https://owasp.org/www-community/attacks/xss/)
+- [OWASP - Command Injection](https://owasp.org/www-community/attacks/Command_Injection)
+- [GTFOBins - Sudo](https://gtfobins.github.io/gtfobins/bash/#sudo)
+- [HackTricks - Linux Privilege Escalation](https://book.hacktricks.xyz/linux-hardening/privilege-escalation)
 - [Linux PAM Backdoor Persistence](https://book.hacktricks.xyz/linux-hardening/privilege-escalation#pam-backdoor)
-- [pam_permit(8) — Linux man page](https://man7.org/linux/man-pages/man8/pam_permit.8.html)
+- [pam_permit(8) - Linux man page](https://man7.org/linux/man-pages/man8/pam_permit.8.html)

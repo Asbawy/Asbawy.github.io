@@ -1,6 +1,6 @@
 ---
 slug: "thm-packed-light"
-title: "Packed Light — TryHackMe Challenge Writeup"
+title: "Packed Light - TryHackMe Challenge Writeup"
 date: "2026-07-31"
 platform: "TryHackMe"
 type: "Challenge"
@@ -14,7 +14,7 @@ tags:
   - "Python Reverse Engineering"
   - "XOR Encryption"
   - "Keylogger"
-excerpt: "A TryHackMe Network Forensics challenge involving PCAP inspection of HTTP C2 traffic, extracting a Python keylogger C2 script, reverse engineering its XOR encryption quirk, and recovering the keystroke stream from HTTP cookie headers — plus an automated Python solver script."
+excerpt: "A TryHackMe Network Forensics challenge involving PCAP inspection of HTTP C2 traffic, extracting a Python keylogger C2 script, reverse engineering its XOR encryption quirk, and recovering the keystroke stream from HTTP cookie headers - plus an automated Python solver script."
 readTime: "7 min"
 rating: 3
 hasAutoScript: true
@@ -222,7 +222,7 @@ print(f"[+] Recovered Flag: {flag}")
 
 ## Automation
 
-This entire challenge — from parsing the PCAPNG file to extracting the C2 staging payload, cryptanalyzing the XOR keylogger, and decrypting the exfiltrated keystrokes — can be fully automated. Instead of running each step manually, here's an interactive demo of the standalone Python solver script in action:
+This entire challenge - from parsing the PCAPNG file to extracting the C2 staging payload, cryptanalyzing the XOR keylogger, and decrypting the exfiltrated keystrokes - can be fully automated. Instead of running each step manually, here's an interactive demo of the standalone Python solver script in action:
 
 <TerminalReplay
   title="packed_light_solve.py"
@@ -233,7 +233,7 @@ This entire challenge — from parsing the PCAPNG file to extracting the C2 stag
   ]}
   steps={[
     {
-      label: "Step 1/4 — Inspect PCAP & Verify File",
+      label: "Step 1/4 - Inspect PCAP & Verify File",
       command: "python3 packed_light_solve.py --pcap traffic.pcapng",
       output: [
         { text: "[*] Step 1/4: Inspecting PCAP file: traffic.pcapng...", color: "blue" },
@@ -242,7 +242,7 @@ This entire challenge — from parsing the PCAPNG file to extracting the C2 stag
       delayAfter: 600,
     },
     {
-      label: "Step 2/4 — Extract & Decode C2 Stage (/temp/updates.py)",
+      label: "Step 2/4 - Extract & Decode C2 Stage (/temp/updates.py)",
       output: [
         { text: "[*] Step 2/4: Extracting C2 staging script (/temp/updates.py)...", color: "blue" },
         { text: "[✓] Extracted script (1085 bytes)", color: "green" },
@@ -259,7 +259,7 @@ This entire challenge — from parsing the PCAPNG file to extracting the C2 stag
       delayAfter: 800,
     },
     {
-      label: "Step 3/4 — Harvest Exfiltrated Cookies",
+      label: "Step 3/4 - Harvest Exfiltrated Cookies",
       output: [
         {
           text: "[*] Step 3/4: Harvesting exfiltrated 'hotel_sess_state' cookies...",
@@ -271,7 +271,7 @@ This entire challenge — from parsing the PCAPNG file to extracting the C2 stag
       delayAfter: 600,
     },
     {
-      label: "Step 4/4 — Decrypt Keystrokes & Capture Flag",
+      label: "Step 4/4 - Decrypt Keystrokes & Capture Flag",
       output: [
         { text: "[*] Step 4/4: Decrypting keystroke stream...", color: "blue" },
         { text: "[✓] Keystroke stream successfully reconstructed!", color: "green" },
@@ -291,7 +291,7 @@ This entire challenge — from parsing the PCAPNG file to extracting the C2 stag
 
 ## References
 
-- [Wireshark — HTTP Display Filters](https://www.wireshark.org/docs/dfref/h/http.html)
+- [Wireshark - HTTP Display Filters](https://www.wireshark.org/docs/dfref/h/http.html)
 - [Python `pynput` Documentation](https://pynput.readthedocs.io/en/latest/keyboard.html)
 - [XOR Cipher Cryptanalysis & Quirks](https://en.wikipedia.org/wiki/XOR_cipher)
-- [RFC 6265 — HTTP State Management Mechanism (Cookies)](https://datatracker.ietf.org/doc/html/rfc6265)
+- [RFC 6265 - HTTP State Management Mechanism (Cookies)](https://datatracker.ietf.org/doc/html/rfc6265)

@@ -1,6 +1,6 @@
 ---
 slug: "thm-ledger"
-title: "Ledger — TryHackMe Writeup"
+title: "Ledger - TryHackMe Writeup"
 date: "2026-09-17"
 platform: "TryHackMe"
 type: "Machine"
@@ -160,7 +160,7 @@ server 10.114.169.135, stratum 3, offset -0.418291, delay 0.05211
 17 Sep 03:43:02 ntpdate[4211]: adjust time server 10.114.169.135 offset -0.418291 sec
 ```
 
-The offset is less than half a second—well within the acceptable skew window.
+The offset is less than half a second - well within the acceptable skew window.
 
 <Callout type="info">
   Whenever testing Active Directory environments, always add both the fully qualified domain name (`labyrinth.thm.local`) and the NetBIOS name (`LABYRINTH`) to `/etc/hosts`. Kerberos SPN resolution requires exact hostname matching; connecting via raw IP addresses forces NTLM fallback and will break ticket-based attacks.
@@ -241,7 +241,7 @@ cn: SUSANNA_MCKNIGHT
 sAMAccountName: SUSANNA_MCKNIGHT
 ```
 
-Two domain accounts—`IVY_WILLIS` and `SUSANNA_MCKNIGHT`—share the initial onboarding password `CHANGEME2023!`.
+Two domain accounts - `IVY_WILLIS` and `SUSANNA_MCKNIGHT` - share the initial onboarding password `CHANGEME2023!`.
 
 ### 2.4 Credential Validation & Foothold Verification
 
@@ -265,7 +265,7 @@ Both accounts are active with valid credentials. We have established our initial
 
 With valid domain credentials for `SUSANNA_MCKNIGHT`, we map out the domain hierarchy, group memberships, ACL delegations, and certificate infrastructure. 
 
-Instead of deploying the legacy `bloodhound-python` script and spinning up a resource-heavy Neo4j graph database, we deploy **pharaohound**—our dedicated high-performance Active Directory collection and analysis engine. It pulls LDAP objects directly into memory and executes 30+ vulnerability analyzers locally:
+Instead of deploying the legacy `bloodhound-python` script and spinning up a resource-heavy Neo4j graph database, we deploy **pharaohound** - our dedicated high-performance Active Directory collection and analysis engine. It pulls LDAP objects directly into memory and executes 30+ vulnerability analyzers locally:
 
 ```bash
 asbawy@kali:~$ pharaohound collect -t 10.114.169.135 -u SUSANNA_MCKNIGHT -p 'CHANGEME2023!' \
@@ -290,7 +290,7 @@ CertTemplates   : 37
 Total Objects   : 923
 
 RISK ASSESSMENT:
-  Overall Domain Status: HIGH — Multiple critical paths to Domain Admin
+  Overall Domain Status: HIGH - Multiple critical paths to Domain Admin
   Critical Risks: 3 | High Risks: 4 | Medium Risks: 2
 
 CRITICAL ATTACK PATHS IDENTIFIED:
@@ -610,6 +610,6 @@ The forged ticket grants full administrative access over `C$`, allowing us to pu
 
 ### Related Cheatsheets & Writeups
 - [Active Directory Exploitation & Enumeration Reference Cheatsheet](/cheatsheet/Active%20Directory/Active_Directory_Cheatsheet)
-- [Active — HackTheBox Writeup (GPP Password & Kerberoasting)](/writeups/htb-active)
-- [Forest — HackTheBox Writeup (AS-REP Roasting & Exchange Delegation)](/writeups/htb-forest)
-- [Sauna — HackTheBox Writeup (AS-REP Roasting & BloodHound Pathing)](/writeups/htb-sauna)
+- [Active - HackTheBox Writeup (GPP Password & Kerberoasting)](/writeups/htb-active)
+- [Forest - HackTheBox Writeup (AS-REP Roasting & Exchange Delegation)](/writeups/htb-forest)
+- [Sauna - HackTheBox Writeup (AS-REP Roasting & BloodHound Pathing)](/writeups/htb-sauna)

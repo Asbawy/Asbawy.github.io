@@ -19,7 +19,7 @@ export const Route = createFileRoute("/cheatsheet")({
   },
   head: () => ({
     meta: [
-      { title: "Cheatsheets — Asbawy" },
+      { title: "Cheatsheets - Asbawy" },
       {
         name: "description",
         content: "Security cheatsheets, command references, and tactical field notes by Asbawy.",

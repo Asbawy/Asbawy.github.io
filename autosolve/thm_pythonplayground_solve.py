@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║         🐍  PYTHON PLAYGROUND — Auto Exploitation & Solver Script           ║
+# ║         🐍  PYTHON PLAYGROUND - Auto Exploitation & Solver Script           ║
 # ║      TryHackMe Web & Linux | Base-26 Reversing, Sandbox Escape & Sudo BOF    ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 # Author: Asbawy (https://asbawy.com)
 # Repository: https://github.com/Asbawy/Asbawy.github.io
 """
-thm_pythonplayground_solve.py — automated solver for THM "Python Playground".
+thm_pythonplayground_solve.py - automated solver for THM "Python Playground".
 
 Chain:
   1. Pull the admin backdoor page, read its client-side login constant, and
@@ -18,7 +18,7 @@ Chain:
   5. The docker gateway fronts upstream SSH; password reuse for the connor
      account hands over flag 2.
   6. Host sudo 1.8.21p2 = CVE-2021-3156 "Baron Samedit". Ship a pure-python
-     exploit over SSH (Sleepya's nss service_user overwrite — credit worawit),
+     exploit over SSH (Sleepya's nss service_user overwrite - credit worawit),
      run it, and ride the root /bin/sh it drops -> flag 3.
 
 Usage:
@@ -101,7 +101,7 @@ def ssh_write(target, password, remote_path, text):
 
 # ---------------------------------------------------------------------------
 # Stage 3 artillery: CVE-2021-3156 (Baron Samedit), pure-python, target needs
-# only python3. Based on sleepya's exploit_nss.py — credit worawit — with the
+# only python3. Based on sleepya's exploit_nss.py - credit worawit - with the
 # libnss payload .so kept byte-identical because heap grooming needs exact
 # allocation sizes. DO NOT "tidy" the math.
 # ---------------------------------------------------------------------------

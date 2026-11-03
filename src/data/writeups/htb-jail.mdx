@@ -1,6 +1,6 @@
 ---
 slug: "htb-jail"
-title: "Jail — HackTheBox Machine Writeup"
+title: "Jail - HackTheBox Machine Writeup"
 date: "2026-08-14"
 platform: "HackTheBox"
 type: "Machine"
@@ -84,7 +84,7 @@ All custom exploit scripts, helper utilities, and diagnostics developed for this
   files={jailScripts}
 />
 
-## Reconnaissance — The Six Gates
+## Reconnaissance - The Six Gates
 
 ### Port scan
 
@@ -101,11 +101,11 @@ nmap -p 22,80,111,2049,7411,20048 -sV -T4 -Pn 10.129.63.36
 | 80   | HTTP    | Apache 2.4.6 (CentOS) |
 | 111  | rpcbind | NFS support |
 | 2049 | NFS     | exported shares |
-| 7411 | `daqstream` | custom service — "OK Ready. Send USER command." |
+| 7411 | `daqstream` | custom service - "OK Ready. Send USER command." |
 | 20048| mountd  | NFS mount daemon |
 
 
-**MTU blackhole:** the web server headers arrived but the 2 KB body never did — a classic path-MTU problem through the VPN. Clamping the MSS on the route fixed it instantly:
+**MTU blackhole:** the web server headers arrived but the 2 KB body never did - a classic path-MTU problem through the VPN. Clamping the MSS on the route fixed it instantly:
 
 ```bash
 iptables -t mangle -A OUTPUT -p tcp -d 10.129.63.36 -j TCPMSS --set-mss 800
@@ -113,7 +113,7 @@ iptables -t mangle -A OUTPUT -p tcp -d 10.129.63.36 -j TCPMSS --set-mss 800
 
 ### The website
 
-Port 80 serves a single page of ASCII art — a jail cell. Nothing dynamic.
+Port 80 serves a single page of ASCII art - a jail cell. Nothing dynamic.
 
 But a directory listing at `/jailuser/dev/` leaks the **source code of the
 service running on port 7411**, the compiled binary, and the build script
@@ -130,7 +130,7 @@ gcc -o jail jail.c -m32 -z execstack
 ```
 
 Two words that change everything: **`-m32`** (32-bit binary) and
-**`-z execstack`** (the stack is *executable* — DEP is off). On a 32-bit box
+**`-z execstack`** (the stack is *executable* - DEP is off). On a 32-bit box
 with an executable stack, a classic stack overflow becomes trivially
 exploitable.
 
@@ -142,7 +142,7 @@ showmount -e 10.129.63.36
 # /var/nfsshare *
 ```
 
-Both shares are exported to everyone. We'll come back to these — the
+Both shares are exported to everyone. We'll come back to these - the
 `/var/nfsshare` one is the key to the next user.
 
 ## The Key Under the Mat
@@ -167,9 +167,9 @@ int auth(char *username, char *password) {
 Three things stand out:
 
 1. **Hardcoded credentials**: `admin` / `1974jailbreak!`.
-2. **`DEBUG` mode** leaks the stack address of `userpass` — a gift for exploit development.
+2. **`DEBUG` mode** leaks the stack address of `userpass` - a gift for exploit development.
 3. **`strcpy(userpass, password)`** with a 16-byte destination and no length
-   check — the classic overflow. The password comes straight from the `PASS` token we send to the service.
+   check - the classic overflow. The password comes straight from the `PASS` token we send to the service.
 
 The service runs on port 7411 and speaks a tiny FTP-like protocol
 
@@ -182,17 +182,17 @@ printf 'USER admin\nPASS test\nDEBUG\nPASS 1974jailbreak!\n' | nc 10.129.63.36 7
   **Protocol order matters:** `DEBUG` must be sent *after* `USER` and *before* the `PASS` that triggers `auth()`. The daemon processes `DEBUG` between the `USER` and `PASS` commands. Once enabled, every subsequent call to `auth()` will print the stack leak.
 </Callout>
 
-The leaked address `0xffffd610` is **identical across connections** — the
+The leaked address `0xffffd610` is **identical across connections** - the
 `fork()`-per-connection model gives every child the same stack layout, so a
 leak in one connection is valid in the next. No ASLR drama.
 
-## Breaking Out — The Buffer Overflow
+## Breaking Out - The Buffer Overflow
 
 <BufferOverflowVisualizer />
 
 ### Understanding the Vulnerability (The "Why")
 
-In C, when a function creates local variables—like `char userpass[16]` inside `auth()`—it allocates that memory on the **call stack**.
+In C, when a function creates local variables - like `char userpass[16]` inside `auth()` - it allocates that memory on the **call stack**.
 
 When `auth()` is called, the CPU also stores critical bookkeeping data on the stack so it knows where to resume execution when the function returns:
 
@@ -252,7 +252,7 @@ The offset is confirmed: **exactly 28 bytes** of padding reaches the return addr
 
 ### Crafting the Shellcode (Executable Stack)
 
-Because `compile.sh` used **`-z execstack`**, the operating system leaves the stack memory marked as executable (`RWX`). We don't need complex ROP gadgets—we can place raw machine instructions (shellcode) directly on the stack and tell EIP to jump to them.
+Because `compile.sh` used **`-z execstack`**, the operating system leaves the stack memory marked as executable (`RWX`). We don't need complex ROP gadgets - we can place raw machine instructions (shellcode) directly on the stack and tell EIP to jump to them.
 
 Our shellcode must satisfy three conditions:
 1. **Zero Null Bytes (`\x00`):** Functions like `strcpy()` and `sscanf()` terminate upon encountering `\x00`. A null byte would truncate our payload before reaching the stack.
@@ -338,7 +338,7 @@ python3 breakout.py 10.129.63.36
   **Why it works even if the password is wrong:** `auth()` returns right after `strcpy()` completes. The overwritten return address is popped into `EIP` the moment the function returns, regardless of whether `strcmp(userpass, "1974jailbreak!")` matched.
 </Callout>
 
-## The First Transfer — nobody → frank
+## The First Transfer - nobody → frank
 
 We're `nobody`, CentOS 7.3, SELinux enforcing. Enumeration time:
 
@@ -351,7 +351,7 @@ cat /etc/exports
 ```
 
 The interesting bit is the NFS option **`no_all_squash`**. With
-`root_squash`, the root user gets mapped to `nobody` — but every *other* uid
+`root_squash`, the root user gets mapped to `nobody` - but every *other* uid
 passes through unchanged. Local uid 1000 on our Kali box is `kali`; on Jail,
 uid 1000 is **`frank`**. Anything we write to the share as uid 1000 is owned
 by frank on the remote side. And the SUID bit survives the trip.
@@ -371,7 +371,7 @@ int main(void) {
 }
 ```
 
-Compiled **statically** — the remote CentOS 7 glibc (2.17) is far older than
+Compiled **statically** - the remote CentOS 7 glibc (2.17) is far older than
 Kali's, and a dynamic binary would refuse to run with `GLIBC_x not found`.
 
 ```bash
@@ -386,7 +386,7 @@ su kali -c "cp /tmp/frankish /mnt/nfsshare/frankish && chmod 4777 /mnt/nfsshare/
 ```
 
 **Why `setresuid` matters:** a SUID binary owned by frank gives us euid
-1000, but the real uid is still 99 — and bash *drops* privileges when
+1000, but the real uid is still 99 - and bash *drops* privileges when
 ruid ≠ euid. Setting all three ids to 1000 keeps the shell fully frank.
 
 I installed my SSH key as frank for a stable foothold, then claimed the
@@ -398,7 +398,7 @@ ssh -i ~/.ssh/id_ed25519 frank@10.129.63.36 "cat /home/frank/user.txt"
 
 <SpoilerFlag label="User Flag" flag="5af9d49cd3924175345b0be9fc5bbae6" />
 
-## The Guard's Terminal — frank → adm
+## The Guard's Terminal - frank → adm
 
 As frank, `sudo -l` reveals a second sudo rule:
 
@@ -406,7 +406,7 @@ As frank, `sudo -l` reveals a second sudo rule:
 (adm) NOPASSWD: /usr/bin/rvim /var/www/html/jailuser/dev/jail.c
 ```
 
-We can open that one file in **`rvim`** — *restricted vim* — as `adm`. The
+We can open that one file in **`rvim`** - *restricted vim* - as `adm`. The
 restriction is real: `:!` shell commands and `:sh` are blocked. But rvim
 still embeds interpreters. This vim was built with `+python/dyn`, and vim
 script can hand the whole process to Python:
@@ -425,9 +425,9 @@ python3 adm_pick.py "id; ls -la /var/adm"
 ```
 
 `/var/adm` is adm's home (the box uses a nonstandard home dir) and it
-contains a hidden `.keys` directory — the road to root.
+contains a hidden `.keys` directory - the road to root.
 
-## The Warden's Vault — adm → root
+## The Warden's Vault - adm → root
 
 ### The note and the cipher
 
@@ -441,13 +441,13 @@ cat /var/adm/.keys/.local/.frank
 # Szszsz! Mlylwb droo tfvhh nb mvd kzhhdliw! ...
 ```
 
-The second file is **Atbash** — the alphabet mirrored onto itself
+The second file is **Atbash** - the alphabet mirrored onto itself
 (A↔Z, B↔Y, ...). A tiny decoder reveals the message:
 
 > *"Hahaha! Nobody will guess my new password! Only a few lucky souls have
 > **Escaped from Alcatraz** alive like I did!!!"*
 
-The user is `frank` — **Frank Morris** escaped Alcatraz in **1962**. So the
+The user is `frank` - **Frank Morris** escaped Alcatraz in **1962**. So the
 password is `Morris` + 4 digits + a symbol.
 
 ### The encrypted archive
@@ -455,7 +455,7 @@ password is `Morris` + 4 digits + a symbol.
 `keys.rar` holds `rootauthorizedsshkey.pub` (root's authorized SSH key) and
 it's password-protected. We pull it to our box and attack it.
 
-The password shape is exactly `Morris?d?d?d?d?s` — a hashcat mask over
+The password shape is exactly `Morris?d?d?d?d?s` - a hashcat mask over
 10 digit × ~30 symbol combinations (~330k candidates). But the intended
 answer is guessable directly: `Morris1962!` (escape year + `!`).
 
@@ -474,7 +474,7 @@ unrar e -pMorris1962! keys.rar
 ### Recovering the private key
 
 The extracted public key is a 512-bit RSA key. `RsaCtfTool` runs its whole
-battery of attacks and lands on the **Wiener attack** — a small private
+battery of attacks and lands on the **Wiener attack** - a small private
 exponent `d`, which can be recovered from `n` and `e` alone via continued
 fractions:
 
@@ -485,7 +485,7 @@ python -m RsaCtfTool.main --publickey rootauthorizedsshkey.pub --private --outpu
 
 ### Root
 
-The box runs OpenSSH 6.6.1, which only offers SHA-1 RSA signatures — modern
+The box runs OpenSSH 6.6.1, which only offers SHA-1 RSA signatures - modern
 clients refuse them by default, so the key needs the legacy algorithms
 re-enabled:
 
@@ -499,9 +499,9 @@ ssh -i loot/loot_private.pem \
 
 ## References
 
-- [GTFOBins — rvim](https://gtfobins.github.io/gtfobins/rvim/)
+- [GTFOBins - rvim](https://gtfobins.github.io/gtfobins/rvim/)
 - [Wiener's attack (Wikipedia)](https://en.wikipedia.org/wiki/Wiener%27s_attack)
 - [RsaCtfTool](https://github.com/RsaCtfTool/RsaCtfTool)
 - [Atbash cipher (Wikipedia)](https://en.wikipedia.org/wiki/Atbash)
-- [Frank Morris — Alcatraz escape (Wikipedia)](https://en.wikipedia.org/wiki/Frank_Morris_(prisoner))
-- [HackTheBox — Jail](https://app.hackthebox.com/machines/Jail)
+- [Frank Morris - Alcatraz escape (Wikipedia)](https://en.wikipedia.org/wiki/Frank_Morris_(prisoner))
+- [HackTheBox - Jail](https://app.hackthebox.com/machines/Jail)

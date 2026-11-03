@@ -55,7 +55,7 @@ function highlightShellCommands(html: string): string {
   const temp = document.createElement("div");
   temp.innerHTML = html;
 
-  // Classes to skip — never re-color tokens inside comments or strings
+  // Classes to skip - never re-color tokens inside comments or strings
   const SKIP_CLASSES = ["hljs-comment", "hljs-string", "hljs-meta"];
 
   const masterPattern = new RegExp(

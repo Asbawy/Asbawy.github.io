@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════
-   1. 5G ATTACK SURFACE MAP — Interactive layered diagram
+   1. 5G ATTACK SURFACE MAP - Interactive layered diagram
    ═══════════════════════════════════════════════════════ */
 
 interface AttackLayer {
@@ -126,7 +126,7 @@ export function AttackSurfaceMap() {
             <Target className="h-4 w-4 text-red-400" />
           </div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">
-            5G Attack Surface — End-to-End Kill Chain
+            5G Attack Surface - End-to-End Kill Chain
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -322,7 +322,7 @@ const ROGUE_GNB_STEPS: FlowStep[] = [
   { num: 1, from: "Attacker SDR", fromIcon: <Radio className="h-3.5 w-3.5" />, fromColor: "red", to: "Target UE", toIcon: <Smartphone className="h-3.5 w-3.5" />, toColor: "blue", action: "Broadcast rogue SSB (stronger RSRP)", dir: "right" },
   { num: 2, from: "Target UE", fromIcon: <Smartphone className="h-3.5 w-3.5" />, fromColor: "blue", to: "Rogue gNodeB", toIcon: <Radio className="h-3.5 w-3.5" />, toColor: "red", action: "Attach with SUCI (NULL scheme → plaintext SUPI)", dir: "right" },
   { num: 3, from: "Rogue gNodeB", fromIcon: <Radio className="h-3.5 w-3.5" />, fromColor: "red", to: "Target UE", toIcon: <Smartphone className="h-3.5 w-3.5" />, toColor: "blue", action: "Force NEA0 (null cipher) in Security Mode Command", critical: true, dir: "right" },
-  { num: 4, from: "Target UE", fromIcon: <Smartphone className="h-3.5 w-3.5" />, fromColor: "blue", to: "Rogue Core", toIcon: <Server className="h-3.5 w-3.5" />, toColor: "red", action: "Complete 5G-AKA — all NAS in cleartext", dir: "right" },
+  { num: 4, from: "Target UE", fromIcon: <Smartphone className="h-3.5 w-3.5" />, fromColor: "blue", to: "Rogue Core", toIcon: <Server className="h-3.5 w-3.5" />, toColor: "red", action: "Complete 5G-AKA - all NAS in cleartext", dir: "right" },
   { num: 5, from: "Rogue Core", fromIcon: <Server className="h-3.5 w-3.5" />, fromColor: "red", to: "Attacker", toIcon: <Terminal className="h-3.5 w-3.5" />, toColor: "red", action: "Log RAND/AUTN/XRES*/K_SEAF vectors", dir: "right" },
 ];
 
@@ -449,7 +449,7 @@ const GHOST_SMF_STEPS: FlowStep[] = [
   { num: 2, from: "NEF (SSRF)", fromIcon: <Server className="h-3.5 w-3.5" />, fromColor: "amber", to: "NRF", toIcon: <Database className="h-3.5 w-3.5" />, toColor: "amber", action: "Reach internal NRF via SSRF" },
   { num: 3, from: "Attacker", fromIcon: <Terminal className="h-3.5 w-3.5" />, fromColor: "red", to: "NRF", toIcon: <Database className="h-3.5 w-3.5" />, toColor: "amber", action: "Register rogue SMF via Nnrf_NFRegister", critical: true },
   { num: 4, from: "AMF", fromIcon: <Server className="h-3.5 w-3.5" />, fromColor: "blue", to: "Rogue SMF", toIcon: <Terminal className="h-3.5 w-3.5" />, toColor: "red", action: "Sends PDU sessions to rogue SMF" },
-  { num: 5, from: "Rogue SMF", fromIcon: <Terminal className="h-3.5 w-3.5" />, fromColor: "red", to: "Real SMF", toIcon: <Server className="h-3.5 w-3.5" />, toColor: "blue", action: "Forward traffic (full MITM — zero degradation)" },
+  { num: 5, from: "Rogue SMF", fromIcon: <Terminal className="h-3.5 w-3.5" />, fromColor: "red", to: "Real SMF", toIcon: <Server className="h-3.5 w-3.5" />, toColor: "blue", action: "Forward traffic (full MITM - zero degradation)" },
 ];
 
 export function GhostSmfFlow() {
@@ -461,7 +461,7 @@ export function GhostSmfFlow() {
             <ShieldAlert className="h-4 w-4 text-amber-400" />
           </div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">
-            Ghost SMF — NRF Poisoning Kill Chain
+            Ghost SMF - NRF Poisoning Kill Chain
           </span>
         </div>
         <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[10px] text-amber-400 uppercase tracking-widest font-semibold">
@@ -475,7 +475,7 @@ export function GhostSmfFlow() {
         <div className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
           <Eye className="h-4 w-4 text-amber-400" />
           <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400">
-            Result: Full PDU Session Interception — SUPI, TEID, QFI, SMS, Location
+            Result: Full PDU Session Interception - SUPI, TEID, QFI, SMS, Location
           </span>
         </div>
       </div>
@@ -500,7 +500,7 @@ interface KillChainDay {
 const KILL_CHAIN_DAYS: KillChainDay[] = [
   { day: "Day 0", title: "Physical Access", detail: "UART dump → U-Boot → SPI flash image from cell-site BBU cabinet", icon: <HardDrive className="h-3.5 w-3.5" />, color: "text-slate-300", borderColor: "border-slate-400/40", bgColor: "bg-slate-500/8" },
   { day: "Day 1", title: "Firmware RE", detail: "Extract /etc/ipsec.secrets → IPsec PSK for transport network", icon: <Cpu className="h-3.5 w-3.5" />, color: "text-slate-400", borderColor: "border-slate-400/40", bgColor: "bg-slate-500/8" },
-  { day: "Day 2", title: "Transport Pivot", detail: "IPsec tunnel into 5G core transport VLAN — bypass all edge firewalls", icon: <Network className="h-3.5 w-3.5" />, color: "text-cyan-400", borderColor: "border-cyan-500/40", bgColor: "bg-cyan-500/8" },
+  { day: "Day 2", title: "Transport Pivot", detail: "IPsec tunnel into 5G core transport VLAN - bypass all edge firewalls", icon: <Network className="h-3.5 w-3.5" />, color: "text-cyan-400", borderColor: "border-cyan-500/40", bgColor: "bg-cyan-500/8" },
   { day: "Day 3", title: "Core Recon", detail: "SCTP scan of AMF pool → find debug port 8080 (Open5GS WebUI)", icon: <Target className="h-3.5 w-3.5" />, color: "text-cyan-400", borderColor: "border-cyan-500/40", bgColor: "bg-cyan-500/8" },
   { day: "Day 4", title: "K8s Initial Access", detail: "LFI in AMF WebUI → K8s service account token → cluster-admin", icon: <Terminal className="h-3.5 w-3.5" />, color: "text-amber-400", borderColor: "border-amber-500/40", bgColor: "bg-amber-500/8" },
   { day: "Day 5", title: "Secret Dump", detail: "Dump all 5g-core secrets → mTLS certs + NRF JWT signing key", icon: <Key className="h-3.5 w-3.5" />, color: "text-amber-400", borderColor: "border-amber-500/40", bgColor: "bg-amber-500/8" },
@@ -521,7 +521,7 @@ export function KillChainTimeline() {
             <Zap className="h-4 w-4 text-red-400" />
           </div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">
-            Baseband to Cloud — Full Kill Chain
+            Baseband to Cloud - Full Kill Chain
           </span>
         </div>
         <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[10px] text-red-400 uppercase tracking-widest font-semibold">
@@ -602,7 +602,7 @@ export function SuciFlow() {
             <Lock className="h-4 w-4 text-emerald-400" />
           </div>
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-foreground">
-            SUCI Privacy Protection — Normal vs. NULL Scheme
+            SUCI Privacy Protection - Normal vs. NULL Scheme
           </span>
         </div>
         <button
@@ -633,7 +633,7 @@ export function SuciFlow() {
               </div>
             </div>
             <div className="text-center text-[11px] text-emerald-400 font-semibold">
-              ✓ SUPI concealed — IMSI never exposed over the air
+              ✓ SUPI concealed - IMSI never exposed over the air
             </div>
           </div>
         ) : (
@@ -647,7 +647,7 @@ export function SuciFlow() {
                 <div className="w-full h-[2px] bg-red-500/40" />
                 <ArrowRight className="absolute right-0 text-red-500/60" size={14} />
                 <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 bg-card px-2 text-[10px] text-red-400 whitespace-nowrap flex items-center gap-1">
-                  <AlertTriangle className="h-3 w-3" /> SUPI (plaintext — NULL scheme 0x0)
+                  <AlertTriangle className="h-3 w-3" /> SUPI (plaintext - NULL scheme 0x0)
                 </div>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-2 rounded-md border border-red-500/40 bg-red-500/8 text-red-400 font-semibold w-24 justify-center">
@@ -655,7 +655,7 @@ export function SuciFlow() {
               </div>
             </div>
             <div className="text-center text-[11px] text-red-400 font-semibold">
-              ✕ SUPI exposed — attacker captures IMSI in real-time
+              ✕ SUPI exposed - attacker captures IMSI in real-time
             </div>
           </div>
         )}

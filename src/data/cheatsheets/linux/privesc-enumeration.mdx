@@ -1,6 +1,6 @@
 ---
 title: "Linux Privilege Escalation: Enumeration Cheatsheet"
-excerpt: "Copy-paste-ready enumeration commands covering every critical Linux privesc vector — OS, users, network, files, capabilities, and scheduled tasks. Built for Red Teamers, pentesters, and CTF players."
+excerpt: "Copy-paste-ready enumeration commands covering every critical Linux privesc vector - OS, users, network, files, capabilities, and scheduled tasks. Built for Red Teamers, pentesters, and CTF players."
 url: "https://asbawy.com/cheatsheet/linux/privesc-enumeration"
 date: "2026-06-05"
 updated: "2026-06-20"
@@ -22,15 +22,15 @@ readTime: "10 mins"
 ### Kernel & Architecture
 
 ```bash
-uname -a          # full kernel string — version, hostname, arch, date
-uname -r          # kernel release only — clean string for searchsploit
+uname -a          # full kernel string - version, hostname, arch, date
+uname -r          # kernel release only - clean string for searchsploit
 uname -m          # CPU architecture: x86_64 / aarch64 / i686
 ```
 
 **What to extract from `uname -a` output:**
 
-- **Kernel version** — run through [Linux Exploit Suggester](https://github.com/The-Z-Labs/linux-exploit-suggester) and cross-check on [Exploit-DB](https://www.exploit-db.com/)
-- **Architecture** — determines which precompiled exploit binaries will execute
+- **Kernel version** - run through [Linux Exploit Suggester](https://github.com/The-Z-Labs/linux-exploit-suggester) and cross-check on [Exploit-DB](https://www.exploit-db.com/)
+- **Architecture** - determines which precompiled exploit binaries will execute
 
 <Callout type="warning">
   **Architecture mismatch kills payloads silently.** A `x86_64` exploit will not run on `aarch64`.
@@ -50,7 +50,7 @@ Linux version 6.8.0-41-generic (buildd@lcy02-amd64-077) (x86_64-linux-gnu-gcc-13
 ```
 
 - `6.8.0-41-generic` → **kernel version**
-- `x86_64-linux-gnu-gcc-13` → **compiler** — match this version when compiling exploits locally to avoid ABI mismatches
+- `x86_64-linux-gnu-gcc-13` → **compiler** - match this version when compiling exploits locally to avoid ABI mismatches
 - `buildd@lcy02-amd64-077` → build machine (useful for fingerprinting cloud images)
 
 ### OS Release
@@ -65,14 +65,14 @@ cat /etc/*-release
 
 ```bash
 lsblk                    # all block devices + current mount points
-cat /etc/fstab           # all filesystems — including unmounted ones
+cat /etc/fstab           # all filesystems - including unmounted ones
 df -h                    # mounted filesystems with usage
 ```
 
 <Callout type="info">
-  **`/etc/fstab`** - **Unmounted partitions** — potentially weaker permissions or cached sensitive
-  data - **NFS mounts with `no_root_squash`** — local root on the attacker machine becomes root on
-  the NFS share - **CIFS/SMB mounts with inline credentials** — `username=` and `password=` options
+  **`/etc/fstab`** - **Unmounted partitions** - potentially weaker permissions or cached sensitive
+  data - **NFS mounts with `no_root_squash`** - local root on the attacker machine becomes root on
+  the NFS share - **CIFS/SMB mounts with inline credentials** - `username=` and `password=` options
   are plaintext in the file
 </Callout>
 
@@ -85,11 +85,11 @@ ps axjf       # all processes in forest/tree view
 
 **`ps aux` columns to focus on:**
 
-- **USER** — processes running as `root` that reference writable scripts are your target
-- **COMMAND** — look for web servers, database processes, custom application scripts
+- **USER** - processes running as `root` that reference writable scripts are your target
+- **COMMAND** - look for web servers, database processes, custom application scripts
 
 <Callout type="info">
-  Tree view (`ps axjf`) exposes **parent-child relationships** — spot scripts spawned by root
+  Tree view (`ps axjf`) exposes **parent-child relationships** - spot scripts spawned by root
   daemons that might be replaceable or injectable.
 </Callout>
 
@@ -116,7 +116,7 @@ MIN   HOUR   DOM   MON   DOW   USER    COMMAND
 - **Field order:** `minute hour day-of-month month day-of-week user command`
 - `30 2 * * 1` → 02:30 every Monday as `root`
 - `*/5 * * * *` → every 5 minutes as `root`
-- **Sixth field is your target** — `root` means any script it calls runs with full privileges
+- **Sixth field is your target** - `root` means any script it calls runs with full privileges
 
 </Tab>
 <Tab label="systemd timers">
@@ -131,8 +131,8 @@ Mon 2025-01-13 06:23:10 UTC    Sun 2025-01-12 06:17:43 UTC    apt-daily.timer ->
 Mon 2025-01-13 00:00:00 UTC    Sun 2025-01-12 00:00:12 UTC    fstrim.timer -> fstrim.service
 ```
 
-- **ACTIVATES** — the unit/service triggered; inspect its `ExecStart` path for writable scripts
-- **NEXT** — tells you how long until it fires
+- **ACTIVATES** - the unit/service triggered; inspect its `ExecStart` path for writable scripts
+- **NEXT** - tells you how long until it fires
 
 ```bash
 systemctl cat apt-daily.service     # view the full unit file and ExecStart path
@@ -144,14 +144,14 @@ systemctl cat apt-daily.service     # view the full unit file and ExecStart path
 <Callout type="danger">
   **Cron/timer privesc trigger:** If a root-owned scheduled task calls a script at a world-writable
   path (`/tmp/`, `/home/user/script.sh`), overwrite that script with a payload. **Check permissions
-  on every path referenced** in crontab entries and timer unit files — not just the script itself,
+  on every path referenced** in crontab entries and timer unit files - not just the script itself,
   but every directory in the path.
 </Callout>
 
 ### Installed Packages
 
 ```bash
-dpkg -l                                                         # Debian/Ubuntu — all installed packages
+dpkg -l                                                         # Debian/Ubuntu - all installed packages
 dpkg -l | grep -i "apache\|nginx\|mysql\|python\|sudo\|snap"   # filter to interesting services
 rpm -qa                                                         # Red Hat / CentOS equivalent
 ```
@@ -177,7 +177,7 @@ uid=1001(asbawy) gid=1001(asbawy) groups=1001(asbawy),100(users)
 uid=1002(matt) gid=1002(matt) groups=1002(matt),27(sudo),116(admin)
 ```
 
-**High-value group memberships — flag and act on immediately:**
+**High-value group memberships - flag and act on immediately:**
 
 | Group            | Escalation Vector                                |
 | ---------------- | ------------------------------------------------ |
@@ -185,7 +185,7 @@ uid=1002(matt) gid=1002(matt) groups=1002(matt),27(sudo),116(admin)
 | `docker`         | `docker run -v /:/mnt -it alpine chroot /mnt sh` |
 | `disk`           | Raw block device read via `debugfs /dev/sda1`    |
 | `lxd` / `lxc`    | Container image import → host root escape        |
-| `adm`            | Read `/var/log/auth.log` — credentials in logs   |
+| `adm`            | Read `/var/log/auth.log` - credentials in logs   |
 | `shadow`         | Read `/etc/shadow` password hashes               |
 
 ### Environment Variables
@@ -197,9 +197,9 @@ printenv
 
 **Hunt for:**
 
-- **`PATH`** — writable directory earlier in PATH → hijack a binary called by root
-- **`LD_PRELOAD` / `LD_LIBRARY_PATH`** — if preserved across `sudo` → shared library injection
-- **Credential patterns** — `*_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `DATABASE_URL`, `AWS_*`
+- **`PATH`** - writable directory earlier in PATH → hijack a binary called by root
+- **`LD_PRELOAD` / `LD_LIBRARY_PATH`** - if preserved across `sudo` → shared library injection
+- **Credential patterns** - `*_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `DATABASE_URL`, `AWS_*`
 
 <Callout type="danger">
   If `sudo -l` output shows `env_keep+=LD_PRELOAD`, you have a **trivial root escalation**. Compile
@@ -215,7 +215,7 @@ cat ~/.bash_history
 cat ~/.zsh_history
 cat ~/.python_history      # credentials entered in interactive Python sessions
 cat ~/.mysql_history       # database credentials
-cat ~/.nano_history        # recently edited files — reveals sensitive paths
+cat ~/.nano_history        # recently edited files - reveals sensitive paths
 ```
 
 ### Sudo Permissions
@@ -256,15 +256,15 @@ cut -d ":" -f 1 /etc/passwd
 
 **Field format:** `username : password : UID : GID : comment : home_dir : shell`
 
-- **UID `0`** — root-equivalent regardless of username; flag immediately
-- **`x` in password field** — hash stored in `/etc/shadow`
-- **Hash directly in the passwd field** (legacy systems) — `/etc/passwd` is world-readable, crack it
+- **UID `0`** - root-equivalent regardless of username; flag immediately
+- **`x` in password field** - hash stored in `/etc/shadow`
+- **Hash directly in the passwd field** (legacy systems) - `/etc/passwd` is world-readable, crack it
 
 ### /etc/shadow
 
 ```bash
-ls -la /etc/shadow       # check permissions — should be 640 root:shadow
-cat /etc/shadow          # attempt read — succeeds if misconfigured or your user is in 'shadow' group
+ls -la /etc/shadow       # check permissions - should be 640 root:shadow
+cat /etc/shadow          # attempt read - succeeds if misconfigured or your user is in 'shadow' group
 ```
 
 <Callout type="danger">
@@ -328,8 +328,8 @@ capsh --print                          # human-readable breakdown (requires caps
 
 ```bash
 ip addr              # all interfaces and assigned IPs
-ip route             # routing table — reveals additional subnets to pivot into
-ip neigh             # ARP cache — live hosts on the local network
+ip route             # routing table - reveals additional subnets to pivot into
+ip neigh             # ARP cache - live hosts on the local network
 ifconfig             # legacy equivalent (net-tools package)
 ```
 
@@ -357,14 +357,14 @@ ss -anp       # all sockets, numeric, with process names
 netstat -lt       # TCP listening ports only
 netstat -ano      # all sockets, numeric, with timers
 netstat -tpln     # TCP listening + PID/process name (PID visible only as root)
-netstat -i        # interface statistics — RX/TX counters, errors, drops
+netstat -i        # interface statistics - RX/TX counters, errors, drops
 ```
 
   </Tab>
 </Tabs>
 
 <Callout type="info">
-Services bound to `127.0.0.1` are invisible externally but fully accessible on the box. **Internal-only ports are high-value targets** — databases, admin panels, internal APIs, CI/CD agents. Reach them via local port forwarding from your attack box:
+Services bound to `127.0.0.1` are invisible externally but fully accessible on the box. **Internal-only ports are high-value targets** - databases, admin panels, internal APIs, CI/CD agents. Reach them via local port forwarding from your attack box:
 
 ```bash
 ssh -L 8080:127.0.0.1:8080 user@target   # forward target's local port 8080 to attacker:8080
@@ -379,10 +379,10 @@ ssh -L 8080:127.0.0.1:8080 user@target   # forward target's local port 8080 to a
 ### SUID / SGID Binaries
 
 ```bash
-# SUID — binary executes as its owner (usually root)
+# SUID - binary executes as its owner (usually root)
 find / -perm -u=s -type f 2>/dev/null
 
-# SGID — binary executes as its group owner
+# SGID - binary executes as its group owner
 find / -perm -g=s -type f 2>/dev/null
 
 # Both flags in one pass
@@ -429,7 +429,7 @@ find / -name "pass*" -type f 2>/dev/null
 find / -name "*secret*" -type f 2>/dev/null
 find / -name "*.bak" -type f 2>/dev/null
 
-# Recently modified files (last 5 days) — catches post-deployment changes
+# Recently modified files (last 5 days) - catches post-deployment changes
 find / -mtime -5 -type f 2>/dev/null | grep -v proc | grep -v sys
 ```
 
@@ -463,7 +463,7 @@ Example output:
 ```
 
 <Callout type="danger">
-**Capabilities are the most overlooked privesc vector.** They grant individual kernel privileges to binaries **without the SUID bit** — completely invisible to basic `ls -la` audits and missed by many automated tools.
+**Capabilities are the most overlooked privesc vector.** They grant individual kernel privileges to binaries **without the SUID bit** - completely invisible to basic `ls -la` audits and missed by many automated tools.
 
 | Capability             | Impact                                                                  |
 | ---------------------- | ----------------------------------------------------------------------- |
@@ -474,7 +474,7 @@ Example output:
 | `cap_net_raw`          | Capture raw network traffic                                             |
 | `cap_net_bind_service` | Bind to privileged ports < 1024                                         |
 
-The `+ep` suffix = **Effective + Permitted** — capability is active on execution. Cross-reference all hits at [GTFOBins → Capabilities](https://gtfobins.github.io/#capabilities).
+The `+ep` suffix = **Effective + Permitted** - capability is active on execution. Cross-reference all hits at [GTFOBins → Capabilities](https://gtfobins.github.io/#capabilities).
 
 </Callout>
 
@@ -489,7 +489,7 @@ The `+ep` suffix = **Effective + Permitted** — capability is active on executi
 ```
 
 ```bash
-# /usr/bin/tar has cap_dac_read_search+ep — read any file on the system:
+# /usr/bin/tar has cap_dac_read_search+ep - read any file on the system:
 /usr/bin/tar -cvf /tmp/shadow.tar /etc/shadow && tar -xvf /tmp/shadow.tar
 ```
 
@@ -511,7 +511,7 @@ The `+ep` suffix = **Effective + Permitted** — capability is active on executi
 | `dpkg -l`                                                         | Installed packages + versions                     |
 | `id`                                                              | Current UID, GID, group memberships               |
 | `sudo -l`                                                         | Allowed sudo commands                             |
-| `env`                                                             | Environment variables — PATH, LD_PRELOAD, secrets |
+| `env`                                                             | Environment variables - PATH, LD_PRELOAD, secrets |
 | `cat ~/.bash_history`                                             | Command history                                   |
 | `cat /etc/passwd \| grep /bin/bash`                               | Real interactive users                            |
 | `ls -la /etc/shadow`                                              | Shadow file permissions                           |

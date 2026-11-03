@@ -100,13 +100,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Asbawy Blog" },
       {
         name: "description",
-        content: "Asbawy's personal blog — security research, dev logs, and tools.",
+        content: "Asbawy's personal blog - security research, dev logs, and tools.",
       },
       { name: "author", content: "Asbawy" },
       { property: "og:title", content: "Asbawy Blog" },
       {
         property: "og:description",
-        content: "Asbawy's personal blog — security research, dev logs, and tools.",
+        content: "Asbawy's personal blog - security research, dev logs, and tools.",
       },
       { property: "og:type", content: "website" },
       { property: "og:image", content: "https://asbawy.com/eye-of-ra.png" },

@@ -109,7 +109,7 @@ export function Mermaid({ chart }: { chart: string }) {
 
   return (
     <Panel title="diagram" className="my-8 relative group">
-      {/* Toolbar — visible on hover */}
+      {/* Toolbar - visible on hover */}
       <div className="absolute top-2 right-2 flex gap-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={handleCopy}

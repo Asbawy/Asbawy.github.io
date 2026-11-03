@@ -11,11 +11,11 @@ import { Wrench, Zap, Hash, Network, Code2, Github } from "lucide-react";
 export const Route = createFileRoute("/tools")({
   head: () => ({
     meta: [
-      { title: "Offensive Security Tools — Browser Pentest Utilities" },
+      { title: "Offensive Security Tools - Browser Pentest Utilities" },
       {
         name: "description",
         content:
-          "Zero-telemetry client-side pentester utilities — Reverse shell generator, hash identifier, subnet calculator, and cyber multi-codec by Asbawy.",
+          "Zero-telemetry client-side pentester utilities - Reverse shell generator, hash identifier, subnet calculator, and cyber multi-codec by Asbawy.",
       },
     ],
   }),
@@ -48,7 +48,7 @@ function ToolsPage() {
               </h1>
             </div>
             <p className="text-sm md:text-base text-muted-foreground max-w-2xl leading-relaxed">
-              Client-side offensive security and pentester utilities. 100% private, zero network telemetry — everything computes directly in your browser memory.
+              Client-side offensive security and pentester utilities. 100% private, zero network telemetry - everything computes directly in your browser memory.
             </p>
           </div>
 

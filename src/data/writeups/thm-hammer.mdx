@@ -1,6 +1,6 @@
 ---
 slug: "thm-hammer"
-title: "Hammer — TryHackMe Writeup"
+title: "Hammer - TryHackMe Writeup"
 date: "2026-07-20"
 platform: "TryHackMe"
 type: "Machine"
@@ -54,7 +54,7 @@ _Hammer_ is a medium-rated Linux machine that front-ends a small custom PHP web 
 1. A **user flag** located behind the authenticated dashboard.
 2. A **root flag** readable only after escalating to an admin role and triggering remote command execution.
 
-The entire attack chain is web-based—no SSH credentials are required for the intended path.
+The entire attack chain is web-based - no SSH credentials are required for the intended path.
 
 ---
 
@@ -128,8 +128,8 @@ We now have a **valid username**: `tester@hammer.thm`. The next step is to abuse
 
 Accessing `reset_password.php` with the leaked email returns a secondary form asking for a **4-digit recovery code**, alongside a hidden `s` field acting as a client-side countdown timer. Two protections stand out:
 
-1. **Per-session rate limit** — visible in the `Rate-Limit-Pending` response header.
-2. **Client-side timer** — the `s` value is merely a number that the browser counts down; the server trusts whatever value we send.
+1. **Per-session rate limit** - visible in the `Rate-Limit-Pending` response header.
+2. **Client-side timer** - the `s` value is merely a number that the browser counts down; the server trusts whatever value we send.
 
 ![Password reset flow countdown](https://i.imgur.com/hKTTP3u.png)
 

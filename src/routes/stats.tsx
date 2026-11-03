@@ -8,7 +8,7 @@ import { Activity, Swords, FileTerminal, BookOpen, Tag as TagIcon, BarChart2 } f
 export const Route = createFileRoute("/stats")({
   head: () => ({
     meta: [
-      { title: "Stats & Analytics — Asbawy Blog" },
+      { title: "Stats & Analytics - Asbawy Blog" },
       {
         name: "description",
         content:

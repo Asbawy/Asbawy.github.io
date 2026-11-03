@@ -1,6 +1,6 @@
 ---
 slug: "htb-ghostlink"
-title: "Ghostlink — HackTheBox Machine Writeup"
+title: "Ghostlink - HackTheBox Machine Writeup"
 date: "2026-08-13"
 platform: "HackTheBox"
 type: "Machine"
@@ -105,13 +105,13 @@ PORT      STATE SERVICE
 5985/tcp  open  wsman
 ```
 
-The box is clearly a **Domain Controller** — it's running DNS, Kerberos, LDAP, SMB and WinRM. Two things jump out as non-default: port `1883/tcp` (**MQTT**) and an IIS web server on port `80`.
+The box is clearly a **Domain Controller** - it's running DNS, Kerberos, LDAP, SMB and WinRM. Two things jump out as non-default: port `1883/tcp` (**MQTT**) and an IIS web server on port `80`.
 
 <Callout type="info">
-  **Why MQTT is interesting.** MQTT is a lightweight pub/sub protocol normally used by IoT devices. Finding it on a domain controller is unusual — it suggests some internal component is publishing messages. If the broker allows **anonymous** connections, we can subscribe to `#` (all topics) and read everything being published.
+  **Why MQTT is interesting.** MQTT is a lightweight pub/sub protocol normally used by IoT devices. Finding it on a domain controller is unusual - it suggests some internal component is publishing messages. If the broker allows **anonymous** connections, we can subscribe to `#` (all topics) and read everything being published.
 </Callout>
 
-Browsing to the IIS server on port 80 gives nothing but a static "Ghost Protocol Zero" landing page — the box is themed around a fictional APT group.
+Browsing to the IIS server on port 80 gives nothing but a static "Ghost Protocol Zero" landing page - the box is themed around a fictional APT group.
 
 ---
 
@@ -159,14 +159,14 @@ curl -s -i http://gpz-op26-toolkits.ghostlink.htb/ | grep -i 'gogs\|title'
 ![Gogs login page](https://i.imgur.com/jO30WXU.png)
 
 <Callout type="info">
-  **Fingerprinting Gogs without a version string.** Gogs doesn't advertise its version in the page footer. But it does load its static assets with a *git commit hash* as a cache-buster: `gogs.js?v=5084b4a9b77a506f5e287e82e945e1c6882b827a`. Searching that hash maps it to **Gogs 0.13.3** — which is vulnerable to the authenticated RCE **CVE-2025-8110** (we'll come back to this).
+  **Fingerprinting Gogs without a version string.** Gogs doesn't advertise its version in the page footer. But it does load its static assets with a *git commit hash* as a cache-buster: `gogs.js?v=5084b4a9b77a506f5e287e82e945e1c6882b827a`. Searching that hash maps it to **Gogs 0.13.3** - which is vulnerable to the authenticated RCE **CVE-2025-8110** (we'll come back to this).
 </Callout>
 
 ---
 
 ## NTLM Coercion via the MQTT Health-Check
 
-The `secureshare` health-check topic contains a `url` field that the *secureshare* host periodically fetches to confirm it's still alive. The clever bit: the topic is **writable**, so we can repoint that `url` at our own box. When the health-check worker performs its HTTP request, it authenticates with **NTLM** — and we can capture (or relay) that authentication.
+The `secureshare` health-check topic contains a `url` field that the *secureshare* host periodically fetches to confirm it's still alive. The clever bit: the topic is **writable**, so we can repoint that `url` at our own box. When the health-check worker performs its HTTP request, it authenticates with **NTLM** - and we can capture (or relay) that authentication.
 
 <FileAttachment
   name="mqtt_trigger.py"
@@ -191,7 +191,7 @@ Within a minute, the worker fetches our URL and hands us an NTLMv2 hash:
 ```
 
 <Callout type="warning">
-  **The hash is uncrackable** — `svc_canary` has a strong machine-style password. Capturing it isn't the goal; *relaying* it is. NTLM relay lets us take that inbound authentication and bounce it against another service that will accept `svc_canary`'s credentials, without ever knowing the password.
+  **The hash is uncrackable** - `svc_canary` has a strong machine-style password. Capturing it isn't the goal; *relaying* it is. NTLM relay lets us take that inbound authentication and bounce it against another service that will accept `svc_canary`'s credentials, without ever knowing the password.
 </Callout>
 
 ---
@@ -218,7 +218,7 @@ We're now authenticated to the file-share app as `svc_canary`.
 The app is a Blazor/ASP.NET front-end with an upload endpoint (`/api/upload`) and a download endpoint (`/api/download/<file>`), as revealed by `app.js`.
 
 <Callout type="warning">
-  **A real-world gotcha we hit.** The default ntlmrelayx SOCKS plugin reuses the raw relayed socket and desyncs on keep-alive (each request returns the *previous* request's body). To get reliable multi-request browsing, we wrote a small custom ntlmrelayx HTTP attack (`relay_bridge.py`) that serializes every request through the relayed connection with a lock — a local proxy on `127.0.0.1:18080`.
+  **A real-world gotcha we hit.** The default ntlmrelayx SOCKS plugin reuses the raw relayed socket and desyncs on keep-alive (each request returns the *previous* request's body). To get reliable multi-request browsing, we wrote a small custom ntlmrelayx HTTP attack (`relay_bridge.py`) that serializes every request through the relayed connection with a lock - a local proxy on `127.0.0.1:18080`.
 </Callout>
 
 <FileAttachment
@@ -239,21 +239,21 @@ GET /api/download/<file>
 
 We suspect it resolves `<file>` against an upload directory on the internal host. If it naively joins the path, a `..\` traversal would escape. Let's test the escalation ladder.
 
-**Attempt 1 — raw traversal** (blocked):
+**Attempt 1 - raw traversal** (blocked):
 
 ```bash
 curl --path-as-is 'http://127.0.0.1:18080/api/download/..\..\..\..\windows\win.ini'
 # HTTP/1.1 403 Forbidden
 ```
 
-**Attempt 2 — single URL-encoding** (still blocked):
+**Attempt 2 - single URL-encoding** (still blocked):
 
 ```bash
 curl 'http://127.0.0.1:18080/api/download/%2e%2e%5c%2e%2e%5cwindows%5cwin.ini'
 # HTTP/1.1 403 Forbidden
 ```
 
-**Attempt 3 — double URL-encoding** (works):
+**Attempt 3 - double URL-encoding** (works):
 
 <FileAttachment
   name="traversal_fetch.py"
@@ -357,23 +357,23 @@ Domain Password Policy -> (attachment: passpol.pdf)
 
 Two things matter:
 
-1. **`vroth` still has a password** — every other account was migrated to a "centralized password manager", but vroth was forgotten. `vroth:mOo03jpsqx8JQYMBwvFP` is our ticket into Gogs.
-2. The **Recycle Bin** contains a deleted entry with a `passpol.pdf` attachment — the *Default Domain Policy* report. It tells us the **minimum password length is 20 characters**, which we'll use to speed up hash-cracking later.
+1. **`vroth` still has a password** - every other account was migrated to a "centralized password manager", but vroth was forgotten. `vroth:mOo03jpsqx8JQYMBwvFP` is our ticket into Gogs.
+2. The **Recycle Bin** contains a deleted entry with a `passpol.pdf` attachment - the *Default Domain Policy* report. It tells us the **minimum password length is 20 characters**, which we'll use to speed up hash-cracking later.
 
 ---
 
-## Gogs RCE — CVE-2025-8110
+## Gogs RCE - CVE-2025-8110
 
 Gogs `0.13.3` is vulnerable to **CVE-2025-8110**, an authenticated remote-code-execution via a **symbolic-link** bypass in its `PutContents` API.
 
 ### The bug, simply
 
-Gogs lets users commit **symlinks** into a repository (normal git behavior). It also exposes a `PutContents` API that writes file content *outside* the normal git flow. When CVE-2024-55947 was patched, the fix validated the *path* — but it forgot to validate where a *symlink* in that path points.
+Gogs lets users commit **symlinks** into a repository (normal git behavior). It also exposes a `PutContents` API that writes file content *outside* the normal git flow. When CVE-2024-55947 was patched, the fix validated the *path* - but it forgot to validate where a *symlink* in that path points.
 
 So the attack is:
 
 1. Create a repo and commit a symlink that points at `.git/config`.
-2. Use `PutContents` to write through that symlink — Gogs follows it and overwrites the repo's `.git/config`, which lives *outside* the intended working-tree directory.
+2. Use `PutContents` to write through that symlink - Gogs follows it and overwrites the repo's `.git/config`, which lives *outside* the intended working-tree directory.
 3. In the injected `.git/config`, we set `core.sshCommand` to our reverse-shell command. The next time Gogs runs a git operation over SSH, that command executes.
 
 <FileAttachment
@@ -412,7 +412,7 @@ git@gpz-op26-toolkits:~/data/tmp/local-repo/9$
 
 ---
 
-## Lateral Movement — from `git` to `nvirelli`
+## Lateral Movement - from `git` to `nvirelli`
 
 The Gogs host has a local user `nvirelli`. Gogs stores user password hashes (PBKDF2-SHA256) in its SQLite database `gogs.db`, so we exfiltrate it:
 
@@ -438,7 +438,7 @@ sha256:10000:RFczWWR4UHkyNQ==:jZs6AcOgJgs52wEa7R2/I5uLGyivYUHyiqAdOzq4/9RAi8W5Bl
 ```
 
 <Callout type="info">
-  **Using the leaked password policy.** PBKDF2 is deliberately slow, so cracking a huge wordlist is painful. But `passpol.pdf` told us the minimum length is **20 characters**, so we trim `rockyou.txt` to only 20+ character candidates — from 14 million words down to 46,602 — and the crack finishes in seconds.
+  **Using the leaked password policy.** PBKDF2 is deliberately slow, so cracking a huge wordlist is painful. But `passpol.pdf` told us the minimum length is **20 characters**, so we trim `rockyou.txt` to only 20+ character candidates - from 14 million words down to 46,602 - and the crack finishes in seconds.
 </Callout>
 
 ```bash
@@ -461,11 +461,11 @@ su nvirelli          # password: u47YUclrDiwWxBheaSzI
 cat /home/nvirelli/user.txt
 ```
 
-<SpoilerFlag label="Ghostlink — User Flag" flag="946398f6fc6e3e70828c7b9fc29cb1dc" />
+<SpoilerFlag label="Ghostlink - User Flag" flag="946398f6fc6e3e70828c7b9fc29cb1dc" />
 
 ---
 
-## Domain Escalation — ESC11 (ADCS)
+## Domain Escalation - ESC11 (ADCS)
 
 `nvirelli` is a domain account, and the network has an **Active Directory Certificate Services** (ADCS) CA. We pivot through the Gogs host with **chisel** (reverse SOCKS proxy) so we can reach the CA on the internal `172.16.20.10`, then enumerate ADCS for vulnerabilities:
 
@@ -488,7 +488,7 @@ Enforce Encryption for Requests     : Disabled
 
 The CA accepts certificate requests over RPC (**ICPR**). Because it does **not enforce encryption** on those requests, we can relay a machine account's NTLM authentication directly into a certificate request. The classic ESC8 needs HTTP web enrollment; **ESC11** does the same thing over the raw RPC interface.
 
-Our target is the **Domain Controller machine account** (`DC01$`), which is allowed to request a *DomainController* certificate — and that certificate can impersonate the DC.
+Our target is the **Domain Controller machine account** (`DC01$`), which is allowed to request a *DomainController* certificate - and that certificate can impersonate the DC.
 
 The attack is a two-step relay:
 
@@ -539,16 +539,16 @@ WINRM  10.129.62.59  5985  DC01  [+] Executed command
 WINRM  10.129.62.59  5985  DC01  4f54904aea696f4638d47f38e76927b2
 ```
 
-<SpoilerFlag label="Ghostlink — Root Flag" flag="4f54904aea696f4638d47f38e76927b2" />
+<SpoilerFlag label="Ghostlink - Root Flag" flag="4f54904aea696f4638d47f38e76927b2" />
 
 ---
 
 
 ## References
 
-- [Wiz Research — Gogs Zero-Day RCE (CVE-2025-8110)](https://www.wiz.io/blog/wiz-research-gogs-cve-2025-8110-rce-exploit)
-- [CVE-2025-8110 — NVD / SentinelOne](https://www.sentinelone.com/vulnerability-database/cve-2025-8110/)
-- [Certipy — ADCS attack tool](https://github.com/ly4k/Certipy)
-- [SpecterOps — Certified Pre-Owned (ADCS attack taxonomy, ESC1-ESC8+)](https://posts.specterops.io/certified-pre-owned-d95910965cd2)
-- [Impacket — ntlmrelayx / secretsdump](https://github.com/fortra/impacket)
-- [Chisel — fast TCP/UDP tunnel](https://github.com/jpillora/chisel)
+- [Wiz Research - Gogs Zero-Day RCE (CVE-2025-8110)](https://www.wiz.io/blog/wiz-research-gogs-cve-2025-8110-rce-exploit)
+- [CVE-2025-8110 - NVD / SentinelOne](https://www.sentinelone.com/vulnerability-database/cve-2025-8110/)
+- [Certipy - ADCS attack tool](https://github.com/ly4k/Certipy)
+- [SpecterOps - Certified Pre-Owned (ADCS attack taxonomy, ESC1-ESC8+)](https://posts.specterops.io/certified-pre-owned-d95910965cd2)
+- [Impacket - ntlmrelayx / secretsdump](https://github.com/fortra/impacket)
+- [Chisel - fast TCP/UDP tunnel](https://github.com/jpillora/chisel)

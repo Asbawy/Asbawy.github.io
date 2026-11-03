@@ -1,6 +1,6 @@
 ---
 slug: "htb-hexecution"
-title: "Hexecution — HackTheBox Challenge Writeup"
+title: "Hexecution - HackTheBox Challenge Writeup"
 date: "2026-08-01"
 platform: "HackTheBox"
 type: "Challenge"
@@ -127,8 +127,8 @@ By decompiling the handler functions, we reconstruct the complete ISA semantics:
 | `GOODBYE`    | `dst, src` | `dst = src`                                             | Copy source register value to destination         |
 | `GRIND`      | `r1, r2`   | `if (r1 != r2) { puts("Wrong!"); exit(1); }`            | Assert equal registers (enforces input length!)   |
 | `PEPEFROG`   | `r1, r2`   | `for (i=0..31) if (stack[r1+i] != stack[r2+i]) exit(1)` | Assert 32-byte equality (final flag verification) |
-| `CHAIR`      | —          | `dump_stack_numbers()`                                  | Debug helper: print stack as decimal values       |
-| `ID`         | —          | `dump_stack_chars()`                                    | Debug helper: print stack as ASCII characters     |
+| `CHAIR`      | - | `dump_stack_numbers()`                                  | Debug helper: print stack as decimal values       |
+| `ID`         | - | `dump_stack_chars()`                                    | Debug helper: print stack as ASCII characters     |
 
 <Callout type="warning">
   **Important Observation:** The instruction `GRIND` is missing from the official challenge author
@@ -166,7 +166,7 @@ QUICKMAFFS 0x36                 ; PROTEIN = stack[0x36] (user input length)
 BOIL VEGETABLE, 0x20            ; VEGETABLE = 32
 GRIND PROTEIN, VEGETABLE        ; if (len != 32) -> "Wrong!"
 
-; ---- Stage 4: Permutation 1 — 4-Byte Group Shuffle (3, 2, 4, 1) ------
+; ---- Stage 4: Permutation 1 - 4-Byte Group Shuffle (3, 2, 4, 1) ------
 QUICKMAFFS 0x14 ; GOODBYE VEGETABLE, PROTEIN   ; VEGETABLE = input[0]
 QUICKMAFFS 0x15 ; GOODBYE FRUIT,    PROTEIN    ; FRUIT     = input[1]
 QUICKMAFFS 0x16 ; GOODBYE MEAT,     PROTEIN    ; MEAT      = input[2]
@@ -177,8 +177,8 @@ BOIL CARBO, 0x16 ; WINDOW DAIRY                ; stack[0x16] = input[3]  (was in
 BOIL CARBO, 0x17 ; WINDOW VEGETABLE            ; stack[0x17] = input[0]  (was input[3])
 ; ... repeated across all 8 4-character blocks (0x18, 0x1c, 0x20, 0x24, 0x28, 0x2c, 0x30)
 
-; ---- Stage 5: Permutation 2 — Global 32-Byte Array Reordering --------
-BOIL CARBO, 0x42                ; CARBO = 0x42 (66) — destination buffer
+; ---- Stage 5: Permutation 2 - Global 32-Byte Array Reordering --------
+BOIL CARBO, 0x42                ; CARBO = 0x42 (66) - destination buffer
 QUICKMAFFS 0x14 ; WINDOW PROTEIN ; LADDER CARBO  ; stack[0x42] = shuffled[0]
 QUICKMAFFS 0x19 ; WINDOW PROTEIN ; LADDER CARBO  ; stack[0x43] = shuffled[5]
 QUICKMAFFS 0x1e ; WINDOW PROTEIN ; LADDER CARBO  ; stack[0x44] = shuffled[10]
@@ -301,7 +301,7 @@ Here is an interactive replay of `htb_hexecution_solve.py` in action:
   ]}
   steps={[
     {
-      label: "Step 1/5 — Parse & Tokenize Custom Bytecode (recipe.asm)",
+      label: "Step 1/5 - Parse & Tokenize Custom Bytecode (recipe.asm)",
       command: "python3 htb_hexecution_solve.py recipe.asm",
       output: [
         {
@@ -313,7 +313,7 @@ Here is an interactive replay of `htb_hexecution_solve.py` in action:
       delayAfter: 600,
     },
     {
-      label: "Step 2/5 — Extract Encrypted Target Flag Buffer",
+      label: "Step 2/5 - Extract Encrypted Target Flag Buffer",
       output: [
         {
           text: "[*] Step 2/5: Extracting encrypted flag from AES256 bytecode pushes...",
@@ -327,7 +327,7 @@ Here is an interactive replay of `htb_hexecution_solve.py` in action:
       delayAfter: 700,
     },
     {
-      label: "Step 3/5 — Extract Global Reordering Permutation Table",
+      label: "Step 3/5 - Extract Global Reordering Permutation Table",
       output: [
         {
           text: "[*] Step 3/5: Extracting global reorder table from QUICKMAFFS/WINDOW dance...",
@@ -341,7 +341,7 @@ Here is an interactive replay of `htb_hexecution_solve.py` in action:
       delayAfter: 700,
     },
     {
-      label: "Step 4/5 — Invert 2-Stage Permutation Algorithm",
+      label: "Step 4/5 - Invert 2-Stage Permutation Algorithm",
       output: [
         { text: "[*] Step 4/5: Inverting two-stage permutation algorithm...", color: "blue" },
         {
@@ -357,7 +357,7 @@ Here is an interactive replay of `htb_hexecution_solve.py` in action:
       delayAfter: 800,
     },
     {
-      label: "Step 5/5 — Verify Recovered Flag via VM Emulation",
+      label: "Step 5/5 - Verify Recovered Flag via VM Emulation",
       output: [
         {
           text: "[*] Step 5/5: Verifying recovered flag inside Python VM emulator...",
@@ -393,7 +393,7 @@ Here is an interactive replay of `htb_hexecution_solve.py` in action:
 
 ## References
 
-- [Ghidra Decompiler Documentation — Analyzing Custom VMs](https://ghidra-sre.org/)
-- [HackTricks — Reverse Engineering Virtual Machines](https://book.hacktricks.xyz/)
+- [Ghidra Decompiler Documentation - Analyzing Custom VMs](https://ghidra-sre.org/)
+- [HackTricks - Reverse Engineering Virtual Machines](https://book.hacktricks.xyz/)
 - [ELF Specification & Section Anatomy](https://refspecs.linuxfoundation.org/elf/gabi4+/contents.html)
-- [Python Standard Library — `subprocess` & `pathlib`](https://docs.python.org/3/library/subprocess.html)
+- [Python Standard Library - `subprocess` & `pathlib`](https://docs.python.org/3/library/subprocess.html)

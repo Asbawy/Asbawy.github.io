@@ -372,7 +372,7 @@ const STAGES: StepData[] = [
     title: "Stage 4: Hijacking Saved EIP (+4 bytes address)",
     subtitle: "Overwriting Saved EIP with 0xffffd630 (buffer_addr + 32)",
     summary:
-      "We append p32(0xffffd630) directly at offset 28. The CPU now holds 0xffffd630 in Saved EIP. When auth() executes the 'ret' instruction, it will NOT return to handle()—it will jump directly to the stack address 0xffffd630!",
+      "We append p32(0xffffd630) directly at offset 28. The CPU now holds 0xffffd630 in Saved EIP. When auth() executes the 'ret' instruction, it will NOT return to handle() - it will jump directly to the stack address 0xffffd630!",
     instruction: "Saved EIP overwritten with 0xffffd630. ret instruction will jump to stack.",
     registers: {
       eip: "0xffffd630 (HIJACKED -> STACK)",

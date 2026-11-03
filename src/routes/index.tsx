@@ -21,12 +21,12 @@ import { HeistCardPreview } from "@/components/cyber/BinanceHeistVisuals";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Asbawy — Security Research & Dev Logs" },
+      { title: "Asbawy - Security Research & Dev Logs" },
       {
         name: "description",
         content: "Offensive security research, CTF writeups, dev logs, and cheatsheets by Asbawy.",
       },
-      { property: "og:title", content: "Asbawy — Security Research" },
+      { property: "og:title", content: "Asbawy - Security Research" },
       {
         property: "og:description",
         content:

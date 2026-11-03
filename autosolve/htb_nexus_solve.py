@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-htb_nexus_solve.py — Standalone Autonomous Solve Script for HackTheBox Nexus.
+htb_nexus_solve.py - Standalone Autonomous Solve Script for HackTheBox Nexus.
 
 Chain of Exploitation:
   1. Recon & Leak : Clone public Gitea repo (admin/krayin-docker-setup) and recover scrubbed
@@ -14,7 +14,7 @@ Chain of Exploitation:
                     timer (`gitea-template-sync.service`) to flatten the ls-tree path using os.path.join()
                     without path normalization, dropping /etc/sudoers.d/pwn -> NOPASSWD sudo -> root.txt.
 
-Target: HackTheBox — Nexus (Linux, Easy)
+Target: HackTheBox - Nexus (Linux, Easy)
 Requirements: requests, paramiko, git (system binary)
 Usage:
     python3 htb_nexus_solve.py <TARGET_IP>
@@ -252,7 +252,7 @@ def main() -> int:
 
     print("  Polling for root timer execution (60s cadence)...")
     if not wait_for_sudoers(ssh):
-        raise RuntimeError("Sudoers drop timed out — check root timer logs")
+        raise RuntimeError("Sudoers drop timed out - check root timer logs")
 
     log("sudoers", "/etc/sudoers.d/pwn successfully created by root systemd timer!")
 
@@ -261,7 +261,7 @@ def main() -> int:
     log("root.txt", root_flag)
 
     print("\n" + "=" * 50)
-    print("  EXPLOITATION COMPLETE — CAPTURED FLAGS")
+    print("  EXPLOITATION COMPLETE - CAPTURED FLAGS")
     print("=" * 50)
     print(f"  user.txt : {user_flag}")
     print(f"  root.txt : {root_flag}")

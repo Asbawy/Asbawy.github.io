@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Ghostlink relay bridge — custom ntlmrelayx HTTP attack.
+"""Ghostlink relay bridge - custom ntlmrelayx HTTP attack.
 
 Instead of the SOCKS plugin (which reads the raw socket and desyncs on
 keep-alive reuse), this attack hands the authenticated HTTP connection to a
